@@ -359,7 +359,11 @@ async function main() {
     // `-hotplug-host` / `-hotplug-client` / `-rope-entry` / `-tuner` / `-bubble-timing` / `-mascot-motion` /
     // `-egg1-motion` / `-egg1-rebound` / `-sidebar-rebound` / `-egg2-motion` / `-follow`，见 run-guards.mjs
     // 的 VERIFY_STEPS 清单）。合并时按实测重取：原 PR 基于 P-F 批 1c 之前的树，写的是 84/97。
-    const CHAIN_FLOOR = { verify: 85, docs: 6, smoke: 6, all: 98 };
+    //  再：verify 85→86 / all 98→99 —— 新增 `test/verify-layer-ownership.mjs`（P-D S4：壁纸层的
+    // 单例声明 / id 赋值点 / body 挂载白名单 / fiber cleanup 拆卸零残留 / iframe 父链。硬档依据 =
+    // 层所有权一旦裂成两份，用户侧后果是"壁纸停在上一张、关掉插件层不撤、双倍暗化"—— 同 ⑧ 的
+    // 发布面口径：它坏的时候没有别的判据会红）。
+    const CHAIN_FLOOR = { verify: 86, docs: 6, smoke: 6, all: 99 };
     /** 地板表与 GROUPS 的对齐体检：键名必须与**组名**逐一对齐（纯函数 ⇒ 负对照可直接喂）。 */
     const floorGaps = (groups, floors) => groups.map(([, g]) => g).filter((g) => !Number.isInteger(floors[g]));
     const problems = floorGaps(GROUPS, CHAIN_FLOOR).map((g) => '地板表缺组 ' + g

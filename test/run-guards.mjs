@@ -202,6 +202,15 @@ const VERIFY_STEPS = [
   //    真 cordis 往返仍未跑（`@deepseek-ai/cordis` 是 peer，本轮口径 `npm ci --omit=peer`）⇒
   //    fiber 回滚语义是**源码推读**，守卫只在文件头如实标注，不升级为"已验证"。
   step('test/verify-host-teardown.mjs'),
+  // 壁纸层所有权（P-D S4；BUNDLE-SPLIT §7.4 / §13 风险 9）：层是**单例 DOM 节点**
+  //    （`#dsh-wallpaper-engine-layer` / `#dsh-wallpaper-engine-scrim`），P-D 把渲染半边搬进
+  //    `packages/wallpaper` 时，最坏的结构性失效是两半边各建一层、各拆各的 —— 用户看到的是
+  //    "壁纸永远停在上一张 / 关掉插件层不撤 / 两个 scrim 叠出双倍暗化"。判据四条：层单例声明
+  //    与 id 赋值点冻结（声明只许 src/client.js:63-64，id 赋值只许 src/live-layer.js）、body
+  //    挂载白名单逐点归属、fiber cleanup 拆卸零残留（真源码跑在 mini mock DOM 上）、iframe
+  //    父链不得直接含 body。硬档依据：每一条的后果都是**用户在屏上能看见的残留/错层**，不是
+  //    仓库内务（同上方包面判据的发布面口径）。
+  step('test/verify-layer-ownership.mjs'),
   // 可选桌宠联动的离线回归；安装和浏览器集成另走显式环境入口。
   step('test/verify-pet-package.mjs'),
   step('test/verify-pet-hotplug-host.mjs'),

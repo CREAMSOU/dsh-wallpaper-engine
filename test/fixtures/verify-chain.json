@@ -561,6 +561,14 @@
         {
           "kind": "guard",
           "npm": null,
+          "file": "test/verify-layer-ownership.mjs",
+          "args": [],
+          "tier": "hard",
+          "probe": false
+        },
+        {
+          "kind": "guard",
+          "npm": null,
           "file": "test/verify-pet-package.mjs",
           "args": [],
           "tier": "hard",
@@ -1359,6 +1367,14 @@
           "kind": "guard",
           "npm": null,
           "file": "test/verify-host-teardown.mjs",
+          "args": [],
+          "tier": "hard",
+          "probe": false
+        },
+        {
+          "kind": "guard",
+          "npm": null,
+          "file": "test/verify-layer-ownership.mjs",
           "args": [],
           "tier": "hard",
           "probe": false

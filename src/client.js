@@ -60,8 +60,15 @@ globalThis.__weComponentVisible = weComponentVisible;
 // Body attribute set while a wallpaper is active; CSS uses it to make the frame
 // background transparent so the behind-body layer shows through.
 const ACTIVE_ATTR = "data-we-wallpaper";
-const LAYER_ID = "dsh-wallpaper-engine-layer";
-const SCRIM_ID = "dsh-wallpaper-engine-scrim";
+const LAYER_ID = "dsh-wallpaper-engine-layer"; // 壁纸层单例：全仓唯一声明点（verify-layer-ownership P1）
+const SCRIM_ID = "dsh-wallpaper-engine-scrim"; // 可读性 scrim 单例：同上
+// **层所有权契约（P-D S4，ADR-0013 D12 / BUNDLE-SPLIT §7.4 / §13 风险 9）**：壁纸层与 scrim 是
+// **进程内单例 DOM 节点**，所有权 = 主包渲染内核独占 —— `src/live-layer.js` 建层/领养/退役，
+// `src/client.js` 的 fiber cleanup 摘净。子包（`packages/wallpaper` 浏览器半边）**不得**建层/退层，
+// 也不许持 `#layer` 引用：它只经 host 键面拿渲染器与状态（`selection` 等活别名）。
+// 判据：`test/verify-layer-ownership.mjs`（P1 声明/id 赋值点 · P2 body 挂载白名单 ·
+// P3 拆卸零残留 · P4 iframe 父链）。改这两行或这两条路径 = 改契约，必须同步守卫与
+// `.integration-notes/p-d-contract.md` §4.1。
 // Chat-interface rope dock: a draggable pull-cord floating over the chat plus
 // the glass repo side panel it pulls out. Both are portalled onto <body> under
 // their own React root (see apply), independent of the settings view.

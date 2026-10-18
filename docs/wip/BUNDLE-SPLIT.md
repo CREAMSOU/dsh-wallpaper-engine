@@ -520,6 +520,7 @@ Cordis 的级联只有**一个判据**：`name in fiber.inject`（`cordis/src/re
 
 以 `packages/wallpaper`（P-F 批 1c 2026-10-16 出户）为基础大改：WE 壁纸与自定义导入壁纸的渲染、壁纸库 + 播放-画面里的配置项、声音、省电。
 **前置**：层的所有权（`LAYER_ID` / `SCRIM_ID` / iframe 的建立与退役）必须有唯一所有者，否则两个包各建层 = 撞单例 id。
+**层所有权已钉（P-D S4，2026-10-18）**：所有权 = 主包渲染内核独占（`src/live-layer.js` 建/领养/退役 + `src/client.js` fiber cleanup 摘净），壁纸包浏览器半边不得建层/退层/持 `#layer` 引用；判据 `test/verify-layer-ownership.mjs`（P1 声明与 id 赋值点 · P2 body 挂载白名单逐点归属 · P3 拆卸零残留 · P4 iframe 父链），负对照含"白名单外建层 / 删 scrim 摘除 / iframe 直接挂 body"三种变异。契约正文见 `.integration-notes/p-d-contract.md` §4.1。
 **注意**：引擎已是 npm 依赖（§9.4 定案 = 主包持有、不随子包）；`lib/webwallgl/**` 如今只剩自家模板/桥文件。
 
 **P-D 阶段1 落地账（2026-10-18）**：本阶段只做**机械改名 / 并入**、零行为变更（D5）—— 原「系统媒体桥」子包目录（`packages/` 下的 `media-bridge`）整包搬到 `packages/wallpaper/`；包名 / 行 `id` / 行 `name` / `SUBPACKAGE_KEY_TABLE` 键 / `COMPONENT_VIEW_KEYS` 键 / 守卫与测试里的包路径全部同步为新名。行 `id` 改为 `wallpaper-engine-wallpaper` 是 §14 `D-15` 的**唯一例外**（S4.3 强制 `id = wallpaper-engine-<目录名>`，且该行从未发布 ⇒ 无迁移负担）。**本阶段不做**：壁纸渲染的功能搬入 / 浏览器半边（§15 账③）与任何产品语义改动 —— 均属 P-D 后续批次。
