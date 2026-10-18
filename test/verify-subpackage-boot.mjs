@@ -241,7 +241,10 @@ const APPLY_KEYS = ['buildInventory', 'componentsProbe', 'faststartVariant', 'ha
 // （scene-media 提取内嵌媒资）。叶子本身留主包（主包内核仍 import 它们，见设计稿 §4.6 落地修正）。
 const SCHEMA_KEYS = ['isFontSetId', 'sanitizeFontset', 'FONTSET_MIGRATED_ID', 'FONTSET_SCHEMA_TAG',
   'systemFontKeyOf', 'clampNum', 'parseUserPropDefs', 'entryDirPrefix', 'filterKnownOverrides',
-  'extractSceneVideoFromDir', 'extractSceneVideoFromPkgFile'];
+  'extractSceneVideoFromDir', 'extractSceneVideoFromPkgFile',
+  // S5d 刀3：遮挡 hub 随包出户，平台适配器/会话判定留主包（x11 只是取数适配器，不是省电判据
+  // 本身）⇒ 两个纯符号经这个视图注入。缺任一键 = hub 构造期无法拿到平台能力（大声抛）。
+  'isX11CandidateEnv', 'createX11Adapter'];
 // P-F：`http` 面多了一个纯符号 —— 组件（wallpaper；P-D 阶段1 前名 media-bridge）读体的字节上限常量 `CONTROL_JSON_MAX_BYTES`
 // 不能静态 import 主包模块（§5.2 禁"直接 import 另一个包的模块级导出"）⇒ 同样从服务面取。
 const HTTP_KEYS = ['sendJson', 'bodyReader', 'CONTROL_JSON_MAX_BYTES'];
@@ -315,6 +318,7 @@ const synthHost = (over) => {
         clampNum: (v) => v,
         parseUserPropDefs: () => [], entryDirPrefix: () => '', filterKnownOverrides: () => ({}),
         extractSceneVideoFromDir: () => null, extractSceneVideoFromPkgFile: () => null,
+        isX11CandidateEnv: () => false, createX11Adapter: () => ({ poll: async () => null, start: async () => {}, stop: () => {}, onChange: () => {} }),
       }),
       http: Object.freeze({ sendJson: () => true, bodyReader: () => ({}) }),
       get apply() { return Object.freeze(Object.fromEntries(APPLY_KEYS.map((k) => [k, { key: k }]))); },
@@ -333,7 +337,7 @@ const synthHost = (over) => {
 const baseHostMod = synthHost();
 const baseHostValue = baseHostMod.createSubpackageHost();
 
-check('跨包服务面契约（HOST_SERVICE_NAME 字面量 / 7 键冻结 / schema 11 键 / http 3 键 / apply 惰性 15 键 / provide 真宿主+夹具两腿）',
+check('跨包服务面契约（HOST_SERVICE_NAME 字面量 / 7 键冻结 / schema 13 键 / http 3 键 / apply 惰性 15 键 / provide 真宿主+夹具两腿）',
   mod ? serviceViolations(mod, HOST_SERVICE_LITERAL).length === 0 : false,
   mod ? JSON.stringify(serviceViolations(mod, HOST_SERVICE_LITERAL)) : '契约模块没有加载成功');
 // P-F：组件行出户后，组件宿主半边**也只**能从这个服务面取键（零主包说明符）⇒ 把每个已登记 id 的
@@ -368,6 +372,13 @@ check('负对照：服务名漂移 ⇒ 判红',
   serviceViolations(synthHost({ HOST_SERVICE_NAME: 'wallpaperFoo' }), HOST_SERVICE_LITERAL).length > 0);
 check('负对照：schema 键漂移 ⇒ 判红',
   serviceViolations(synthHost({ createSubpackageHost: () => Object.freeze({ ...baseHostValue, schema: Object.freeze({ isFontSetId: () => false, sanitizeFontset: (v) => v, FONTSET_MIGRATED_ID: 'm', FONTSET_SCHEMA_TAG: 't' }) }) }), HOST_SERVICE_LITERAL).length > 0);
+// S5d 刀3：schema 面扩了两个遮挡平台符号 —— 缺任一键必须判红（hub 出户后只能靠它拿适配器）。
+const schemaWithout = (drop) => Object.freeze(Object.fromEntries(
+  Object.entries(baseHostValue.schema).filter(([k]) => k !== drop)));
+check('负对照：schema 缺 isX11CandidateEnv ⇒ 判红（hub 拿不到会话判定）',
+  serviceViolations(synthHost({ createSubpackageHost: () => Object.freeze({ ...baseHostValue, schema: schemaWithout('isX11CandidateEnv') }) }), HOST_SERVICE_LITERAL).length > 0);
+check('负对照：schema 缺 createX11Adapter ⇒ 判红（hub 拿不到平台适配器）',
+  serviceViolations(synthHost({ createSubpackageHost: () => Object.freeze({ ...baseHostValue, schema: schemaWithout('createX11Adapter') }) }), HOST_SERVICE_LITERAL).length > 0);
 check('负对照：provide 腿被抹掉（真宿主只挂属性）⇒ 判红',
   serviceViolations(synthHost({ provideSubpackageHost: (ctx) => { const value = baseHostMod.createSubpackageHost(); try { ctx[baseHostMod.HOST_SERVICE_NAME] = value; } catch { /* 只读 */ } return value; } }), HOST_SERVICE_LITERAL).length > 0);
 check('负对照：直调夹具腿不挂 ctx 属性（mock ctx 下子包取不到）⇒ 判红',

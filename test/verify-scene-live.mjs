@@ -408,9 +408,13 @@ const dispose = apply(mockCtx);
 // `packages/wallpaper/lib/`（P2-2 入包、P-F 批 1c 出户，ADR-0013 D14「实现入包、主包不留注册点」，
 // 由 `verify-route-ownership` 的 M10 钉住）。上游那条判据按"门面 apply 后即可用"写（单包单行假设）。
 // 处置与第 4 轮 `/avatar` 一致：**连组件一起 boot**，判据判什么一个字没改。
+// S5d 刀3：`wallpaper` 组件行现在**拥有省电（occlusion）hub 的生命周期**（hub 随族入包，由本组件
+// 会话的 disposers 收尾）。hub 在非 X11 环境会挂 30s 重试定时器 ⇒ 夹具必须把组件行的 teardown
+// 一起收掉，否则本脚本跑完进程不退出（真宿主里由行卸载/进程退出收尾，判据一个字没改）。
+const componentDisposers = [];
 if (typeof hostMod.applyComponent === 'function') {
   for (const comp of ['wallpaper', 'mascot-avatar', 'about-notice']) {
-    try { hostMod.applyComponent(mockCtx, {}, comp); } catch (err) {
+    try { componentDisposers.push(hostMod.applyComponent(mockCtx, {}, comp)); } catch (err) {
       console.log('  · 组件行 boot 失败（' + comp + '）：' + String(err && err.message));
     }
   }
@@ -7537,6 +7541,7 @@ check('negative control: 门面里重新出现被搬走的路由体会被同一�
   movedOut(hostSrc + '\n  jsonOut(404, { error: `未知素材源：${id}` });'));
 
 // ── teardown ────────────────────────────────────────────────────────────────
+for (const d of componentDisposers) { try { if (typeof d === 'function') d(); } catch { /* 收尾失败不影响判定 */ } }
 try { if (dispose) dispose(); } catch { /* ignore */ }
 delete process.env.DSH_WE_STEAM_ROOT;
 delete process.env.DSH_WE_UPLOAD_DIR;

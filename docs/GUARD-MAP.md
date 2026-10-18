@@ -60,7 +60,7 @@
 | `verify-module-layout.mjs` | `lib/index.js` `lib/settings-schema.js` `src/client.js` | ✅ |
 | `verify-mp4-vfs.mjs` | `lib/faststart.js` `lib/host-boot.js` `lib/kernel/host-session.js` `lib/mp4-vfs.js` |  |
 | `verify-occlusion-client.mjs` | `src/api-client.js` `src/live-layer-diag.js` `src/live-layer-gate.js` `src/live-layer-pointer.js` `src/live-layer-underlay.js` `src/live-layer-watch.js` `src/live-layer.js` `src/occlusion.js` | ✅ |
-| `verify-occlusion-hub.mjs` | `lib/index.js` `lib/json-response.js` `lib/occlusion/index.js` `lib/occlusion/rects.js` `lib/occlusion/x11.js` `lib/routes/occlusion.js` |  |
+| `verify-occlusion-hub.mjs` | `lib/index.js` `lib/json-response.js` `lib/occlusion/rects.js` `lib/occlusion/x11.js` `packages/wallpaper/lib/occlusion/index.js` `packages/wallpaper/lib/routes/occlusion.js` |  |
 | `verify-package-files.mjs` | `lib/http-body.js` `lib/index.js` `lib/pkg-read.js` | ✅ |
 | `verify-package-publish.mjs` | `lib/index.js` `lib/pkg-read.js` `src/client.js` | ✅ |
 | `verify-pet-bubble-timing.mjs` | `packages/pet-link/src/pet-link-tuner.js` `packages/pet-link/src/pet-link.js` |  |
@@ -153,13 +153,11 @@
 | `lib/media/video-preview.js` | 3 | `verify-cache-dir` `verify-cache-prune` `verify-video-preview` |
 | `lib/mp4-vfs.js` | 2 | `verify-mp4-vfs` `verify-scene-live` |
 | `lib/notice.js` | 1 | `verify-logging` |
-| `lib/occlusion/index.js` | 1 | `verify-occlusion-hub` |
 | `lib/occlusion/rects.js` | 1 | `verify-occlusion-hub` |
 | `lib/occlusion/x11.js` | 1 | `verify-occlusion-hub` |
 | `lib/pkg-read.js` | 4 | `verify-package-files` `verify-package-publish` `verify-scene-probe` `verify-scene` |
 | `lib/routes/cache-dir.js` | 1 | `verify-cache-dir` |
 | `lib/routes/diag.js` | 3 | `verify-layer-ownership` `verify-logging` `verify-scene-live` |
-| `lib/routes/occlusion.js` | 1 | `verify-occlusion-hub` |
 | `lib/routes/presets.js` | 1 | `verify-presets` |
 | `lib/routes/settings.js` | 2 | `verify-scene` `verify-settings-namespaces` |
 | `lib/scene-manifest.js` | 2 | `verify-scene-probe` `verify-scene` |
@@ -211,12 +209,14 @@
 | `packages/wallpaper/lib/client.wallpaper.js` | 8 | `live-frame-backfill-smoke` `verify-client-sync` `verify-client` `verify-picker-model` `verify-picker-props` `verify-picker-upload` `verify-playback-controls` `verify-transcode-state` |
 | `packages/wallpaper/lib/index.js` | 5 | `verify-contracts` `verify-scene-live` `verify-scene` `verify-token-domain` `verify-transcode-state` |
 | `packages/wallpaper/lib/legacy.js` | 4 | `verify-cache-dir` `verify-child-kill` `verify-contracts` `verify-scene-live` |
+| `packages/wallpaper/lib/occlusion/index.js` | 1 | `verify-occlusion-hub` |
 | `packages/wallpaper/lib/provision.js` | 3 | `e2e-web-media-origin` `verify-media-bridge` `verify-scene-live` |
 | `packages/wallpaper/lib/routes/inventory.js` | 2 | `verify-component-visibility` `verify-route-index` |
 | `packages/wallpaper/lib/routes/live-frame.js` | 1 | `verify-scene` |
 | `packages/wallpaper/lib/routes/media-bytes.js` | 3 | `verify-route-index` `verify-scene-live` `verify-scene` |
 | `packages/wallpaper/lib/routes/media-derived.js` | 1 | `verify-transcode-state` |
 | `packages/wallpaper/lib/routes/now-playing.js` | 2 | `verify-cache-dir` `verify-scene-live` |
+| `packages/wallpaper/lib/routes/occlusion.js` | 1 | `verify-occlusion-hub` |
 | `packages/wallpaper/lib/routes/props.js` | 1 | `verify-scene` |
 | `packages/wallpaper/lib/routes/scene-frame.js` | 2 | `verify-scene-frame-master` `verify-scene` |
 | `packages/wallpaper/lib/routes/scene-media.js` | 1 | `verify-scene` |

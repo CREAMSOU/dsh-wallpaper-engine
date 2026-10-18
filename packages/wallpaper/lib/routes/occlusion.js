@@ -1,10 +1,11 @@
 /**
  * routes/occlusion.js — **遮挡快照族**路由：`GET <BASE>/occlusion`。
  *
- * 为什么独立成文件：遮挡的生产端（`lib/occlusion/`）是一个自带心跳、降级与适配器
- * 重建的**活系统**，而路由层应当薄到零逻辑——hub 的快照 `getSnapshot()` 永不抛错、
- * 永不回空（见 `lib/occlusion/index.js` 头注释），所以这里**不需要任何防御性代码**，
- * 直接把快照 JSON 化发出去即可。把「活系统」收进 `lib/occlusion/`、把「一个只读
+ * 为什么独立成文件：遮挡的生产端（本包 `packages/wallpaper/lib/occlusion/`）是一个自带
+ * 心跳、降级与适配器重建的**活系统**，而路由层应当薄到零逻辑——hub 的快照 `getSnapshot()`
+ * 永不抛错、永不回空（见 `packages/wallpaper/lib/occlusion/index.js` 头注释），所以这里
+ * **不需要任何防御性代码**，直接把快照 JSON 化发出去即可。把「活系统」收进
+ * `packages/wallpaper/lib/occlusion/`、把「一个只读
  * 端点」收进本文件，依赖（`hub`）写在签名上（`c`），生命周期（`dispose`）由调用点
  * 推进 `c.disposers` —— 与其它路由族同一套分工。
  *
@@ -24,14 +25,15 @@
  *     `test/verify-json-response.mjs` 的棘轮盯着）。
  */
 
-// JSON 应答的唯一实现 —— 见 lib/json-response.js。
-import { sendJson } from '../json-response.js';
+// JSON 应答的唯一实现 —— 见主包 lib/json-response.js；本包（宿主半边）经 `c` 的 `http`
+// 面拿同一个实现（S5c 起四族的同一来路：DEPS 含 `'http'`、包入口 `http: <host>.http`；
+// 判据 test/verify-json-response.mjs 的来路 c）。
 
-/** 注入契约（P2-7A / ADR-0013 D12）：本族从 `c` 消费的**必需**键 —— 门面调用点必须逐键给到（判据 test/verify-inject-contracts.mjs 双向对账）。 */
-export const DEPS = ['disposers', 'base', 'hub', 'log', 'diag'];
+/** 注入契约（P2-7A / ADR-0013 D12）：本族从 `c` 消费的**必需**键 —— 调用点必须逐键给到（判据 test/verify-inject-contracts.mjs 双向对账）。 */
+export const DEPS = ['disposers', 'base', 'hub', 'log', 'diag', 'http'];
 
 export function registerOcclusionRoutes(webServer, c) {
-  const { disposers, base: BASE, hub, log, diag } = c;
+  const { disposers, base: BASE, hub, log, diag, http } = c;
   // trace 判定放 handler 内**现读**（对齐 lib/log.js 的环境闸门约定：不快照在
   // 注册那一刻）—— QA 中途开/关 DSH_WE_OCCLUSION_TRACE 立即生效，无需重挂插件。
   const tracing = () => process.env.DSH_WE_OCCLUSION_TRACE === '1';
@@ -54,7 +56,7 @@ export function registerOcclusionRoutes(webServer, c) {
       const trace = tracing();
       if (req.method !== 'GET') {
         res.setHeader('Allow', 'GET');
-        sendJson(res, 405, { ok: 0, error: 'method not allowed' });
+        http.sendJson(res, 405, { ok: 0, error: 'method not allowed' });
         // 405 也逐请求留痕：QA 用非 GET 探测方法面时同样要对账。
         if (trace) {
           traceLog(`${req.method} ${BASE}/occlusion -> 405 (allow: GET)`);
@@ -65,7 +67,7 @@ export function registerOcclusionRoutes(webServer, c) {
       const t0 = Date.now();
       const snap = hub.getSnapshot();
       // hub.getSnapshot() 永不抛错（含降级态）——这里不需要 try/catch。
-      sendJson(res, 200, snap);
+      http.sendJson(res, 200, snap);
       if (trace) {
         const ms = Date.now() - t0;
         traceLog(`GET ${BASE}/occlusion -> 200 gen=${snap.gen} backend=${snap.backend} rects=${snap.rects ? snap.rects.length : 'null'} (${ms}ms)`);

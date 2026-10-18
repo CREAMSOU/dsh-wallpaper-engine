@@ -7,7 +7,7 @@
  * `ts` 新鲜度，不关心底下是 X11 还是 Wayland —— hub 把这两件事隔开，让将来的
  * Wayland 适配器（KWin 脚本 / sway IPC / portal）只是**换一个 createAdapter**。
  *
- * ══ 快照契约（消费方：lib/routes/occlusion.js → src/occlusion.js → WebWallGL）═══
+ * ══ 快照契约（消费方：packages/wallpaper/lib/routes/occlusion.js → 主包 src/occlusion.js → WebWallGL）═══
  *   `{ ok:1, backend:'x11', epoch, gen, own:{w,h}, rects:[[x,y,w,h]…], ts }`
  *   · `rects` 已**相对自窗客户区原点**、单位是自窗像素（客户端按 innerWidth/own.w
  *     缩放到画布 CSS 像素）；`epoch` 标识坐标系来源，变 epoch ⇒ 渲染器全量重置；
@@ -26,7 +26,12 @@
  *   · `dispose()` 幂等；清掉全部定时器与适配器连接（进 `c.disposers`）。
  */
 
-import { isX11CandidateEnv, createX11Adapter } from './x11.js';
+// ══ 平台适配器的来路（S5d 刀3：hub 随壁纸子包出户）══════════════════════════════
+// 本文件不再 `import './x11.js'` —— 平台适配器与「是否 X11 会话」的判定留在主包
+// （`lib/occlusion/{x11,rects}.js`，x11 只是取数适配器、不是省电判据本身），经键表
+// `schema:` 面注入（`isX11CandidateEnv` / `createX11Adapter`）。两者都是**必需**输入：
+// 缺了就是接线错误，构造时大声抛 —— 绝不静默退化成"永远降级"（那会让省电功能无声失效，
+// 而不是红在测试里）。
 
 const POLL_INTERVAL_MS = 1000;   // 心跳：渲染器 3s 陈旧线的三倍余量。
 const EVENT_COALESCE_MS = 200;   // 事件触发的最小重算间隔（拖动风暴闸）。
@@ -40,10 +45,10 @@ const POLL_TIMEOUT_MS = 3_000;   // 单次 poll 的看门狗：x11 断连可能�
  * 所以缺省空实现、单测/探针里的单参回调都合法（形状真源见 `lib/log.js`）。
  *
  * @param {object} [o]
- * @param {import('../log.js').LogCall} [o.log] 日志被调用面（`log(msg, level?)`）；缺省空实现。
+ * @param {import('../../../../lib/log.js').LogCall} [o.log] 日志被调用面（`log(msg, level?)`）；缺省空实现。
  * @param {(data:any) => void} [o.diag] 宿主注入 `appendDiagLine` 包装（**单参**：`diag({ ev, … })`）。可省。
- * @param {Function} [o.createAdapter] 适配器工厂（缺省 `createX11Adapter`）。
- * @param {(env?:any) => boolean} [o.isCandidate] 候选环境判定（缺省 `isX11CandidateEnv`）。
+ * @param {Function} o.createX11Adapter **必需**：适配器工厂（主包 `lib/occlusion/x11.js`，经 `schema:` 面注入）。
+ * @param {(env?:any) => boolean} o.isX11CandidateEnv **必需**：候选环境判定（同上）。
  * @param {number} [o.pollMs] 兜底轮询间隔（缺省 1000ms）。
  * @param {number} [o.retryStartMs] 降级后重建适配器的重试间隔上限（缺省 30s）。
  * @param {number} [o.pollTimeoutMs] 单次 poll 的看门狗（缺省 3s）；0/负值 = 关闭。
@@ -53,14 +58,24 @@ const POLL_TIMEOUT_MS = 3_000;   // 单次 poll 的看门狗：x11 断连可能�
 export function createOcclusionHub({
   log = () => {},
   diag, // (obj) => void；宿主注入 appendDiagLine 包装。可省（单测/探针）。
-  createAdapter = createX11Adapter,
-  isCandidate = isX11CandidateEnv,
+  isX11CandidateEnv: isCandidate, // 必需：见文件头「平台适配器的来路」。
+  createX11Adapter: createAdapter, // 必需：同上。
   pollMs = POLL_INTERVAL_MS,
   retryStartMs = RETRY_START_MS,
   pollTimeoutMs = POLL_TIMEOUT_MS, // 单测可调小；0/负值 = 关闭看门狗
   now = () => Date.now(),
   ownPid, // 仅透传给适配器（探针/单测注入用）；undefined ⇒ 适配器取 [pid, ppid]
-} = {}) {
+} = /** @type {any} */ ({})) {
+  // 大声抛（不静默 undefined）：hub 出户后平台能力只能经注入来，缺一个就会在
+  // `start()` 里变成 TypeError 被 catch 成"假降级"——省电功能无声失效，测试全绿。
+  const missing = [];
+  if (typeof isCandidate !== 'function') missing.push('isX11CandidateEnv');
+  if (typeof createAdapter !== 'function') missing.push('createX11Adapter');
+  if (missing.length) {
+    throw new Error('[wallpaper-engine] createOcclusionHub 缺少必需注入：' + missing.join('、')
+      + '（hub 已随壁纸子包出户，平台适配器与会话判定经键表 schema: 面拿主包实现）');
+  }
+
   let adapter = null;
   let started = false;
   let disposed = false;
@@ -168,7 +183,6 @@ export function createOcclusionHub({
       // require-atomic-updates（噪声，非竞态）：`busy` 是重入锁 —— 函数开头 `if (busy || …) return;`
       // 保证同一时刻至多一个 recompute 在飞，写者只有它自己（进入时置真、这里置假），事件回调只读它。
       // eslint 报的是"读过后跨 await 再写"的形状，语义却是"我这一趟跑完了"。
-      // eslint-disable-next-line require-atomic-updates -- 见上方注释：busy 是重入锁，写者只有本趟自身。
       busy = false;
       if (pollGuard) clearTimeout(pollGuard);
       // trailing 补算：busy 中 / 合并窗内被丢的事件在这里补上一拍，不让事件退化成

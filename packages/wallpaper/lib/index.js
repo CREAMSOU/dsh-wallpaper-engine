@@ -59,6 +59,10 @@ import { registerSceneFrameRoutes } from './routes/scene-frame.js';
 import { registerSceneServeRoutes } from './routes/scene-serve.js';
 import { registerSceneMediaRoutes } from './routes/scene-media.js';
 import { registerLiveFrameRoutes } from './routes/live-frame.js';
+// S5d 刀3：遮挡/省电判据源整族入包 —— 生产端（x11 探针 + 心跳/降级）在本包
+// `lib/occlusion/`，只读端点在本包 `lib/routes/occlusion.js`；hub 由本入口在行装载时现建。
+import { createOcclusionHub } from './occlusion/index.js';
+import { registerOcclusionRoutes } from './routes/occlusion.js';
 
 /** patch 行 slug（`cordis.patch.yml` 里该行 `name` 的完整值，两处逐字相等）。 */
 export const name = 'dsh-plugin-wallpaper-engine-wallpaper';
@@ -117,8 +121,24 @@ export function applyImpl(root, _rawConfig, c) {
   // 本组件自己要的两个键：后端启动决策每次现读设置（`readConfig`），缓存根传**访问器**。
   const { readConfig, cacheBaseDir } = view;
 
-  // ⚠️ **注册期必须包 try**（P2-4）：本组件一次性注册**二十八条**路由（媒体状态 5 + WE 素材源 2
-  // + S5c 刀2 的 9 族 21 条），
+  // S5d 刀3. 遮挡/省电判据源随本组件行装载：hub 在**本入口**现建（x11 探针 + 心跳 + 降级），
+  // dispose 推进**本组件会话**的 `disposers` —— 保 S7.1 行级开关（关包行 ⇒ hub 与 `/occlusion`
+  // 一起撤，不碰主包其它族）。日志/诊断走键表同源绑定：`log:` 源型与 `kernel:appendDiagLine`。
+  // 行为变化（有意）：hub 生命周期从「主包 apply」变为「wallpaper 行装载」—— 这正是
+  // 「省电判据源 + 策略同包」的定义；浏览器侧仍只经 HTTP（`/occlusion`）消费，零跨包调用。
+  // 平台适配器 / 会话判定留在主包（`lib/occlusion/x11.js`），经键表 `schema:` 面注入 ——
+  // 缺键会让 `createOcclusionHub` 大声抛（不静默退化成"永远降级"）。
+  const occlusionHub = createOcclusionHub({
+    log: keys.log.tag('occlusion'),
+    diag: (obj) => keys.appendDiagLine('occlusion', obj),
+    isX11CandidateEnv: keys.isX11CandidateEnv,
+    createX11Adapter: keys.createX11Adapter,
+  });
+  disposers.push(() => occlusionHub.dispose());
+  occlusionHub.start().catch(() => { /* hub.start 不外抛；兜底防 unhandled（主包原实现同款） */ });
+
+  // ⚠️ **注册期必须包 try**（P2-4）：本组件一次性注册**二十九条**路由（媒体状态 5 + WE 素材源 2
+  // + S5c 刀2 的 9 族 21 条 + S5d 刀3 的遮挡 1 条），
   // 中途抛错时已经推进 `disposers` 的那几条会留下（`mediaBackend.stop()` 也在同一个 disposer 列表里，一并丢）
   // ⇒ 下一次启用撞 `webserver: duplicate … route`，且桥的子进程无人收。`teardown()` 自己吞异常，
   // 原错照抛（装载失败必须仍然是红的）。
@@ -190,6 +210,17 @@ export function applyImpl(root, _rawConfig, c) {
     // 4/5/6. 上传资产族（导入 / 删除 / 切换上传目录）→ 本包 `lib/routes/upload.js`。
     registerUploadRoutes(webServer, {
       ...keys, disposers, http: keys.http,
+    });
+
+    // S5d 刀3. 遮挡快照族（`/occlusion`）→ 本包 `lib/routes/occlusion.js`（一族一条）。
+    // ⚠️ 调用点形态被判据钉住（test/verify-occlusion-hub.mjs 的 D3）：`hub` 与 log/diag 必须
+    // 在这个字面量里逐键给到，引入中间变量/少给 `hub` 都判红。`diag` 用内核 `appendDiagLine`
+    // 的同源绑定（与主包原调用点同一份实现）。
+    registerOcclusionRoutes(webServer, {
+      ...keys, disposers, base, hub: occlusionHub,
+      log: keys.log.tag('occlusion'),
+      diag: (obj) => keys.appendDiagLine('occlusion', obj),
+      http: keys.http,
     });
   } catch (error) {
     teardown();
