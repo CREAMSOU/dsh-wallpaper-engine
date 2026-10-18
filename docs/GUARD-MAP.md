@@ -214,7 +214,7 @@
 | `packages/parallax/src/client.js` | 0 | **（无）** |
 | `packages/parallax/src/ext-parallax.js` | 1 | `verify-scene-live` |
 | `packages/parallax/src/parallax-layer.js` | 1 | `verify-scene-live` |
-| `packages/pet-link/lib/client.pet-link.js` | 1 | `verify-client-sync` |
+| `packages/pet-link/lib/client.pet-link.js` | 2 | `verify-client-sync` `verify-client` |
 | `packages/pet-link/lib/index.js` | 2 | `verify-pet-hotplug-integration` `verify-pet-package` |
 | `packages/pet-link/lib/prepared.js` | 2 | `verify-pet-hotplug-browser` `verify-pet-hotplug-integration` |
 | `packages/pet-link/lib/routes/pet-link.js` | 1 | `verify-pet-hotplug-host` |

@@ -6,7 +6,7 @@
 #     two routes, the `mascot-avatar` component row that owns the mascot image +
 #     the two session avatars, and the `media-bridge` component row that owns the
 #     system media integration;
-#   - three owned by `packages/{fx,parallax,fonts}`: the subpackages this main
+#   - four owned by `packages/{fx,parallax,fonts,pet-link}`: the subpackages this main
 #     package depends on (BUNDLE-SPLIT §7.1). Semantics A (§2.3) — the main package
 #     owns these rows, each `name` is the subpackage's REAL package name, and this
 #     patch is the single source of truth for the row set; a subpackage's own
@@ -61,10 +61,10 @@
       # webServer is a hard dependency (`inject = ['webServer']` in lib/index.js):
       # the Loader waits for the HTTP server to mount, so a headless/TUI profile
       # without one does not load this bundle at all.
-    # ── P-A 子包行（BUNDLE-SPLIT §7.1）────────────────────────────────────────────
+    # ── 子包行（P-A 三包 + §7.10 可选 pet-link；BUNDLE-SPLIT §7.1/§7.10）────────────────────────────────────────────
     # 行的 name 是**子包的真名**（不是主包的子路径）：开发期解析靠
     # `scripts/dev-link-subpackages.mjs` 在 <profile>/node_modules 下建的目录 junction，
-    # 与发布期 pnpm hoist 布局同形（§8.1 spike 结论）。主包 apply 会先 resolve 这三行，
+    # 与发布期 pnpm hoist 布局同形（§8.1 spike 结论）。主包 apply 会先 resolve 这些子包行，
     # 解析不到就**大声抛错**（宿主对行级失败是静默的 —— §4.1 I5）。
     # 可选桌宠联动；没有 dsh-pet 或首次准备未完成时保留吉祥物原生行为。
     - id: wallpaper-engine-pet-link

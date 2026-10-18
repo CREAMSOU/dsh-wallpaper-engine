@@ -1,7 +1,7 @@
 # 插件包重构手册 —— 多包拆分（主包 + 核心子插件 + 边缘子插件）
 
 > **哈希说明（这条线被重写过两次，旧哈希多半已不在现行 `main` 上）**：本文件里的短哈希是**当时那条线上的**历史哈希。
-> **现行线 = `main` @ HEAD**（复算：`git rev-parse --short HEAD`；本节写于 `ddfe63de`，2026-10-15 收口时点）：拆包那笔 squash `6385b62e`（父 = 上游 merge `a86923b7`）只是它的**祖先**，
+> **现行线 = `main` @ HEAD**（复算：`git rev-parse --short HEAD`；**本文件的现状基线已同步到 `main` @ `5f87e698`，2026-10-18 复核**；本节原写于 `ddfe63de`，2026-10-15 收口时点，该哈希只作历史）：拆包那笔 squash `6385b62e`（父 = 上游 merge `a86923b7`）只是它的**祖先**，
 > 其后还有追版本与多次上游 merge 若干笔 ⇒ **文中把 `6385b62e` 当"现行尖端"读的地方，一律以此行为准**
 > （该哈希现在只用于指 §13.1 那次审查的对象）。本文件自身在本机工作树里可能另有未提交改动。
 > 追版本第二期那一笔（108 笔压缩，父 = `c43a936`）以 tag `catchup-2nd` 标注，但**该 tag 只被
@@ -20,8 +20,8 @@
 
 **基线**：现行 `main` 相对 `origin/main` **behind 0**（复算：`git rev-list --left-right --count origin/main...HEAD`）。
 **拆包起点** = **单包 + 4 个插件行**（`dsh-plugin-wallpaper-engine`，即 `cordis.patch.yml` 的那四条 `insert`）；
-**现行形态**（2026-10-16：P-A 三子包 + P-F 三组件包出户）= **主包 + 6 个子包** = 3 个独立子包 `packages/{fx,parallax,fonts}` + 3 个已出户的组件包 `packages/{about-notice,mascot-avatar,media-bridge}`（复算：`git ls-files 'packages/*/package.json'`）⇒ patch 共**七条** `insert`
-（1 条主行 + 3 条组件包行 + 3 条子包行；见 §7.1 的实况块与 §7.8）。
+**现行形态**（2026-10-17，PR #5 之后）= **主包 + 7 个子包** = 3 个独立子包 `packages/{fx,parallax,fonts}` + 3 个已出户的组件包 `packages/{about-notice,mascot-avatar,media-bridge}` + 第 7 个**可选**子包 `packages/pet-link`（PR #5，merge `617b2b43`；安装器形态见 §7.10）（复算：`git ls-files 'packages/*/package.json'`，2026-10-18 = 7 条；`test/tools/packages.mjs` 的 `FLOORS.packages` = 7）⇒ patch 共**八条** `insert`
+（1 条主行 + 3 条组件包行 + 4 条子包行 = 8；复算：数根 `cordis.patch.yml` 的 `- id:`，或 `node test/tools/host-route-index.mjs`；见 §7.1 的实况块、§7.8 与 §7.10）。
 **目标形态** = **主包 + N 个子插件包**（版本一致、一次安装落地、代码各自成包、第三方代码除外）。
 
 ---
@@ -47,7 +47,7 @@
 | **做法**（"怎么拆"） | 本文与 §14／附录 G 管 | 本文 §2–§12、§14 的 `D-*`、附录 G 的 `J1`–`J7` | 本轮细化的两条（开关档位 / 重启边界）都是**做法**档，不动 `D1`–`D5` |
 | **非目标**（"明确不做"） | 不再反复讨论 | ADR-0013 §D 的 `D16`–`D19` | 改它要新 ADR（ADR-0013 §A `D5` 的后半句） |
 
-> ⚠️ **两个编号系统不要混**：现行 ADR-0013 的决策是 `D1`–`D19`；本文 §14 的待决策是 `D-1`–`D-19`（`D-*` 为本文编号，与 ADR-0013 的 `D*` 不同体系；当前未结项见 §14 表头）；附录 G 的入选判据是 `J1`–`J7`；代码注释与测试里反复出现的 `P0` / `P1` / `P2-7` / `P2-8` / `P2-11` 是**上一轮那个编号体系**的完成记录（见附录 E 与 `CHANGELOG.md` / git 历史），**不是**本文的阶段名（本文的阶段是 `P-A`…`P-E`）。两者编号体系不同，别互相换算。
+> ⚠️ **两个编号系统不要混**：现行 ADR-0013 的决策是 `D1`–`D22`（`D20`–`D22` 于 2026-10-16 追加，见 ADR-0013 的 §A/§D 与文内锚点）；本文 §14 的待决策是 `D-1`–`D-19`（`D-*` 为本文编号，与 ADR-0013 的 `D*` 不同体系；当前未结项见 §14 表头）；附录 G 的入选判据是 `J1`–`J7`；代码注释与测试里反复出现的 `P0` / `P1` / `P2-7` / `P2-8` / `P2-11` 是**上一轮那个编号体系**的完成记录（见附录 E 与 `CHANGELOG.md` / git 历史），**不是**本文的阶段名（本文的阶段是 `P-A`…`P-E`）。两者编号体系不同，别互相换算。
 >
 > **旧锚点 → 现落点**（只留仍然会被读到的；表中三处**已完成**、其判据各自在跑，所以"现落点"是判据文件而不是本文的待办节）：
 
@@ -148,12 +148,16 @@ Cordis 的级联只有**一个判据**：`name in fiber.inject`（`cordis/src/re
 
 **现状（必须原样保留）**：
 
-| 行 id | 行 `name`（现为子路径 specifier） |
+| 行 id | 行 `name`（现行 = 根 `cordis.patch.yml` 的**真名**） |
 |---|---|
 | `wallpaper-engine` | `dsh-plugin-wallpaper-engine` |
-| `wallpaper-engine-about-notice` | `dsh-plugin-wallpaper-engine/about-notice` |
-| `wallpaper-engine-mascot-avatar` | `dsh-plugin-wallpaper-engine/mascot-avatar` |
-| `wallpaper-engine-media-bridge` | `dsh-plugin-wallpaper-engine/media-bridge` |
+| `wallpaper-engine-about-notice` | `dsh-plugin-wallpaper-engine-about-notice`（P-F 前 = `dsh-plugin-wallpaper-engine/about-notice`） |
+| `wallpaper-engine-mascot-avatar` | `dsh-plugin-wallpaper-engine-mascot-avatar`（P-F 前 = `…/mascot-avatar`） |
+| `wallpaper-engine-media-bridge` | `dsh-plugin-wallpaper-engine-media-bridge`（P-F 前 = `…/media-bridge`） |
+| `wallpaper-engine-pet-link` | `dsh-plugin-wallpaper-engine-pet-link`（PR #5 新增；可选行、安装器形态 `S3.8a`，见 §7.10） |
+
+> 本表的**现行真源** = 根 `cordis.patch.yml`（共 8 条 `- id:`，复算：读该文件；`fx` / `parallax` / `fonts` 三行同用真名，
+> 因它们**从未有过子路径旧名**、不涉及兼容，未列入上表的"旧 → 新"对照）。
 
 **开关机制的两条硬事实**（决定兼容策略）：
 1. 开关写入 = `writePluginEnabled(filename, id, name, enabled)`：在 profile 的 `cordis.patch.yml` 里找
@@ -170,7 +174,7 @@ Cordis 的级联只有**一个判据**：`name in fiber.inject`（`cordis/src/re
 包内**没有** `lib/components/`；三个组件真名在 registry **全 E404**（复算见 §15.7）。
 ⇒ **三条组件行从未出现在任何发行物里 ⇒ 不存在"曾关过该组件"的用户**（用户口径，2026-10-16）
 ⇒ 本节"保留 `id` 与 `name`"**对它们不适用**：§15 的搬迁可以把行 `name` 直接改成**真实包名**
-（`id` 仍按本节末尾"先把 id 定死"保持不变），**零迁移代价**成立。上面那张表里三行组件行的"现状（必须原样保留）"随之作废。
+（`id` 仍按本节末尾"先把 id 定死"保持不变），**零迁移代价**成立。上面那张表里三行组件行原来的"现状（必须原样保留）"随之作废（表中已改成真名）。
 
 **✅ 已作废（2026-10-16）**：组件行**从未发布** ⇒ 无老用户 ⇒ 无兼容负担，本节上面那条"保留 `id` 与 `name`"对它们不再适用（§15.1 / §15.2 / §14 D-15）。
 三行 `name` 已直接改为真名 `dsh-plugin-wallpaper-engine-<sub>`，`id` 冻结不变（见本节末尾"先把 `id` 定死"）；主包 `exports` 的 `./<c>` 子路径三连已随 P-F 出户删除，该兼容通路不再存在。
@@ -412,7 +416,7 @@ Cordis 的级联只有**一个判据**：`name in fiber.inject`（`cordis/src/re
 
 ### 7.0 起步态（已达成，作为基线）
 
-单包 + 4 行（**这是拆包起点**；现行形态 = 7 行，见文件头「基线」）；D3 的界面级开关语义已落地（状态面 `/inventory.components`、可见面声明 `lib/component-visibility.js`、
+单包 + 4 行（**这是拆包起点**；现行形态 = 8 行，见文件头「基线」）；D3 的界面级开关语义已落地（状态面 `/inventory.components`、可见面声明 `lib/component-visibility.js`、
 判据 `test/verify-component-visibility.mjs`）；守卫链 `node test/run-guards.mjs all` **全绿**
 （步数与地板以 `test/run-guards.mjs` 与 `test/verify-package-files.mjs` 的 `CHAIN_FLOOR` 为准，本文不抄数）。
 **度量口径见本文件末的附录 E；历史进度与追版本日志见 `CHANGELOG.md` 与 git 历史。**
@@ -644,6 +648,19 @@ Cordis 的级联只有**一个判据**：`name in fiber.inject`（`cordis/src/re
 - **前提已勘误**：三条组件行**从未发布**（已发布物只有主行）⇒ **不存在"曾关过该组件"的用户**，
   行 `name` 可直接改真名、**零迁移代价**（§15.1 / §3 的范围勘误）。
 - **完整计划与须知见 §15**（三笔账的边界 / 落点硬约束 / 判红面 / 前置决策 / 复算入口）。
+
+### 7.10 落地账 · 第七包 `pet-link`（PR #5，2026-10-17）
+
+> **位置**：**可选**桌宠联动**完整子包** `packages/pet-link/`，与 §7.1 的 P-A 子包**同形**（自带 `package.json` / `cordis.patch.yml` / `icon.png` / `locale/{en,zh}.json` / `lib/` / 浏览器产物），行 `wallpaper-engine-pet-link`（`id` 冻结，`name` = 真名 `dsh-plugin-wallpaper-engine-pet-link`）。
+> **不属 §7.9 的 P-F 组件行统一**：它**从来不是** `lib/components/<sub>/` 的一格，而是独立功能子包（"一功能 = 一包 + 一条行"的另一实例）；P-F 讲的三格与它无账目关系。
+
+- **历史**：功能 `ee30a85c`（2026-10-16，含 12 条 pet 判据入链）→ PR #5 merge `617b2b43`（2026-10-17）→ 浏览器半边 `491282f7`（2026-10-17）**收口成一般形态**（子包自出产物）→ `e0780de6`（合并收尾：守卫登记 / 生成物重算 / `SUBPACKAGE-GRAPH` 与 ADR 同步）→ `5f87e698`（链地板收到实测 + `test/verify-pet-link.mjs`）。
+- **形态 ①（可选）**：行未装 / 桥接未准备 / 桌宠不在当前网页 / 联动关闭 ⇒ 吉祥物**保留 wallpaper 原生行为**；关掉本行只撤桌宠联动，不影响壁纸与另 7 行。
+- **形态 ②（安装器形态 = ADR-0014 §S3.8a）**：`exports['./install']` = `./tools/install-bridge.mjs`；`files` 在基础五项（`lib/` `cordis.patch.yml` `locale/` `icon.png` `package.json`）后依次含 `tools/` / `assets/` / `src/`。**安装器必须显式调用**（`node packages/pet-link/tools/install-bridge.mjs …`），**不挂自动安装**，也不因此给主包或本包加 `dsh-pet` / Electron 依赖（`peerDependencies` 只有可选的 `@deepseek-ai/dsh-host-webserver`）。
+- **形态 ③（浏览器半边）**：包内 `src/client.js` + `client.build.json`（`entry` / `artifact` / `inline` 配方）⇒ 产物 `packages/pet-link/lib/client.pet-link.js`；**`FLOORS.clientArtifacts` 随 4→5**（收口前源码由主包 `scripts/build-client.mjs` 内联、本包无自有产物）。调参面板（`Ctrl+Shift+D`）随半边内联，属维护工具、非产品功能。功能面 = 九段联动动画 + 五张气泡配图 + 四条逻辑 + 两个彩蛋（条数复算见包内 `README.md` 与 `src/pet-link-actions.json`）。
+- **形态 ④（主包侧接线）**：`lib/subpackage-boot.js` 的 `SUBPACKAGE_KEY_TABLE` 登记 `'pet-link'`（只登记它真用的 `base` / `runComponent` / `handOffTeardown`，薄面）；`src/client.js` 经 `host.registerPetLink()` 门面（`petLink.*` 调用点文本零改动；门面缺席即抛、回落到原生行为）；`src/extension-registry.js` 加 `petLink` 服务槽（登记 / 重复登记判红 / 未装载 ⇒ `null`）；译文自包内 `src/i18n-copy-pet-link.js` 搬到主包 `src/`（`491282f7`）并由 `src/i18n-copy.js` 并入 `WE_I18N_EN`；`package.json` 开发期接线 = `devDependencies` + `file:packages/pet-link`（**不写 `dependencies`**，见 §10.1 #14）与 3 条 `verify:pet-link*` 脚本。
+- **判据**：12 条 pet 判据已入**硬档**（`test/run-guards.mjs` 的 `VERIFY_STEPS`：`verify-pet-package` / `-hotplug-host` / `-hotplug-client` / `-rope-entry` / `-tuner` / `-bubble-timing` / `-mascot-motion` / `-egg1-motion` / `-egg1-rebound` / `-sidebar-rebound` / `-egg2-motion` / `-follow`；复算：`node test/run-guards.mjs verify`）。
+- **仍未做**：本包不改变 §7.4 / §7.5 的未开工状态（P-D、P-E 仍未开工；`packages/ui` 仍未建；§7.9 的账③ 未做；字体预设面判据仍未落；`D-9` / `D-17`–`D-19` 仍待定见 §14）—— **别把本节读成"整线完工"**。本包**是否随主包发布**、发布形态（`dependencies` 精确版本）仍归 §12 / `D-18`。
 
 ---
 
@@ -1070,7 +1087,7 @@ Cordis 的级联只有**一个判据**：`name in fiber.inject`（`cordis/src/re
 > - **判据**：`test/verify-subpackage-boot.mjs` 新增 ②b 段（合成 `$DSH_HOME` 的发现口径正/负两态、
 >   默认解析根真 fs 正/负两态、两条腿的接线与顺序、旁路开关、真源码变异体），并同步扩了文件头的判据口径。
 > - **读数（2026-10-16 实测，复算见下）**：`node test/verify-subpackage-boot.mjs` = ALL PASSED（34 条）；
->   `node test/run-guards.mjs all` = 全部 86 步 exit 0；真机探针 = 装载根 `["desktop","web"]`、六行全解析、
+>   `node test/run-guards.mjs all` = 全部 86 步 exit 0；真机探针 = 装载根 `["desktop","web"]`、六行全解析（原文读数 6 条子包行；加入 `pet-link` 行后应为 7 条，复算 `node test/verify-subpackage-boot.mjs`）、
 >   人造缺行立刻抛错并指认 profile 名 + 包名。
 > - **复算**：`node test/verify-subpackage-boot.mjs`；人造缺行探针见本块（`env.DSH_HOME` 指向合成 home）。
 
@@ -1152,11 +1169,15 @@ Cordis 的级联只有**一个判据**：`name in fiber.inject`（`cordis/src/re
 `scripts/dev-link-subpackages.mjs:34-37`；批 2 让组件包进构建循环（配方住包内 `client.build.json`，
 构建器入口仍是主包的 `scripts/build-client.mjs`，§10.1 #11）。
 
-**`test/tools/packages.mjs:53` 的 `FLOORS` 为什么不用改**：三项都数"包"、不数目录类型 ——
-`packages: 6`（主包不计入）搬完仍是 3+3、`rows: 7`（行数不变）；
-`clientArtifacts` 已从 3 **抬到 4**（P-F 批 1c：`main+fonts+fx+parallax` 四份产物，且
-`test/verify-client-sync.mjs` 直接 import 这**同一个常量** ⇒ 两处不会再一高一低）。
-前提是搬走的目录**仍自带直接位于其下的 `package.json`**（`:219-240` 只认直接子目录）。
+**`test/tools/packages.mjs` 的 `FLOORS` 每次加包/加产物都实测抬过（不是"不用改"）**：三项都数"包"、不数目录类型，
+现行 `FLOORS = { packages: 7, clientArtifacts: 5, rows: 8 }`（复算：读 `test/tools/packages.mjs` 的同名常量，
+或 `node test/tools/packages.mjs selftest`）：
+`packages: 7`（主包不计入）= 3 组件包 + `fx` / `parallax` / `fonts` / `pet-link` 四子包（P-A 后 3 → P-F 后 6 → PR #5 后 7）；
+`rows: 8` = 根 patch 的 8 条 `insert`（PR #5 加 `wallpaper-engine-pet-link` 行）；
+`clientArtifacts` 先由 P-F 批 1c 从 3 **抬到 4**（`main+fonts+fx+parallax` 四份产物），
+再由 PR #5 的 `491282f7`（浏览器半边收口成一般形态）**4→5**（`+pet-link`），且
+`test/verify-client-sync.mjs` 直接 import 这**同一个常量** ⇒ 两处不会再一高一低。
+前提是每个包**仍自带直接位于其下的 `package.json`**（`:219-240` 只认直接子目录）。
 
 **批 1c 实测（三格全出户 ⇒ 上表的"必红"逐条已处置）**：`verify-route-ownership` / `verify-route-index` /
 `verify-component-face` / `verify-component-visibility` / `verify-subpackage-manifests` 全部改成**声明面驱动**
@@ -1202,9 +1223,10 @@ node test/run-guards.mjs all            # 硬档 + 软档 + docs + smoke；必�
   `lib/*.js`（serve / inventory / faststart / upload-store / upload-dir / cache-dir / fs-paths / pkg-read /
   scene-manifest / shim-seed / diag-trace / http-lifecycle / http-body / json-response / wallpaper-scan /
   steam-discovery / we-assets / we-props / we-focus-guard / media-origin / mp4-vfs / startup-sweep / host-boot /
-  log / notice …）、`packages/<pkg>/**`（六个独立子包：三格组件行 `about-notice` / `mascot-avatar` / `media-bridge` + `fonts` / `fx` / `parallax`；`lib/components/` 已随 `6dfb431d` 删除）、`lib/webwallgl/*`（自家模板 / 宿主桥，**不是引擎**）。
-- **浏览器半边**：`src/**` 的构建期内联模块（清单的**唯一真源** = `scripts/build-client.mjs` 的 `INLINE_MODULES`）
-  → 单产物 `lib/client.js`（生成物，不入库）。
+  log / notice …）、`packages/<pkg>/**`（**七个独立子包**：三格组件行 `about-notice` / `mascot-avatar` / `media-bridge` + `fonts` / `fx` / `parallax` + 可选桌宠 `pet-link`（安装器形态，§7.10）；`lib/components/` 已随 `6dfb431d` 删除）、`lib/webwallgl/*`（自家模板 / 宿主桥，**不是引擎**）。
+- **浏览器半边**：主包 `src/**` 的构建期内联模块（清单的**唯一真源** = `scripts/build-client.mjs` 的 `INLINE_MODULES`）
+  → 主包单产物 `lib/client.js`（生成物，不入库）；各带浏览器半边的子包按包内 `client.build.json` 配方自产
+  `packages/<pkg>/lib/client.<pkg>.js` —— **共 5 份**（`FLOORS.clientArtifacts`，含 `pet-link`）。
 - **资产**：`lib/about/**`、`lib/fontsets/**`、`lib/glass-presets/**`、`lib/types/**`；仓库根 `assets/**`（不进包）。
 - **发布面**：`package.json` 的 `files`（逐文件白名单）/ `exports`（主入口 + `./client` + `./subpackage-boot.js` + patch + package.json；**组件三连已随 P-F 出户**，见各 `packages/<pkg>/package.json`）/
   `peerDependencies`（宿主 `@deepseek-ai/*` 的兼容锚）—— 逐条以该文件为准。

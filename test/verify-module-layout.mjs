@@ -326,12 +326,35 @@ console.log('\n③ 共享内核白名单：INLINE_MODULES 里非 src/ 的项只�
     '注入后越界=[' + injected.join(', ') + ']');
 }
 
+/**
+ * 规则 ④ 的**窄豁免**判定：开发面（`scripts/` / `test/`）里解析到仓库根 `.artifacts/` 下的相对路径。
+ * 这些路径指向**测试运行后才 `mkdirSync`** 的截图/临时目录（`.artifacts/` 在 `.gitignore` 里），
+ * 静态检查时不存在是正常状态；若不放行，这条判据的结果会取决于"本机上次跑没跑过那几个浏览器冒烟"
+ * —— 同一份代码在不同工作区忽红忽绿。豁免面刻意压到最窄：
+ *   · 只放行**开发面**（`lib/` 的运行期依赖边不豁免：宿主代码不许依赖测试产物）；
+ *   · 只放行仓库根 `.artifacts`（该目录自身或其下路径；`artifacts/`、`.artifacts-other/` 照旧判红）；
+ *   · 只认**解析后的根相对路径**（不按说明符字面量匹配 ⇒ 换个写法也绕不过去）。
+ * 反方向由本节负对照 4 钉住：普通缺失路径、以及 `lib/` 指向 `.artifacts/` 的边仍判红。
+ */
+const RUNTIME_ARTIFACTS_DIR = '.artifacts';
+function isRuntimeArtifactSpec(fromRel, resolved) {
+  const devSurface = fromRel.startsWith('scripts/') || fromRel.startsWith('test/');
+  return devSurface
+    && (resolved === RUNTIME_ARTIFACTS_DIR || resolved.startsWith(RUNTIME_ARTIFACTS_DIR + '/'));
+}
+
 // ═══ ④ 相对说明符必须解析到真实文件（移动代码 ⇒ 相对路径必须重解析）════════════
 // 为什么需要：把一段代码从 `lib/index.js` 搬进 `lib/routes/` 时，块里的相对说明符会**按新位置
 // 重新解析**。静态 import 走这一步会在加载期直接抛（响亮、易查），而**动态 `import()` 的拒绝是
 // 运行期、且常被 try/catch 吞成业务错误** —— 实测：scene 帧提取的那句
 // `await import('./pkg-read.js')` 搬进 `lib/routes/` 后指向一个不存在的文件，最终表现是
 // 《无可用纹理》的 422，看起来像数据问题而不是路径问题。所以判据按"说明符必须解析到真实文件"。
+//
+// 边界（唯一窄豁免）：开发面（`scripts/` / `test/`）里解析到**仓库根 `.artifacts/`** 下的路径
+// 放行 —— 那些目录由浏览器冒烟**运行时 `mkdirSync`**（`.artifacts/` 在 `.gitignore` 里），
+// 静态不存在是正常状态；否则同一份代码会因为"本机上次跑没跑过 pet 浏览器测试"忽红忽绿。
+// 豁免只到这一层：`lib/` 的运行期依赖边不豁免（宿主代码不许依赖测试产物），其它缺失路径照旧判红
+// （由本节最后的负对照 4 钉住）。判定见 `isRuntimeArtifactSpec`。
 console.log('\n④ 相对说明符必须解析到真实文件');
 {
   // Node 式解析：说明符可以省略扩展名（`require('./lib/encoder')` ⇒ `./lib/encoder.js`），
@@ -358,15 +381,25 @@ console.log('\n④ 相对说明符必须解析到真实文件');
   const specsOf = (rel, text) => (rel.startsWith('lib/') ? scanEdges(stripComments(text)) : devSpecifiers(text));
   // 目录也算命中（`new URL('..', import.meta.url)` 指的就是目录；模块说明符另有 index 探测）。
   const resolvesDirOk = (rel) => resolves(rel) || (() => { try { return existsSync(join(ROOT, rel)) && statSync(join(ROOT, rel)).isDirectory(); } catch { return false; } })();
-  const missing = [];
-  for (const { rel, text } of allSources) {
-    for (const { form, spec, allowDir } of specsOf(rel, text)) {
-      const resolved = resolveRelative(spec, rel);
-      if (!resolved) continue; // node: 内置 / 裸包名：不由本判据负责
-      const ok = allowDir ? resolvesDirOk(resolved) : resolves(resolved);
-      if (!ok) missing.push(`${rel} → ${spec}（${form}）`);
+  // 判据本体（生产扫描与负对照**共用同一份**，避免"负对照测的是另一个实现"）：
+  // 坏 = 解析不到**且**不在运行时产物窄豁免里。返回两桶，负对照要能分别看到。
+  const collectMissing = (sources) => {
+    const bad = [];
+    const exemptRuntime = [];
+    for (const { rel, text } of sources) {
+      for (const { form, spec, allowDir } of specsOf(rel, text)) {
+        const resolved = resolveRelative(spec, rel);
+        if (!resolved) continue; // node: 内置 / 裸包名：不由本判据负责
+        const ok = allowDir ? resolvesDirOk(resolved) : resolves(resolved);
+        if (ok) continue;
+        const tag = `${rel} → ${spec}（${form}）`;
+        if (isRuntimeArtifactSpec(rel, resolved)) exemptRuntime.push(tag);
+        else bad.push(tag);
+      }
     }
-  }
+    return { bad, exemptRuntime };
+  };
+  const { bad: missing, exemptRuntime } = collectMissing(allSources);
   // 覆盖面：扫描集非空且至少扫出一条相对边，否则这条断言是空对空
   const relativeEdges = allSources.flatMap(({ rel, text }) => specsOf(rel, text)
     .map(({ spec }) => resolveRelative(spec, rel)).filter(Boolean));
@@ -375,7 +408,12 @@ console.log('\n④ 相对说明符必须解析到真实文件');
   check('覆盖面：开发面也被扫到（scripts/ + test/ 至少 30 个 .mjs）', devSources.length >= 30,
     devSources.length + ' 个开发面 .mjs');
   check('lib/ 与开发面的每条相对路径都指向存在的文件', missing.length === 0,
-    missing.length ? missing.join('; ') : relativeEdges.length + ' 条全部可解析');
+    missing.length
+      ? missing.join('; ')
+      : relativeEdges.length + ' 条全部可解析'
+        + (exemptRuntime.length
+          ? '；另 ' + exemptRuntime.length + ' 条是运行时才创建的产物目录（窄豁免）: ' + exemptRuntime.join('; ')
+          : ''));
   // 负对照：同一条判据喂给一条指向不存在文件的相对边，必须报出来
   const probe = scanEdges("const m = await import('./does-not-exist.js');")
     .map(({ spec }) => resolveRelative(spec, 'lib/routes/probe.js'))
@@ -390,6 +428,39 @@ console.log('\n④ 相对说明符必须解析到真实文件');
   check('负对照：守卫负对照里的合成 import 字符串不会被误判',
     devSpecifiers('    "import a from \'../../src/a.js\';",').length === 0
       && devSpecifiers("import { x } from './real.js';").length === 1);
+  // 负对照 4：运行时目录窄豁免（`isRuntimeArtifactSpec` / `collectMissing`）必须**只**放宽
+  // "开发面 + 仓库根 `.artifacts/`"这一种情况。分两层证明：
+  //   (a) 判定表：开发面 + `.artifacts/`、`.artifacts` 放行；`lib/`、`artifacts/`、
+  //       `.artifacts-other/`、普通路径一律不放行（`.artifacts-other/` 专门防"前缀匹配放宽成任意前缀"）；
+  //   (b) 同一条 `collectMissing` 喂合成源：两个 `.artifacts/` 引用一个豁免、一个（lib 侧）判红，
+  //       外加一条开发面的普通断链判红 —— 豁免不会把"整个开发面"洗白。
+  const controlDir = '.artifacts/__never-created-control__';
+  check('负对照：运行时目录豁免的判定表只认「开发面 + 仓库根 .artifacts/」',
+    isRuntimeArtifactSpec('test/a.mjs', controlDir) === true
+      && isRuntimeArtifactSpec('scripts/a.mjs', RUNTIME_ARTIFACTS_DIR) === true
+      && isRuntimeArtifactSpec('lib/a.js', controlDir) === false
+      && isRuntimeArtifactSpec('test/a.mjs', 'artifacts/__never-created-control__') === false
+      && isRuntimeArtifactSpec('test/a.mjs', '.artifacts-other/pet-tuner') === false
+      && isRuntimeArtifactSpec('test/a.mjs', 'test/no-such-dir') === false
+      && isRuntimeArtifactSpec('test/a.mjs', 'src/no-such.js') === false);
+  const rtProbe = collectMissing([
+    {
+      rel: 'test/__synthetic-runtime__.mjs',
+      text: 'const a = new URL(\'../.artifacts/__never-created-control__/\', import.meta.url);\n'
+        + 'const b = new URL(\'./no-such-helper.mjs\', import.meta.url);',
+    },
+    {
+      rel: 'lib/__synthetic-runtime__.js',
+      text: 'import x from \'../.artifacts/__never-created-control__.js\';',
+    },
+  ]);
+  check('负对照：普通缺失路径仍判红（含 lib 侧指向 .artifacts/ 的边）',
+    rtProbe.exemptRuntime.length === 1
+      && rtProbe.exemptRuntime[0].includes('__never-created-control__')
+      && rtProbe.bad.length === 2
+      && rtProbe.bad.some((tag) => tag.includes('./no-such-helper.mjs'))
+      && rtProbe.bad.some((tag) => tag.includes('../.artifacts/__never-created-control__.js')),
+    'bad=[' + rtProbe.bad.join('; ') + '] 豁免=[' + rtProbe.exemptRuntime.join('; ') + ']');
 
   // `test/tools/` 比 `scripts/`、`test/` **深一层** ⇒ 用 `import.meta.url` 推仓库根必须退**两层**。
   // 这是搬迁最容易漏的一处，且症状离奇：退一层会把 ROOT 解析成 `test/`，于是 buildIndex 读

@@ -1,7 +1,8 @@
 /**
  * 包发现层（BUNDLE-SPLIT §10.2 顺序纪律第 1 条 / P-B 基石）。
  *
- * 本仓从「一个包」拆成「主包 + 3 个 subpath 组件包 + 3 个 standalone 子包」后，
+ * 本仓从「一个包」拆成「主包 + 7 个 standalone 子包」后（P-F 收口、`lib/components/` 已删 ⇒ 发现层
+ * 当前只有 standalone 形态；包数以 `FLOORS` 与磁盘为准，本文件不写死任何包名），
  * "有哪些包、每包的清单 / patch / 浏览器半边产物 / 主 patch 行"这几张脸散落在 build 与
  * 各守卫里各写一遍，已经开始互相漂移。这里把它们收敛成**一份数据模型**：
  *
@@ -15,7 +16,7 @@
  *   export function parseRows(patchText)    → [{ id, name }]，按文件顺序。
  *   export function discoverPackages(root=ROOT) → 模型（见下）。
  *   export function enumerateViolations(model, io) → string[]（**纯函数**，io 注入）。
- *   export const FLOORS = { packages: 6, clientArtifacts: 4, rows: 7 }
+ *   export const FLOORS = { packages: 7, clientArtifacts: 5, rows: 8 }
  *   CLI: `node test/tools/packages.mjs selftest`（退出码 0/1，逐条打印 ✓/✗）、
  *        可选 `--json`（打印模型）、无参（打印摘要，有违规则退出码 1）。
  *
@@ -604,12 +605,14 @@ function runSelftest() {
   if (!subNoClient) throw new Error('[selftest] 负对照 ③/⑦ 需要至少一个不带浏览器半边的包（main 之外的任一形态）');
   const standaloneClient = base.packages.find((p) => p.kind === 'standalone' && p.clientArtifact !== null);
 
-  // ① 模型里删掉一个包（挑带浏览器半边的 standalone：删它同时摘掉 clientPackages 一项，
-  //    产物数 4→3 仍**正好压在地板线上**、不额外触发产物地板 ⇒ 这条负对照只留"删包"一个缺陷）。
+  // ① 模型里删掉一个包（挑带浏览器半边的 standalone：删它同时摘掉 clientPackages 一项 ⇒
+  //    产物数 5→4 低于地板 5 —— "删包"这一个缺陷的因果链里因此同时含产物地板，
+  //    预期标签已含 floor/clientArtifacts）。
   //    ⚠️ 曾经这里挑的是"不带浏览器半边的 standalone"（当时的 host-only 包）；P-C 之后字体包
   //    也有产物了、本仓已无这种真实包 ⇒ 该写法会 `undefined.dir` 崩掉。负对照不许依赖
   //    "盘面上恰好有某个形态的包"这种会随重构漂移的前提（否则重构一落地，判据自己先烂）。
-  //    ✅ 已收（P-F 批 1c，2026-10-16）：`FLOORS.clientArtifacts` 已抬到 4（main+fonts+fx+parallax），
+  //    ✅ 已收（P-F 批 1c，2026-10-16）：`FLOORS.clientArtifacts` 已抬到 4（main+fonts+fx+parallax）；
+  //    pet-link 收口（PR #5，2026-10-17）再 4→5（+ packages/pet-link/lib/client.pet-link.js），
   //    且 `test/verify-client-sync.mjs` 的产物地板**直接 import 同一个常量** ⇒ 两处不会再一高一低
   //    （它那边的"地板 − 1 份 ⇒ 不达标"负对照也自动跟着走）。
   {

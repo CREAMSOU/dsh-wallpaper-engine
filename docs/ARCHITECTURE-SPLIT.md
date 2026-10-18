@@ -39,16 +39,29 @@ graph LR
     P --> C1["组件行 about-notice"]
     P --> C2["组件行 mascot-avatar"]
     P --> C3["组件行 media-bridge"]
+    P --> PET["可选独立行 pet-link<br/>（PR #5，2026-10-17；非组件行）"]
     MAIN --> BOOT["lib/host-boot.js<br/>BASE · 内核单例 · 组件记账"]
     BOOT --> KN["lib/kernel/*<br/>套件实例 · 会话 · 组件视图"]
     MAIN --> R["lib/routes/*.js<br/>跨组件共享的路由族"]
     C1 --> R1["packages/about-notice/lib/*<br/>（P-F 2026-10-16 出户）"]
     C2 --> R2["packages/mascot-avatar/lib/*<br/>（P-F 2026-10-16 出户）"]
     C3 --> R3["packages/media-bridge/lib/*（P-F 批 1c 2026-10-16 出户）"]
+    PET --> PK["packages/pet-link/lib/*<br/>（桥接 · 能力路由 · 自出产物）"]
 ```
 
-（**P-F 组件行统一进行中**：`about-notice` 与 `mascot-avatar` 已出户到 `packages/<组件>/`（真名行 + 独立清单），
-`media-bridge` 已于 P-F 批 1c（2026-10-16）出户；随后 `visibility.js` 移到 `lib/component-visibility.js` ⇒ **`lib/components/` 目录已删除**。计划与须知见 [`wip/BUNDLE-SPLIT.md`](./wip/BUNDLE-SPLIT.md) §15。）
+（**P-F 组件行统一已完成**（2026-10-16）：`about-notice`、`mascot-avatar` 与 `media-bridge` 三格已全部出户到
+`packages/<组件>/`（真名行 + 独立清单；`media-bridge` 为 P-F 批 1c）；随后 `visibility.js` 移到
+`lib/component-visibility.js` ⇒ **`lib/components/` 目录已删除**。计划、时间线与须知见
+[`wip/BUNDLE-SPLIT.md`](./wip/BUNDLE-SPLIT.md) §15。）
+
+（**另有第七个包 `pet-link`，它不是组件行**：PR #5（2026-10-17）合入的可选桌宠联动独立子包
+`packages/pet-link/`，**不属于** P-F 组件行统一 —— 它属「独立子包行」一档（与 fx/parallax/fonts 同类），
+不在「主行 + 三组件行」的组件分类里，而是可单独安装/停用的完整子包；宿主半边入口 `lib/index.js`
+声明 `inject: ['webServer', 'wallpaperEngineHost']`（走与组件行相同的宿主服务面），浏览器半边按包内
+`client.build.json` 自出产物 `packages/pet-link/lib/client.pet-link.js`（浏览器产物地板随之 4→5）；
+未安装 / 桥接未准备 / 桌宠不在网页时保留原生行为（主包侧 `host.registerPetLink()` 门面「缺席即回落」）。
+安装器形态见 [`adr/0014`](./adr/0014-subpackage-contract.md) §S3.8a，落地账见
+[`wip/BUNDLE-SPLIT.md`](./wip/BUNDLE-SPLIT.md) §7.10。）
 
 | 段 | 住在哪 | 是什么 | 契约 / 判据 |
 |---|---|---|---|
@@ -57,6 +70,7 @@ graph LR
 | **宿主内核** | `lib/kernel/*` | `host-kernel.js`（模块加载期建一次的套件实例）、`host-session.js`（一次 apply 的会话段：版本戳 / 日志提示 / token 表 / faststart / 启动清扫 / 字节出站 / 媒体源 / 清单 ＋ teardown）、`component-session.js`（组件的迷你会话 + `componentViewFrom()` 视图）、`config.js`、`data-dir.js` | 对外面分两级（稳定面 / 内部面），键数与分级由 `verify-component-face` 现算；「内核绝不 import 门面」 |
 | **跨组件路由族** | `lib/routes/*.js` | 主包自己的路由，一文件一族 | 族的 `DEPS` 声明 ↔ 调用点实参双向对账；`verify-route-families` 盯触发线 |
 | **组件行** | `packages/<组件>/lib/`（2026-10-16 三格全部出户；旧落点 `lib/components/<组件>/` 已不存在）（`packages/about-notice/`、`packages/mascot-avatar/`、`packages/media-bridge/`，2026-10-16 全部出户） | 一行一个目录：入口 `index.js` + 它自己的路由族实现 + 清单（`package.json`）+ `icon.png` + `locale/*.json` | 行的存在性/形态由 `verify-bundle-rows` ⑥（入口 ⇄ 清单出口三连 ⇄ `files` 四类文件、装载等价、跨行无重复）与 `verify-route-ownership` 钉 |
+| **可选独立行（非组件行）** | `packages/pet-link/`（PR #5，2026-10-17；**不属** P-F 组件行统一） | 可选桌宠联动：宿主侧入口只装桥接与能力路由，浏览器半边按包内 `client.build.json` 自出产物；未安装 / 未准备 / 桌宠不在网页时保持原生行为 | 可选语义由「缺席即回落」钉（主包侧 `host.registerPetLink()` 门面）；12 条 `verify-pet-*` 硬档（见 `test/run-guards.mjs`）；包形态见 [`adr/0014`](./adr/0014-subpackage-contract.md) §S3.8a |
 | **共享内核** | `lib/settings-schema.js` | 唯一被构建期内联进浏览器的 `lib/**` 文件 | 白名单 = `test/verify-module-layout.mjs` 的 `SHARED_KERNEL_WHITELIST`（再加一个必须改清单） |
 
 **行的开关语义 = A 语义**：宿主行级。停用某个组件行 ⇒ 该组件的宿主路由**整族不注册**；
