@@ -2305,6 +2305,9 @@ const faststartSrc = readFileSync(join(root, 'lib', 'faststart.js'), 'utf8');
 const extraHostHalfSources = [
   'lib/diag-trace.js', 'lib/cache-dir.js', 'lib/http-lifecycle.js', 'lib/shim-seed.js',
   'lib/startup-sweep.js', 'lib/we-assets.js', 'lib/media-origin.js',
+  // S5b 刀1：`we-assets` 路由族已出户到壁纸子包 —— 它不再被下面 `lib/routes/` 的目录枚举覆盖，
+  // 必须显式进面（否则 `/api/local-assets` 的路径围栏与指纹判据一起假红，见文件头纪律）。
+  'packages/wallpaper/lib/routes/we-assets.js',
   ...readdirSync(join(root, 'lib', 'kernel')).filter((f) => f.endsWith('.js')).map((f) => 'lib/kernel/' + f),
   ...readdirSync(join(root, 'lib', 'media')).filter((f) => f.endsWith('.js')).map((f) => 'lib/media/' + f),
 ].map((f) => { try { return readFileSync(join(root, f), 'utf8'); } catch { return ''; } });
@@ -7513,15 +7516,16 @@ check('client posts assets dir to host route',
 // ⚠️ 读**宿主半**：`weAssetsAvailable()` 的产出点已随清单构建族搬进 `lib/inventory.js`（§★ W-B B1）。
 check('host inventory reports weAssets availability',
   /weAssetsAvailable: weAssetsAvailable\(\)/.test(hostHalfSrc));
-// ⚠️ 下面这组读**宿主半**：`/api/local-assets` 与 `/we-assets-dir` 已搬进
-//    `lib/routes/we-assets.js`（§★ 重构 W-B B1）。本文件头 `hostHalfSrc` 的约定 ——
+// ⚠️ 下面这组读**宿主半**：`/api/local-assets` 与 `/we-assets-dir` 已出户到
+//    `packages/wallpaper/lib/routes/we-assets.js`（S5b 刀1；§★ 重构 W-B B1 时先搬进
+//    `lib/routes/`）。本文件头 `hostHalfSrc` 的约定 ——
 //    断言"宿主仍实现某契约"必须覆盖族目录，否则"已搬走"会被误报成"契约丢了"。
-const weAssetsFamSrc = readFileSync(join(root, 'lib', 'routes', 'we-assets.js'), 'utf8');
+const weAssetsFamSrc = readFileSync(join(root, 'packages', 'wallpaper', 'lib', 'routes', 'we-assets.js'), 'utf8');
 /** 被搬走的路由体的指纹（只在这两处路由的响应里出现过）。 */
 const movedOut = (t) => /未知素材源/.test(t);
 check('host fences local-assets file paths',
   movedOut(hostHalfSrc) && /target\.startsWith\(root \+ sep\)/.test(hostHalfSrc));
-check('we-assets 族已搬进 lib/routes/we-assets.js（门面里零残留）',
+check('we-assets 族已搬进 packages/wallpaper/lib/routes/we-assets.js（门面里零残留）',
   !movedOut(hostSrc) && movedOut(weAssetsFamSrc)
     && /path: '\/api\/local-assets'/.test(weAssetsFamSrc)
     && /path: `\$\{BASE\}\/we-assets-dir`/.test(weAssetsFamSrc));

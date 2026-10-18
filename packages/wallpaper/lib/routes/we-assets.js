@@ -13,8 +13,11 @@
  * `setWeAssetsDir` 清除 ⇒ 它们是全仓共用的状态，不是本族的私产（门面注入访问器）。
  *   · `disposers` / `base`        ← 清理句柄数组与路径前缀
  *   · `serveFile`                  ← 静态发送（Range 三分支 + HEAD）
- *   · `CONTROL_JSON_MAX_BYTES`     ← POST body 上限（读体器本身见下方 import —— 全仓约定：
- *                                     **用 `bodyReader` 的族自己 import**，不经 `c`，见 verify-body-caps）
+ *   · `http`                       ← 服务视图（`sendJson` / `bodyReader`）。出户后不再直接
+ *                                     import 主包实现：跨包族的来路由调用点显式给这个面
+ *                                     （与 `now-playing.js`、`packages/fonts` 同款；
+ *                                     判据 test/verify-json-response.mjs 来路 c）
+ *   · `CONTROL_JSON_MAX_BYTES`     ← POST body 上限（读体器经 `http.bodyReader` 取）
  *   · `normalizeUserDir`           ← 用户输入目录的规范化（与 `/upload-dir` 同一把）
  *   · `setWeAssetsDir`             ← 写 config.json（串行化）+ 清扫描缓存
  *   · `listWeAssetNames`           ← `materials/**\/*.tex` 名称清单（60s 缓存）
@@ -39,21 +42,16 @@
 
 import { statSync } from 'node:fs';
 import { join, resolve, sep } from 'node:path';
-// 收 body 的**唯一实现**（累加 + 字节计闸 + 一次解码）—— 全仓约定：谁用谁 import，
-// 不经 `c`（`verify-body-caps.mjs` 逐文件断言"用了它就得 import 它"）。
-import { bodyReader } from '../http-body.js';
-// JSON 应答的**唯一实现**（状态码 + 两个头 + end）—— 见 lib/json-response.js。
-import { sendJson } from '../json-response.js';
 
 /** 注入契约（P2-7A / ADR-0013 D12）：本族从 `c` 消费的**必需**键 —— 门面/组件行调用点必须逐键给到（判据 test/verify-inject-contracts.mjs 双向对账）。 */
-export const DEPS = ['disposers', 'base', 'serveFile', 'CONTROL_JSON_MAX_BYTES', 'normalizeUserDir', 'setWeAssetsDir', 'listWeAssetNames', 'weAssetsAvailable', 'WE_ASSETS_SOURCE_ID', 'getWeAssetsDir'];
+export const DEPS = ['disposers', 'base', 'serveFile', 'CONTROL_JSON_MAX_BYTES', 'normalizeUserDir', 'setWeAssetsDir', 'listWeAssetNames', 'weAssetsAvailable', 'WE_ASSETS_SOURCE_ID', 'getWeAssetsDir', 'http'];
 
 export function registerWeAssetsRoutes(webServer, c) {
   const {
     disposers, base: BASE, serveFile,
     CONTROL_JSON_MAX_BYTES, normalizeUserDir,
     setWeAssetsDir, listWeAssetNames, weAssetsAvailable,
-    WE_ASSETS_SOURCE_ID, getWeAssetsDir,
+    WE_ASSETS_SOURCE_ID, getWeAssetsDir, http,
   } = c;
 
   // 3c-3d. WE 官方素材端点（local-assets）—— 上游 WebWallGL 渲染页的消费契约
@@ -72,8 +70,9 @@ export function registerWeAssetsRoutes(webServer, c) {
     handler: async (req, res) => {
       const method = (req.method || 'GET').toUpperCase();
       if (method !== 'GET' && method !== 'HEAD') { res.statusCode = 405; res.end('method not allowed'); return; }
-      // 薄别名：保留调用点写法，实现收敛到 lib/json-response.js（默认带 no-store）。
-      const jsonOut = (code, payload) => sendJson(res, code, payload);
+      // 薄别名：保留调用点写法，实现仍在主包 lib/json-response.js（默认带 no-store）——
+      // 出户后经服务视图 http 取（来路见 test/verify-json-response.mjs 来路 c）。
+      const jsonOut = (code, payload) => http.sendJson(res, code, payload);
       let rest;
       try {
         rest = new URL(req.url || '/', 'http://x').pathname.slice('/api/local-assets'.length);
@@ -118,9 +117,9 @@ export function registerWeAssetsRoutes(webServer, c) {
     path: `${BASE}/we-assets-dir`,
     handler: (req, res) => {
       const method = (req.method || 'GET').toUpperCase();
-      // 薄别名：保留调用点写法，实现收敛到 lib/json-response.js；**第四参 null 保行为** ——
+      // 薄别名：保留调用点写法，实现仍在主包 lib/json-response.js；**第四参 null 保行为** ——
       // 本条副本本来就不写 `Cache-Control`（见 lib/json-response.js 文件头"缓存头口径"）。
-      const jsonOut = (code, payload) => sendJson(res, code, payload, null);
+      const jsonOut = (code, payload) => http.sendJson(res, code, payload, null);
       if (method === 'GET') {
         jsonOut(200, { dir: getWeAssetsDir(), available: weAssetsAvailable() });
         return;
@@ -129,9 +128,9 @@ export function registerWeAssetsRoutes(webServer, c) {
       // 收 body 的两条不变量（权威表述见 lib/routes/upload.js 文件头）：
       //   ① **必须有上限** —— 逐块累加而不比较长度，异常大的请求会把宿主堆无界撑大；
       //   ② **必须一次性解码** —— 逐块 `body += chunk` 会把跨 TCP 分片的多字节码点切成 U+FFFD。
-      // 这两件事的**唯一实现**在 `lib/http-body.js`。
+      // 这两件事的**唯一实现**在主包 `lib/http-body.js`（出户后经 `http.bodyReader` 取）。
       let tooLarge = false;
-      const reader = bodyReader(req, {
+      const reader = http.bodyReader(req, {
         maxBytes: CONTROL_JSON_MAX_BYTES,
         onOverflow: () => { tooLarge = true; jsonOut(413, { error: 'payload too large' }); },
       });

@@ -46,6 +46,7 @@
  * 键集见 `lib/kernel/component-session.js` 的 `COMPONENT_VIEW_KEYS['wallpaper']` 注释。
  */
 import { registerNowPlayingRoutes } from './routes/now-playing.js';
+import { registerWeAssetsRoutes } from './routes/we-assets.js';
 
 /** patch 行 slug（`cordis.patch.yml` 里该行 `name` 的完整值，两处逐字相等）。 */
 export const name = 'dsh-plugin-wallpaper-engine-wallpaper';
@@ -104,8 +105,8 @@ export function applyImpl(root, _rawConfig, c) {
   // 本组件自己要的两个键：后端启动决策每次现读设置（`readConfig`），缓存根传**访问器**。
   const { readConfig, cacheBaseDir } = view;
 
-  // ⚠️ **注册期必须包 try**（P2-4）：这一族一次性注册**五条**路由，中途抛错时已经推进
-  // `disposers` 的那几条会留下（`mediaBackend.stop()` 也在同一个 disposer 列表里，一并丢）
+  // ⚠️ **注册期必须包 try**（P2-4）：本组件两族一次性注册**七条**路由（媒体状态 5 + WE 素材源 2），
+  // 中途抛错时已经推进 `disposers` 的那几条会留下（`mediaBackend.stop()` 也在同一个 disposer 列表里，一并丢）
   // ⇒ 下一次启用撞 `webserver: duplicate … route`，且桥的子进程无人收。`teardown()` 自己吞异常，
   // 原错照抛（装载失败必须仍然是红的）。
   try {
@@ -117,6 +118,12 @@ export function applyImpl(root, _rawConfig, c) {
       CONTROL_JSON_MAX_BYTES, http: keys.http,
       // 媒体子系统的行统一带 `[media]` 标签（与终端既有形状逐字一致）；级别由调用点标注。
       log: log.tag('media'),
+    });
+    // 3c-3d/3c-3e. WE 官方素材源族（`/api/local-assets` + `/we-assets-dir`）→ 本包
+    //       `lib/routes/we-assets.js`（S5b 刀1 出户）。两条注册、配置-消费共用可变真源
+    //       `WE_ASSETS_DIR` 都在那个文件里；这里只声明它的依赖（与门面调用点逐键相同）。
+    registerWeAssetsRoutes(webServer, {
+      ...keys, disposers, base, serveFile, CONTROL_JSON_MAX_BYTES, http: keys.http,
     });
   } catch (error) {
     teardown();
