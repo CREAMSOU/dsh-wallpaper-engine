@@ -45,7 +45,7 @@ graph LR
     MAIN --> R["lib/routes/*.js<br/>跨组件共享的路由族"]
     C1 --> R1["packages/about-notice/lib/*<br/>（P-F 2026-10-16 出户）"]
     C2 --> R2["packages/mascot-avatar/lib/*<br/>（P-F 2026-10-16 出户）"]
-    C3 --> R3["packages/wallpaper/lib/*（P-F 批 1c 2026-10-16 出户）"]
+    C3 --> R3["packages/wallpaper/lib/*（P-F 批 1c 2026-10-16 出户）<br/>P-D S3a–S3d 补浏览器半边：src/** + client.build.json<br/>产物 lib/client.wallpaper.js（2026-10-18）"]
     PET --> PK["packages/pet-link/lib/*<br/>（桥接 · 能力路由 · 自出产物）"]
 ```
 
@@ -53,6 +53,14 @@ graph LR
 `packages/<组件>/`（真名行 + 独立清单；`media-bridge` 为 P-F 批 1c）；该格于 P-D 阶段1（2026-10-18）机械改名 `wallpaper`（落点 `packages/wallpaper/`，见 `wip/BUNDLE-SPLIT.md` §7.4 / §14 `D-15`）；随后 `visibility.js` 移到
 `lib/component-visibility.js` ⇒ **`lib/components/` 目录已删除**。计划、时间线与须知见
 [`wip/BUNDLE-SPLIT.md`](./wip/BUNDLE-SPLIT.md) §15。）
+
+（**2026-10-18 追加：`wallpaper` 那格已补浏览器半边**：P-D 阶段1 的 S3a–S3d 把六节面板渲染器搬进
+`packages/wallpaper/src/`（library 侧 `wallpaper-current` / `transition` / `rotation` / `uploads`，playback 侧
+`wallpaper-playback-rate` / `wallpaper-fit`），经主包面板节注册表（`wePanelSectionsOf('library')` /
+`('playback')`）挂回原页签，包内 `client.build.json` 自出 `lib/client.wallpaper.js`；主包侧
+`src/panel-tabs-wallpaper.js` 已整文件删除、`src/panel-tabs-effects.js` 只留「画面 / 实况 / 来源」三节，
+宿主机面 `HOST_BRIDGE_BINDINGS` 扩到 57 键（包内申报 28 键）。渲染内核 / 层单例仍留主包（宿主半边与
+声音 / 省电属 S5）—— 落地账见 [`wip/BUNDLE-SPLIT.md`](./wip/BUNDLE-SPLIT.md) §7.4。）
 
 （**另有第七个包 `pet-link`，它不是组件行**：PR #5（2026-10-17）合入的可选桌宠联动独立子包
 `packages/pet-link/`，**不属于** P-F 组件行统一 —— 它属「独立子包行」一档（与 fx/parallax/fonts 同类），
@@ -73,8 +81,15 @@ graph LR
 | **可选独立行（非组件行）** | `packages/pet-link/`（PR #5，2026-10-17；**不属** P-F 组件行统一） | 可选桌宠联动：宿主侧入口只装桥接与能力路由，浏览器半边按包内 `client.build.json` 自出产物；未安装 / 未准备 / 桌宠不在网页时保持原生行为 | 可选语义由「缺席即回落」钉（主包侧 `host.registerPetLink()` 门面）；12 条 `verify-pet-*` 硬档（见 `test/run-guards.mjs`）；包形态见 [`adr/0014`](./adr/0014-subpackage-contract.md) §S3.8a |
 | **共享内核** | `lib/settings-schema.js` | 唯一被构建期内联进浏览器的 `lib/**` 文件 | 白名单 = `test/verify-module-layout.mjs` 的 `SHARED_KERNEL_WHITELIST`（再加一个必须改清单） |
 
+> **补注（2026-10-18，浏览器半边进度分叉）**：三格虽都出户为独立子包，浏览器半边并不齐 ——
+> `packages/wallpaper` 自 P-D S3a–S3d 起也有 `src/**` + 包内 `client.build.json` + `exports['./client']` +
+> 自出产物（不再 host-only）；`about-notice` / `mascot-avatar` 仍 host-only，浏览器半边仍内联主包 `src/**`
+> （是否本轮搬进包 = `D-17`，未定）。
+
 **行的开关语义 = A 语义**：宿主行级。停用某个组件行 ⇒ 该组件的宿主路由**整族不注册**；
-浏览器半边仍随整包加载，可见面由宿主行状态派生、双向对账（[`HOW-IT-WORKS.md`](./HOW-IT-WORKS.md)
+浏览器半边则分两种加载路径（`about-notice` / `mascot-avatar` 仍内联在主包 `src/**`，随整包加载；
+`wallpaper` 自 P-D S3a–S3d 起为包内自出产物 `packages/wallpaper/lib/client.wallpaper.js`，随其包级
+graph row 加载）；两种路径下可见面都由宿主行状态派生、双向对账（[`HOW-IT-WORKS.md`](./HOW-IT-WORKS.md)
 与 `lib/component-visibility.js`）。**当前**组件行三格已按 `adr/0013` D6/D8 的「多包」终态出户到
 `packages/<组件>/`（开发期 `file:` 链接解析，发布形态未落地），但**不**做每组件一格客户端开关
 （[`adr/0013`](./adr/0013-bundle-multi-component-rows.md) D17 的非目标）；⚠️ **目标形态已于 2026-10-14 改为

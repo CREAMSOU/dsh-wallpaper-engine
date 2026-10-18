@@ -323,14 +323,14 @@ Cordis 的级联只有**一个判据**：`name in fiber.inject`（`cordis/src/re
 
 ---
 
-## 6. 需要产品/架构拍板的问题（**2026-10-16 复核：§6.1 / §6.2 / §6.3 / §6.5 均已定案；只剩 §6.4 按阶段前置**）
+## 6. 需要产品/架构拍板的问题（**2026-10-18 复核：§6.1 / §6.2 / §6.3 / §6.5 均已定案；§6.4 也已于 2026-10-18 定案（A 主包聚合）**）
 
 | 问题 | 状态 | 决策 / 期限 |
 |---|---|---|
 | §6.1 配置项归属（代码 / 状态） | **已定案（2026-10-16，用户口径）：A 代码归属** | **键与状态全部留主包唯一内核**（`lib/settings-schema.js` 不动）；随包走的是**渲染器 / 描述符**。读法与"面板结构 ⇄ 包结构解耦"原则见下方表态块；**代码注释里必须明文重述**（用户要求）。字体收口的层 2 就是它的第一个实例（§7.8） |
 | §6.2 客户端半边怎么协作（服务面形状） | **已定案（2026-10-15，取代 10-14 口径）** | 跨包通道走 **Cordis Service**（§5.1 ①）：主包 `provide('wallpaperEngineHost', …)`、子包 `inject` 后只读取用；不做长命对象跨包 `require`；**包内**的组件门面仍走宿主注入显式键集（§5.2 允许清单第 2 条）。"provider 缺席"的期望 = 子包 fiber 因 `inject` **级联而 park**（D-13 B），不再是"注入键缺席" |
 | §6.3 设置簇要不要按插件重画 | **已定案（2026-10-16，用户口径）：暂定维持现设置簇** | 分区表与对账口径**不动**（零存档迁移）；要守的原则是**配置面板结构与包结构解耦** —— 面板的簇 / 节按信息架构定，**不按包边界推导**。取 §6.1 A 后，"不重画"不再与单写者不变量冲突（写者仍只有主包内核）。首个真实客户仍是外观页签的字体节（§7.8 层 1） |
-| §6.4 预设怎么跨包 | **阶段前置** | **P-D 之前必须表态**（与 §7.4 同批） |
+| §6.4 预设怎么跨包 | ✅ **已定案（2026-10-18，用户口径）** | **A 主包聚合**：预设键 / `sanitizePresetValues` / 资产安装留主包，子包不注册片段、不持键（§14 `D-9`；落地账见 §7.4） |
 
 ### 6.1 "配置项归子插件" = 代码归属还是**状态归属**？
 
@@ -374,6 +374,10 @@ Cordis 的级联只有**一个判据**：`name in fiber.inject`（`cordis/src/re
 
 它是唯一"路由不写设置却必须理解所有包的键"的落点（`sanitizePresetValues` / `installAssets`）。
 三选一：主包聚合（子包把键注册进主包）/ 每包自带片段 + 宿主装配 / 拆成多个预设。
+
+> **✅ 表态（2026-10-18，用户口径）：取「主包聚合」** —— `PROFILE_PRESET_KEYS` / `sanitizePresetValues` / 资产安装
+> 继续留主包（`lib/settings-schema.js` / `lib/routes/presets.js`），子包**不注册预设片段、不持键、不新增反向通道**；
+> 依据 = §6.1 的 A（代码归属）与 §5.1 的两条跨包通道。落 §14 `D-9`；P-D 落地账见 §7.4。
 
 ### 6.5 （附带，但**开关语义落地前必须先定**）主包被关掉时子包怎么办？
 
@@ -523,7 +527,14 @@ Cordis 的级联只有**一个判据**：`name in fiber.inject`（`cordis/src/re
 **层所有权已钉（P-D S4，2026-10-18）**：所有权 = 主包渲染内核独占（`src/live-layer.js` 建/领养/退役 + `src/client.js` fiber cleanup 摘净），壁纸包浏览器半边不得建层/退层/持 `#layer` 引用；判据 `test/verify-layer-ownership.mjs`（P1 声明与 id 赋值点 · P2 body 挂载白名单逐点归属 · P3 拆卸零残留 · P4 iframe 父链），负对照含"白名单外建层 / 删 scrim 摘除 / iframe 直接挂 body"三种变异。契约正文见 `.integration-notes/p-d-contract.md` §4.1。
 **注意**：引擎已是 npm 依赖（§9.4 定案 = 主包持有、不随子包）；`lib/webwallgl/**` 如今只剩自家模板/桥文件。
 
-**P-D 阶段1 落地账（2026-10-18）**：本阶段只做**机械改名 / 并入**、零行为变更（D5）—— 原「系统媒体桥」子包目录（`packages/` 下的 `media-bridge`）整包搬到 `packages/wallpaper/`；包名 / 行 `id` / 行 `name` / `SUBPACKAGE_KEY_TABLE` 键 / `COMPONENT_VIEW_KEYS` 键 / 守卫与测试里的包路径全部同步为新名。行 `id` 改为 `wallpaper-engine-wallpaper` 是 §14 `D-15` 的**唯一例外**（S4.3 强制 `id = wallpaper-engine-<目录名>`，且该行从未发布 ⇒ 无迁移负担）。**本阶段不做**：壁纸渲染的功能搬入 / 浏览器半边（§15 账③）与任何产品语义改动 —— 均属 P-D 后续批次。
+**P-D 阶段1 落地账（2026-10-18，施工至 S4）**：本阶段把壁纸子插件的**浏览器半边**搬进了 `packages/wallpaper`，零行为变更（D5）。按阶段记账：
+
+- **S1（`ef5b6438`）身份并入**：原「系统媒体桥」子包目录（`packages/` 下的 `media-bridge`）整包 `git mv` 到 `packages/wallpaper/`；包名 / 行 `id` / 行 `name` / `SUBPACKAGE_KEY_TABLE` 键 / `COMPONENT_VIEW_KEYS` 键 / 守卫与测试里的包路径全部同步为新名。行 `id` 改为 `wallpaper-engine-wallpaper` 是 §14 `D-15` 的**唯一例外**（S4.3 强制 `id = wallpaper-engine-<目录名>`，且该行从未发布 ⇒ 无迁移负担）。
+- **S2（勘察 + 设计，仅有本地工作稿）**：结论 = 只搬**面板节渲染器**、渲染内核与层单例**留主包**——渲染内核 16 个文件 / ≈66 键整族搬包会违反 ADR-0013 `D12①`（注入面收窄）与 ADR-0014 `S5.2`，且把 `LAYER_ID` / `SCRIM_ID` / iframe 的唯一建立点劈成两半（§13 风险 9）；故浏览器半边只搬六个纯渲染节，host 键面 **28 键（5 键复用既有 bridge + 新增 23 键）**。工作稿为 `.integration-notes/p-d-browser-surface.md`（被 `.gitignore` 忽略，不进版本库）。
+- **S3a–S3d（`f0de5c3c` / `a0291d50` / `d8420aa7` / `d265c428`）六节渲染器搬入包**：library 四节 `wallpaper-current`（order 10）/ `wallpaper-transition`（20）/ `wallpaper-rotation`（30）/ `wallpaper-uploads`（40），playback 两节 `wallpaper-playback-rate`（60）/ `wallpaper-fit`（70）；入口 `packages/wallpaper/src/client.js` + 包内构建配方 `client.build.json`（6 个 `inline`）⇒ 产物 `packages/wallpaper/lib/client.wallpaper.js`（构建期生成、`.gitignore` 出库），`FLOORS.clientArtifacts` 随之 **5→6**。主包侧同步：`src/panel-tabs.js` 的 `renderWallpaperTab` / `renderEffectsTab` 只按 `wePanelSectionsOf('library')` / `('playback')` 组装注册节；`src/panel-tabs-wallpaper.js` **整文件删除**（rename 进包）；`src/panel-tabs-effects.js` 只留「画面 / 实况 / 来源」三节；`HOST_BRIDGE_BINDINGS` 从 34 键扩到 **57 键**（壁纸包申报 28 键；D-7 反向对账见 `test/verify-subpackage-client-half.mjs` 的「5 张申报表 / 57 个 host 键」）。
+- **S4（`799035d1`）层所有权判据**：见上段；`node test/run-guards.mjs all` 由 98 步增至 **99 步**（新增 `test/verify-layer-ownership.mjs`）。
+- **预设面（§6.4）**：§14 `D-9` 已定案 **A = 主包聚合**——预设键 / `sanitizePresetValues` / 资产安装继续留主包 `lib/settings-schema.js`；壁纸包不注册预设片段、不持键、不新增反向通道。
+- **仍属后续批次（S5，未开始）**：宿主半边大改（路由 / 后端 / supervisor / provision / legacy 搬包与边界重画）与声音、省电等产品语义。**本账不表示 P-D 完工**；渲染内核与层单例仍住主包 `src/**`。
 
 ### 7.5 P-E 收尾
 
@@ -620,7 +631,7 @@ Cordis 的级联只有**一个判据**：`name in fiber.inject`（`cordis/src/re
      （初始无此节 / 注册后可见 / 订阅者被通知 / 注册期不读译文 / 节注册必须住在字体包产物里而不许被主包内联）。
      ~~"今天的现状是界面还在、通道 404"~~ —— 该现状已终结（界面随包走，关行即不再画）；
    - 预设面：字体集预设横跨"字体包 + 主包预设路由"（`lib/routes/presets.js` 的 `currentFontSegment`），
-     其判据随 §6.4 / D-9 一起定 —— **仍未落**。
+     其判据随 §6.4 的定案（A 主包聚合，§14 `D-9`）确定 —— **判据本身仍未落**。
 
 **过渡期必做的三件事（现在就做，不等收口）**：
 1. ~~按 §5.3 的第二条出路**明说**：`packages/fonts` 当前只提供宿主路由、字体界面随主包、**不可单独开关**~~
@@ -647,7 +658,7 @@ Cordis 的级联只有**一个判据**：`name in fiber.inject`（`cordis/src/re
   "以 `packages/wallpaper` 为基础大改"（该格已由 P-F 批 1c 搬出），**先搬后改写只付一次路径成本**；反序要把那批实现与测试改两遍。
   **不与 P-D 合批**（机械搬迁与行为重写混在一个提交 ⇒ `bisect` / `revert` 失能）。
 - **分批**：① 包边界 + 行名（行 `name` 改真名；机械、**零行为变化**，先行）→ ② 浏览器半边逐组件成产物
-  （`about-notice` 先、`mascot-avatar` 后；`wallpaper`（P-D 阶段1 前名 `media-bridge`）今天**没有**浏览器半边 ⇒ 交给 P-D）。
+  （`about-notice` 先、`mascot-avatar` 后；`wallpaper`（P-D 阶段1 前名 `media-bridge`）那格已由 P-D S3a–S3d（2026-10-18）交付六节渲染半边、产物 `lib/client.wallpaper.js` ⇒ 账③ 剩余范围只剩 `about-notice` / `mascot-avatar` 两批）。
 - **前提已勘误**：三条组件行**从未发布**（已发布物只有主行）⇒ **不存在"曾关过该组件"的用户**，
   行 `name` 可直接改真名、**零迁移代价**（§15.1 / §3 的范围勘误）。
 - **完整计划与须知见 §15**（三笔账的边界 / 落点硬约束 / 判红面 / 前置决策 / 复算入口）。
@@ -663,7 +674,7 @@ Cordis 的级联只有**一个判据**：`name in fiber.inject`（`cordis/src/re
 - **形态 ③（浏览器半边）**：包内 `src/client.js` + `client.build.json`（`entry` / `artifact` / `inline` 配方）⇒ 产物 `packages/pet-link/lib/client.pet-link.js`；**`FLOORS.clientArtifacts` 随 4→5**（收口前源码由主包 `scripts/build-client.mjs` 内联、本包无自有产物）。调参面板（`Ctrl+Shift+D`）随半边内联，属维护工具、非产品功能。功能面 = 九段联动动画 + 五张气泡配图 + 四条逻辑 + 两个彩蛋（条数复算见包内 `README.md` 与 `src/pet-link-actions.json`）。
 - **形态 ④（主包侧接线）**：`lib/subpackage-boot.js` 的 `SUBPACKAGE_KEY_TABLE` 登记 `'pet-link'`（只登记它真用的 `base` / `runComponent` / `handOffTeardown`，薄面）；`src/client.js` 经 `host.registerPetLink()` 门面（`petLink.*` 调用点文本零改动；门面缺席即抛、回落到原生行为）；`src/extension-registry.js` 加 `petLink` 服务槽（登记 / 重复登记判红 / 未装载 ⇒ `null`）；译文自包内 `src/i18n-copy-pet-link.js` 搬到主包 `src/`（`491282f7`）并由 `src/i18n-copy.js` 并入 `WE_I18N_EN`；`package.json` 开发期接线 = `devDependencies` + `file:packages/pet-link`（**不写 `dependencies`**，见 §10.1 #14）与 3 条 `verify:pet-link*` 脚本。
 - **判据**：12 条 pet 判据已入**硬档**（`test/run-guards.mjs` 的 `VERIFY_STEPS`：`verify-pet-package` / `-hotplug-host` / `-hotplug-client` / `-rope-entry` / `-tuner` / `-bubble-timing` / `-mascot-motion` / `-egg1-motion` / `-egg1-rebound` / `-sidebar-rebound` / `-egg2-motion` / `-follow`；复算：`node test/run-guards.mjs verify`）。
-- **仍未做**：本包不改变 §7.4 / §7.5 的未开工状态（P-D、P-E 仍未开工；`packages/ui` 仍未建；§7.9 的账③ 未做；字体预设面判据仍未落；`D-9` / `D-17`–`D-19` 仍待定见 §14）—— **别把本节读成"整线完工"**。本包**是否随主包发布**、发布形态（`dependencies` 精确版本）仍归 §12 / `D-18`。
+- **仍未做**：P-D 阶段1 已施工至 S4（S5 未开始）；`P-E` 仍未开工；`packages/ui` 仍未建；§7.9 的账③ 仍未做（剩余范围 = `about-notice` / `mascot-avatar` 两批，`wallpaper` 那格已由 P-D S3a–S3d 交付）；字体预设面判据仍未落；`D-17`–`D-19` 待定见 §14 —— **别把本节读成"整线完工"**。本包**是否随主包发布**、发布形态（`dependencies` 精确版本）仍归 §12 / `D-18`。
 
 ---
 
@@ -930,7 +941,7 @@ Cordis 的级联只有**一个判据**：`name in fiber.inject`（`cordis/src/re
 
 ---
 
-## 14. 待决策清单（**2026-10-16 复核：开工闸门项 `D-6` / `D-7` / `D-13` 全部定案；`D-9`（P-D 前置）与 `D-17`–`D-19`（P-F 组件行统一的**剩余**前置；`D-15` / `D-16` 已定案见下表）待定**）
+## 14. 待决策清单（**2026-10-18 复核：开工闸门项 `D-6` / `D-7` / `D-13` 与 P-D 前置 `D-9` 全部定案；`D-17`–`D-19`（P-F 组件行统一的**剩余**前置；`D-15` / `D-16` 已定案见下表）待定**）
 
 | # | 决策 | 状态 |
 |---|---|---|
@@ -942,7 +953,7 @@ Cordis 的级联只有**一个判据**：`name in fiber.inject`（`cordis/src/re
 | D-6 | 配置项 = 代码归属还是状态归属 | ✅ **已定案（2026-10-16，用户口径）：A 代码归属** —— 键与状态留主包唯一内核，随包走渲染器 / 描述符，代码注释必须明文重述；面板结构与包结构解耦（§6.1 表态块 / §7.3） |
 | D-7 | 设置簇要不要按插件重画 | ✅ **已定案（2026-10-16，用户口径）：暂定维持现设置簇** —— 分区表与对账口径不动（零存档迁移）；原则 = 面板结构与包结构解耦，将来重画与本轮拆包是两件事（§6.3 表态块） |
 | D-8 | 跨包贡献 / 服务面形状 | **已被取代（2026-10-15）**：跨包通道 = **Cordis Service**（§5.1 ①，服务名 `wallpaperEngineHost`）；"宿主注入显式键集"降级为**包内**形态（组件门面 `c` 契约） |
-| D-9 | 预设怎么跨包 | **阶段前置：P-D 之前必须表态**（§6.4 / §7.4） |
+| D-9 | 预设怎么跨包 | ✅ **已定案（2026-10-18，用户口径）：A 主包聚合** —— 预设键 / `sanitizePresetValues` / 资产安装继续留主包 `lib/settings-schema.js`；子包不注册预设片段、不持键、不新增反向通道；落地于 P-D（§6.4 / §7.4） |
 | D-10 | 目录布局 | **定案（2026-10-14）：同仓 `packages/<pkg>/`**（§8.1；不用 workspace 协议） |
 | D-11 | 从哪个子包开始 | **建议三个小包试点**（§7.1） |
 | D-12 | **开关档位 / 重启边界**（"不用重启"的射程） | **已定案（本轮细化）**：开关只承诺**能力**（同行切换宿主半边 + 浏览器可见面，§1.1 边界 1、§11）；**代码 / 版本 / 清单 / 增删行一律重启**（`U3` / `R3` / `I8`，§1.1 边界 2）。判据 = §7.6 第 4 条 |
@@ -950,7 +961,7 @@ Cordis 的级联只有**一个判据**：`name in fiber.inject`（`cordis/src/re
 | D-14 | **字体系统子插件的收口形态** | **定案（2026-10-15，用户口径 A）：目标 = 整个「字体自定义」配置类**（宿主半边 + 浏览器半边 + 外观页签字体节 + 字体键所有权）；**不必现在完成** —— 收口线 = P-B 的能力 + P-C（§6.1 / §6.3 表态）+ P-D（§6.4 预设）之后，见 §7.8 |
 | D-15 | **组件行统一后的行名** | ✅ **已定案（2026-10-16，用户口径）：组件行从未发布 ⇒ 沿用清单里已有的真名 `dsh-plugin-wallpaper-engine-<sub>` 做行 `name`，`id` 不变，零迁移**（§15.1 / §3 范围勘误）。**P-D 阶段1（2026-10-18）唯一例外**：`wallpaper` 一格随包改名，行 `id` 由「`wallpaper-engine-` + 旧目录名」改为 `wallpaper-engine-wallpaper` —— 理由 = S4.3 强制 `id = wallpaper-engine-<目录名>`，且该行**从未发布** ⇒ 仍是零迁移（落地账见 §7.4） |
 | D-16 | `visibility.js`（97 行）归属 | ✅ **已定案并落地（2026-10-16）**：移到 `lib/component-visibility.js`（顶层语义名，与 `lib/inventory.js` 同族），`lib/components/` 目录删除；`lib/index.js` 的再导出位置不变（§15.6 P-F-2） |
-| D-17 | 组件浏览器半边是否本轮搬进包 | 待定（§15.6 P-F-3；建议拆 2a `about-notice` / 2b `mascot-avatar` 两批，`media-bridge`（P-D 阶段1 已改名 `wallpaper`）交 P-D） |
+| D-17 | 组件浏览器半边是否本轮搬进包 | 待定（§15.6 P-F-3；剩余范围 = `about-notice` / `mascot-avatar` 两批 —— `media-bridge` 已改名 `wallpaper`，其浏览器半边已由 P-D S3a–S3d（2026-10-18）交付六节渲染器，不再占 P-F 账） |
 | D-18 | **统一后的发布形态排期** | 待定（§15.6 P-F-4；统一 ⇒ 主包必须**精确依赖**这 3 个包 ⇒ ADR-0014 `S8.2`「发布形态尚未执行过」由"没做过"变"必须做"，§12 的发布顺序要排期） |
 | D-19 | ADR 术语二分与触发线 | 待定（§15.6 P-F-5；ADR-0014 `S1.1` 的"组件行 / 子包"二分可删、ADR-0014 前言"问题 1 / 问题 2"结案、ADR-0013 §重新考虑的触发线是否补说明） |
 
@@ -971,7 +982,8 @@ Cordis 的级联只有**一个判据**：`name in fiber.inject`（`cordis/src/re
 > 须知是搬迁时的**硬约束**与**静默陷阱**。**批 1 / 批 2a / 批 1c 已开工**：`about-notice`（2026-10-16）、
 > `mascot-avatar`（2026-10-16，批 2a）与 `media-bridge`（2026-10-16，批 1c）均已出户
 > （见 §15.2 的三份落地账）⇒ **账①（包边界）在三格上全部落完**，`lib/components/` 目录已删除（`visibility.js` → `lib/component-visibility.js`）；
-> 未做的是 **账③**（组件的浏览器半边独立成产物）。
+> 未做的是 **账③**（组件的浏览器半边独立成产物）—— 其中 `wallpaper` 那格已由 P-D S3a–S3d（2026-10-18）交付，
+> 剩余 = `about-notice` / `mascot-avatar` 两批（见 §7.4 / §14 `D-17`）。
 > 本节所有路径与行号都是 2026-10-16 的实测读数；数值一律给复算命令（`docs/README.md` 写作纪律 4）。
 
 ### 15.1 前提勘误：组件行**从未发布** ⇒ 零迁移代价
@@ -1073,7 +1085,8 @@ Cordis 的级联只有**一个判据**：`name in fiber.inject`（`cordis/src/re
 >   （ESLint 283 文件 / 0 规则超限 · tsc 0；`lib/client.js` 未被 build 改动）。
 >   **注**：`verify:static` 必须在宿主 `pwsh` 跑（沙箱下 ESLint 的 `spawnSync` 管道报 `EPERM`，是环境边界不是回归）。
 > - **仍未做**：账③（组件浏览器半边独立成产物：`about-notice` 35 行 → `mascot-avatar` 1542 行 →
->   `media-bridge` 交给 P-D）；`visibility.js` 归属**已结案**（§14 `D-16`）；发布形态排期（`D-18`）。
+>   `media-bridge` 那格）；`visibility.js` 归属**已结案**（§14 `D-16`）；发布形态排期（`D-18`）。
+>   **2026-10-18 补注**：`media-bridge` 已改名 `wallpaper`，其浏览器半边由 P-D S3a–S3d 交付（§7.4）⇒ 账③ 剩余 = `about-notice` / `mascot-avatar` 两批。
 
 > **落地账 · 自检加固：宿主根腿（2026-10-16；随本笔提交入库）**
 > - **起因（真机事故）**：三条组件行的 `name` 改成裸真名后，profile 侧没人重跑
@@ -1111,8 +1124,9 @@ Cordis 的级联只有**一个判据**：`name in fiber.inject`（`cordis/src/re
    （含本文件 §3 / §9.3 / §10.1）。**三格落完 ⇒ 批 1 收口**（`lib/components/` 目录随后删除，`visibility.js` → `lib/component-visibility.js`）。
 2. **批 2a**：`about-notice` 浏览器半边（今天只有 `src/about-assets.js` —— 最小的试验田）。
 3. **批 2b**：`mascot-avatar` 浏览器半边（`src/avatar-import.js` / `avatar-layer.js` / `ext-avatar.js` / `panel-tabs-mascot.js`）。
-4. **`media-bridge` 的浏览器半边不单列**：它今天**没有**浏览器半边（`lib/types/index.d.ts:166` 明写
-   "media-bridge is deliberately absent"）⇒ 交给 P-D。
+4. **`media-bridge`（P-D 阶段1 已改名 `wallpaper`）的浏览器半边不占 P-F 账③**：原判据「它今天**没有**浏览器半边
+   （`lib/types/index.d.ts:166` 明写 "media-bridge is deliberately absent"）⇒ 交给 P-D」已在 2026-10-18 兑现 ——
+   P-D S3a–S3d 交付六节渲染器并自出产物 `lib/client.wallpaper.js`（§7.4）；渲染内核与层单例仍留主包，S5 再收口。
 
 ### 15.4 落点硬约束（照做，否则是静默事故）
 
@@ -1173,12 +1187,13 @@ Cordis 的级联只有**一个判据**：`name in fiber.inject`（`cordis/src/re
 构建器入口仍是主包的 `scripts/build-client.mjs`，§10.1 #11）。
 
 **`test/tools/packages.mjs` 的 `FLOORS` 每次加包/加产物都实测抬过（不是"不用改"）**：三项都数"包"、不数目录类型，
-现行 `FLOORS = { packages: 7, clientArtifacts: 5, rows: 8 }`（复算：读 `test/tools/packages.mjs` 的同名常量，
+现行 `FLOORS = { packages: 7, clientArtifacts: 6, rows: 8 }`（复算：读 `test/tools/packages.mjs` 的同名常量，
 或 `node test/tools/packages.mjs selftest`）：
 `packages: 7`（主包不计入）= 3 组件包 + `fx` / `parallax` / `fonts` / `pet-link` 四子包（P-A 后 3 → P-F 后 6 → PR #5 后 7）；
 `rows: 8` = 根 patch 的 8 条 `insert`（PR #5 加 `wallpaper-engine-pet-link` 行）；
 `clientArtifacts` 先由 P-F 批 1c 从 3 **抬到 4**（`main+fonts+fx+parallax` 四份产物），
-再由 PR #5 的 `491282f7`（浏览器半边收口成一般形态）**4→5**（`+pet-link`），且
+再由 PR #5 的 `491282f7`（浏览器半边收口成一般形态）**4→5**（`+pet-link`），
+最后由 P-D 阶段1 的 `f0de5c3c`（S3a，壁纸子包出 `client.wallpaper.js`）**5→6**（`+wallpaper`），且
 `test/verify-client-sync.mjs` 直接 import 这**同一个常量** ⇒ 两处不会再一高一低。
 前提是每个包**仍自带直接位于其下的 `package.json`**（`:219-240` 只认直接子目录）。
 
@@ -1193,7 +1208,7 @@ Cordis 的级联只有**一个判据**：`name in fiber.inject`（`cordis/src/re
 |---|---|---|
 | P-F-1 | 三个包的**包名** | 沿用清单里已有的真名（`dsh-plugin-wallpaper-engine-<sub>`）；`id` 不变（§15.1） |
 | P-F-2 | `visibility.js` 归属 | ✅ **已定案并落地（2026-10-16）**：移到 `lib/component-visibility.js`（顶层语义名），`lib/components/` 目录删除，`lib/index.js` 再导出位置不变 → §14 D-16 |
-| P-F-3 | 账③ 是否本轮 | 拆 2a / 2b 两批；`media-bridge` 交 P-D → 落 §14 D-17 |
+| P-F-3 | 账③ 是否本轮 | 拆 2a / 2b 两批；`wallpaper` 那格已由 P-D S3a–S3d（2026-10-18）交付六节浏览器半边 → 落 §14 D-17 |
 | P-F-4 | **发布形态排期** | 统一后主包必须**精确依赖**这 3 个包 ⇒ ADR-0014 `S8.2`「发布形态尚未执行过」由"没做过"变"必须做"；按 §12 顺序（先发子包 → 主包 `dependencies` 加精确版本 + 删 `devDependencies` 的 `file:` + 重算 lock → 再发主包）。**可先只落开发期形态**（`devDependencies` + `file:packages/<pkg>`）→ 落 §14 D-18 |
 | P-F-5 | ADR 动作 | ADR-0014 `S1.1` 的"组件行 / 子包"术语二分可删（统一后只剩一种）；ADR-0014 前言"问题 1 / 问题 2"结案；ADR-0013 §重新考虑的触发线是否补"组件级 `dsh.client` 的前提已变"→ 落 §14 D-19 |
 | P-F-6 | `lib/subpackage-boot.js` 的 `assertSubpackagesResolvable()` 失败文案 | ✅ **已落地（2026-10-16）**：文案已改两态口径 —— 开发期 `devDependencies` + `file:packages/<pkg>` 链接 / 发布期 `dependencies` 精确版本。**同日追加**：文案讲的是**仓库侧**形态，真机事故失败在**宿主侧**（profile 缺 junction）⇒ 同批加了宿主腿 `assertSubpackagesResolvableInHost()`（§7.6① 第 1 条；判据 `test/verify-subpackage-boot.mjs` ②b 段） |
@@ -1229,7 +1244,7 @@ node test/run-guards.mjs all            # 硬档 + 软档 + docs + smoke；必�
   log / notice …）、`packages/<pkg>/**`（**七个独立子包**：三格组件行 `about-notice` / `mascot-avatar` / `wallpaper` + `fonts` / `fx` / `parallax` + 可选桌宠 `pet-link`（安装器形态，§7.10）；`lib/components/` 已随 `6dfb431d` 删除）、`lib/webwallgl/*`（自家模板 / 宿主桥，**不是引擎**）。
 - **浏览器半边**：主包 `src/**` 的构建期内联模块（清单的**唯一真源** = `scripts/build-client.mjs` 的 `INLINE_MODULES`）
   → 主包单产物 `lib/client.js`（生成物，不入库）；各带浏览器半边的子包按包内 `client.build.json` 配方自产
-  `packages/<pkg>/lib/client.<pkg>.js` —— **共 5 份**（`FLOORS.clientArtifacts`，含 `pet-link`）。
+  `packages/<pkg>/lib/client.<pkg>.js` —— **共 6 份**（`FLOORS.clientArtifacts`，含 `pet-link` 与 P-D S3a 起的 `wallpaper`）。
 - **资产**：`lib/about/**`、`lib/fontsets/**`、`lib/glass-presets/**`、`lib/types/**`；仓库根 `assets/**`（不进包）。
 - **发布面**：`package.json` 的 `files`（逐文件白名单）/ `exports`（主入口 + `./client` + `./subpackage-boot.js` + patch + package.json；**组件三连已随 P-F 出户**，见各 `packages/<pkg>/package.json`）/
   `peerDependencies`（宿主 `@deepseek-ai/*` 的兼容锚）—— 逐条以该文件为准。
