@@ -135,15 +135,37 @@ async function loadExtensionRegistry() {
     get title() { return globalThis.weT('全局字体'); },
     render: fontSectionMod.renderAppearanceFontSection,
   });
-  // P-D S3a：「壁纸库」页签第四节「自定义壁纸」同理 —— 按标准包内源文件 import 真渲染器，
-  // 描述符与 packages/wallpaper/src/client.js 逐字同形（title 是 accessor + order 40）。
-  const wallpaperSectionMod = await import(pathToFileURL(join(root, 'packages', 'wallpaper', 'src', 'wallpaper-uploads-section.js')).href);
+  // P-D S3a/S3b：「壁纸库」页签第二/三/四节（切换过场 / 自动轮播 / 自定义壁纸）都随壁纸子包
+  // 搬出 ⇒ 按标准包内源文件 import 真渲染器，描述符与 packages/wallpaper/src/client.js 逐字同形
+  // （title 是 accessor + order 20/30/40）。**故意乱序登记**：注册表按 (order, seq) 排序，下面
+  // 的顺序快照就在验证这一点（否则"登记顺序恰好等于期望顺序"会让这条判据空转）。
+  const wallpaperRotationSectionMod = await import(pathToFileURL(join(root, 'packages', 'wallpaper', 'src', 'wallpaper-rotation-section.js')).href);
+  const wallpaperUploadsSectionMod = await import(pathToFileURL(join(root, 'packages', 'wallpaper', 'src', 'wallpaper-uploads-section.js')).href);
+  const wallpaperTransitionSectionMod = await import(pathToFileURL(join(root, 'packages', 'wallpaper', 'src', 'wallpaper-transition-section.js')).href);
+  reg.weRegisterPanelSection('library', 'wallpaper-rotation', {
+    id: 'wallpaper-rotation',
+    get title() { return globalThis.weT('自动轮播'); },
+    order: 30,
+    render: wallpaperRotationSectionMod.renderWallpaperRotationSection,
+  });
   reg.weRegisterPanelSection('library', 'wallpaper-uploads', {
     id: 'wallpaper-uploads',
     get title() { return globalThis.weT('自定义壁纸'); },
     order: 40,
-    render: wallpaperSectionMod.renderWallpaperUploadsSection,
+    render: wallpaperUploadsSectionMod.renderWallpaperUploadsSection,
   });
+  reg.weRegisterPanelSection('library', 'wallpaper-transition', {
+    id: 'wallpaper-transition',
+    get title() { return globalThis.weT('切换过场'); },
+    order: 20,
+    render: wallpaperTransitionSectionMod.renderWallpaperTransitionSection,
+  });
+  // 顺序快照（判据①）：三节齐全 + 乱序登记下仍按 order 20/30/40 排序。
+  const libSections = reg.wePanelSectionsOf('library');
+  check('P-D S3b：壁纸库注册表三节齐全 · 乱序登记 ⇒ 按 order 20/30/40 排序（顺序快照）',
+    libSections.map((s) => s.id).join(',') === 'wallpaper-transition,wallpaper-rotation,wallpaper-uploads'
+    && libSections.map((s) => s.order).join(',') === '20,30,40',
+    'got=' + libSections.map((s) => s.id + ':' + s.order).join(', '));
   return reg;
 }
 // Keep every cache/config write inside the workspace (same stance as
@@ -1013,11 +1035,16 @@ const tabsSrc = panelText();
 const fontSectionSrc = readFileSync(join(root, 'packages', 'fonts', 'src', 'appearance-font-section.js'), 'utf8')
   .replace(/\r\n/g, '\n');
 const tabsSrcWithFontSection = tabsSrc + '\n;\n' + fontSectionSrc;
-// P-D S3a：「壁纸库」页签第四节「自定义壁纸」的渲染器也随壁纸子包搬出
-// （packages/wallpaper/src/wallpaper-uploads-section.js）⇒ 同一条口径：判"该节画什么 /
+// P-D S3a/S3b：「壁纸库」页签第二/三/四节（切换过场 / 自动轮播 / 自定义壁纸）的渲染器也随
+// 壁纸子包搬出（packages/wallpaper/src/wallpaper-*-section.js）⇒ 同一条口径：判"该节画什么 /
 // 解构了哪些 ctx 字段"的判据读 **页签族 + 包内各节** 的并集。
+const wallpaperTransitionSrc = readFileSync(join(root, 'packages', 'wallpaper', 'src', 'wallpaper-transition-section.js'), 'utf8')
+  .replace(/\r\n/g, '\n');
+const wallpaperRotationSrc = readFileSync(join(root, 'packages', 'wallpaper', 'src', 'wallpaper-rotation-section.js'), 'utf8')
+  .replace(/\r\n/g, '\n');
 const wallpaperUploadsSrc = readFileSync(join(root, 'packages', 'wallpaper', 'src', 'wallpaper-uploads-section.js'), 'utf8')
   .replace(/\r\n/g, '\n');
+const wallpaperSectionsSrc = wallpaperTransitionSrc + '\n;\n' + wallpaperRotationSrc + '\n;\n' + wallpaperUploadsSrc;
 // 组装点自身：只喂给"8 个 render*Tab 声明在 src/panel-tabs.js"那条不变量（族并集会让它变弱）。
 const tabsHubSrc = readFileSync(join(root, 'src', 'panel-tabs.js'), 'utf8');
 // `fnBody` 的实现在 `test/tools/assert-harness.mjs`（`fnNameBody`，取首个 `\n}`；
@@ -3733,11 +3760,14 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
   const tabsSrcNow = panelText()
     .replace(/\r\n/g, '\n')
     + '\n;\n' + fontSectionSrc
-    + '\n;\n' + wallpaperUploadsSrc;
+    + '\n;\n' + wallpaperSectionsSrc;
   // 这些名字在产物里是**内联同一作用域**的常量 / 纯组件 / 纯函数；单独 import 时按内联规则
   // 补 globalThis 替身（`weT` 由 tools/weT-shim.mjs 装、React 等由上面那块装）。
   Object.assign(globalThis, {
     DEFAULTS: schemaMod.DEFAULTS,
+    // P-D S3b：窄键 `rotationIntervalDefault` 是主 bundle 作用域的常量（= DEFAULTS.rotationInterval），
+    // 轮播节的「间隔」下拉在没选分组时用它当默认值 ⇒ 单独 import 时按内联规则补同值替身。
+    rotationIntervalDefault: schemaMod.DEFAULTS.rotationInterval,
     ADAPTER_TARGET_VALUES: schemaMod.ADAPTER_TARGET_VALUES,
     Toggle: noop, VinylRecord: noop,
     SWITCH_DIRS: ['left', 'right'], SWITCH_DIR_LABELS: { left: '左', right: '右' },
@@ -3747,7 +3777,20 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
     adapterCaps: () => ({}), adapterDetectedLabel: () => '', adapterMismatchWarning: () => '',
     liveDiagVerbose: () => false, weAudioVolume: () => 0, vinylSpinVisible: () => false,
     liveFailReasonOf: () => '', groupWallpapers: () => [], switchFrames: () => [],
-    switchTransitionOf: () => ({ id: 'fade', dir: 'left', speed: 'normal', ms: 400 }),
+    // P-D S3b：过场节搬进包内后，这个自由标识符由本替身提供 —— 替身必须与真实现同形：
+    // `directional` 只在方向型过场（真集合 SWITCH_DIRECTIONAL = push/wipe/bars）才为 true。
+    // 恒 true 会让默认 `cut` 下的标签快照凭空多出「方向」＝ 钉住一个真实界面不会出现的状态；
+    // 下方 on* 覆盖用例改用 wipe 让方向段真的出现（另有同形断言钉替身与真集合不脱钩）。
+    switchTransitionOf: (selLike) => {
+      const id = (selLike && selLike.switchTransition) || schemaMod.DEFAULTS.switchTransition;
+      return {
+        id,
+        dir: 'left',
+        speed: 'normal',
+        ms: 400,
+        directional: ['push', 'wipe', 'bars'].includes(id),
+      };
+    },
     renderConfirmRow: noop,
     changeUploadDir: async () => {}, changeWeAssetsDir: async () => {},
     uploadWallpaperFile: () => {}, removeUploadWallpaper: () => {},
@@ -4062,7 +4105,7 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
     // ⚠️ 刀4 之后节的渲染器搬到了 src/panel-tabs-*.js 域模块 ⇒ 扫**页签族全文**（组装点在末尾），
     //    而不是组装点单文件（否则六处调用全在域模块里 ⇒ 假红 missing=theme,detail,…）。
     const appearanceModules = ['theme', 'detail', 'corners', 'uiColor', 'font'];
-    const panelAllSrc = panelText() + '\n;\n' + fontSectionSrc + '\n;\n' + wallpaperUploadsSrc;
+    const panelAllSrc = panelText() + '\n;\n' + fontSectionSrc + '\n;\n' + wallpaperSectionsSrc;
     const missingModules = appearanceModules.filter((m) => !panelAllSrc.includes('moduleResetButton("' + m + '"'));
     check('#192 外观六模块各挂 ↺ + 玻璃 UI 也挂 + 共用构件阻止冒泡',
       missingModules.length === 0
@@ -6129,9 +6172,11 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
       label: '',
       mk: () => st,
       want: ['当前壁纸', '切换过场', '自动轮播', '自定义壁纸'],
-      // ⚠️ 实测：456 行的渲染器在「最小替身」下只吐出 3 个控件标签 —— 说明 `editing` / `groups` /
-      // `uploadedList` / `propsPanelOpen` 这些门关着时，四节里绝大部分内容**根本没被渲染**。
-      // 钉住现状不是认可它：门的另一侧一旦开始渲染，这条就会变红、逼人回来看（下一步就是开门）。
+      // ⚠️ 实测：渲染器在「最小替身」下只吐出 3 个控件标签（过场动画 / 时长 / 自动轮转）——
+      // 说明 `editing` / `groups` / `uploadedList` / `propsPanelOpen` 这些门关着时，四节里绝大部分
+      // 内容**根本没被渲染**。钉住现状不是认可它：门的另一侧一旦开始渲染，这条就会变红、逼人
+      // 回来看（下一步就是开门）。默认过场 `cut` **不是**方向型 ⇒ 没有「方向」行（真实现同此）；
+      // 方向段由下方 on* 覆盖用例用 wipe 单独开出来，不要靠恒 true 的替身把它塞进这条快照。
       wantLabels: ['过场动画', '时长', '自动轮转'],
       // 门的**另一侧**：这几条门关着时，编辑器块 / 上传列表 / 错误与提示都不该出现 ——
       // 与后面两条"开门"用例成对，钉住"门"本身（只钉开门侧的话，"把门拆掉、永远画编辑器"也会绿）。
@@ -6366,6 +6411,90 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
   check('负对照：节抽取只认 section-label 节点（旁边普通文本不得被当节）',
     sectionSeq({ props: { className: 'we-picker__ctl' }, children: ['当前壁纸'] }).length === 0
     && sectionSeq({ props: { className: 'we-picker__section-label' }, children: ['当前壁纸'] }).length === 1);
+
+  // ── P-D S3b：搬出去的两节，其 ctx 回调必须在**真渲染**里逐个到达（on* 覆盖率判据）────
+  // 为什么需要它：节渲染器搬进包内文件后，"控件画出来没有"由类名锚/标签锚守着，但**回调是否
+  // 真的接到 ctx 上**没有判据 —— 渲染器里把一个 onX 接错/漏接，类名锚照旧绿。做法：真渲染一次
+  // 「三节全开门」的壁纸页签，深度优先把树上所有 on<X> 函数 prop 都调一遍，数哪些 ctx 回调真被
+  // 触达；再拿"把两个会渲染回调按钮的替身掐掉"的对照证明它看得见缺失。只扫 on* prop（React 的
+  // 事件口），不扫业务回调 prop（如 renderUserPropsPanel 由节直接调用，不是事件）。
+  {
+    const S3B_CALLBACKS = ['onSwitchTransition', 'onSwitchTransitionDir', 'onSwitchTransitionSpeed',
+      'onArmDeleteGroup', 'onDeleteGroup', 'onDisarmConfirm', 'onEditInterval', 'onEditName',
+      'onEditOrder', 'onGroupChange', 'onGroupInterval', 'onOpenPickerDraft', 'onToggleRotation'];
+    const firedOf = (stubs) => {
+      const fired = [];
+      const sel = Object.assign({}, st, {
+        rotationGroupId: 'g1', rotationEnabled: true,
+        // 方向型过场才画「方向」段（真实现 SWITCH_DIRECTIONAL = push/wipe/bars）⇒ 这里显式选 wipe，
+        // 否则 onSwitchTransitionDir 在树上没有落点，覆盖率判据会误报"漏接"。
+        switchTransition: 'wipe',
+        inventory: Object.assign({}, st.inventory, {
+          playlists: [{ id: 'p1', name: 'P 列表', portableCount: 1 }],
+        }),
+      });
+      const ctx = Object.assign({}, CASES[0].ctx(sel), {
+        groups: [{ id: 'g1', name: 'A 组', wallpaperIds: ['w1'], interval: 10, order: 'sequence' }],
+        group: { id: 'g1', name: 'A 组', wallpaperIds: ['w1'], interval: 10, order: 'sequence' },
+        editing: { name: 'A 组', interval: 10, order: 'sequence', wallpaperIds: ['w1'] },
+        armedConfirm: 'group:g1',
+        uploadedList: [{ id: 'u1', title: '上传的壁纸' }],
+        playableCount: 2,
+      });
+      for (const name of S3B_CALLBACKS) ctx[name] = () => { fired.push(name); };
+      const prevConfirm = globalThis.renderConfirmRow;
+      const prevToggle = globalThis.Toggle;
+      globalThis.renderConfirmRow = stubs.renderConfirmRow;
+      globalThis.Toggle = stubs.Toggle;
+      try {
+        const tree = panelMod.renderWallpaperTab(ctx);
+        const events = [{ target: { value: 'g1' } }, { target: { value: 'p1' } },
+          { target: { value: 'random' } }, { target: { checked: true } }];
+        const walk = (node) => {
+          if (Array.isArray(node)) { node.forEach(walk); return; }
+          if (!node || typeof node !== 'object') return;
+          for (const [key, value] of Object.entries(node.props || {})) {
+            if (!/^on[A-Z]/.test(key) || typeof value !== 'function') continue;
+            // 下游替身可能先炸（例如控件 prop 形状不对）；本判据只数"回调被触达"。
+            for (const ev of events) { try { value(ev); } catch { /* 见上 */ } }
+          }
+          if (Array.isArray(node.children)) node.children.forEach(walk);
+        };
+        walk(tree);
+      } finally {
+        globalThis.renderConfirmRow = prevConfirm;
+        globalThis.Toggle = prevToggle;
+      }
+      return S3B_CALLBACKS.filter((name) => fired.includes(name));
+    };
+    const liveStubs = {
+      renderConfirmRow: (armed, token, question, onConfirm, onDisarm) => REACT.createElement('div', null,
+        REACT.createElement('button', { onClick: onConfirm }, '确认'),
+        REACT.createElement('button', { onClick: onDisarm }, '取消')),
+      Toggle: (props) => REACT.createElement('button', { onClick: props.onChange }, props.label || '开关'),
+    };
+    const got = firedOf(liveStubs);
+    check('P-D S3b：搬出两节的 13 个 ctx 回调在真渲染里逐个触达（on* 覆盖率）',
+      got.length === S3B_CALLBACKS.length,
+      '触达 ' + got.length + '/' + S3B_CALLBACKS.length + '；缺=['
+      + S3B_CALLBACKS.filter((name) => !got.includes(name)).join(', ') + ']');
+    // 负对照：把两个"会渲染回调按钮"的替身掐成 noop ⇒ 这三枚必须触达不到；其余 10 枚走的是
+    // 真 <select>/<button> 节点（替身影响不到）⇒ 缺失集合必须**恰好**是这三枚。
+    const dead = firedOf({ renderConfirmRow: () => null, Toggle: () => null });
+    const missing = S3B_CALLBACKS.filter((name) => !dead.includes(name));
+    check('negative control：掐掉确认行/开关替身 ⇒ 恰好看得见 onDeleteGroup/onDisarmConfirm/onToggleRotation 缺失',
+      missing.length === 3 && ['onDeleteGroup', 'onDisarmConfirm', 'onToggleRotation'].every((name) => missing.includes(name)),
+      'missing=[' + missing.join(', ') + ']');
+    // 替身同形（防"判据钉住替身而不是钉住实现"）：上面的 switchTransitionOf 替身把方向集合写成
+    // 字面量，必须与真实现的 `SWITCH_DIRECTIONAL` 一致；两处一旦脱钩，本判据与标签快照都会
+    // 开始描述一个真实界面不会出现的状态。
+    const realDirectional = (/const SWITCH_DIRECTIONAL = \[([^\]]*)\]/.exec(clientText()) || [null, ''])[1]
+      .split(',').map((s) => s.trim().replace(/^["']|["']$/g, '')).filter(Boolean).sort();
+    const stubDirectional = ['push', 'wipe', 'bars'];
+    check('P-D S3b：switchTransitionOf 替身的方向集合与 src/client.js 的 SWITCH_DIRECTIONAL 同源',
+      realDirectional.join(',') === stubDirectional.slice().sort().join(','),
+      '真=[' + realDirectional.join(',') + '] 替身=[' + stubDirectional.join(',') + ']');
+  }
 
   // ── appearance / effects：同一套挂载台（ctx 由**渲染器自己的解构行**驱动）────────
   // 这两页签的节顺序此前也没有判据（`verify-fontset` 只判"某串在场"，`renderEffectsTab`

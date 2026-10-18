@@ -5984,6 +5984,11 @@ const petLink = {
 // 与 .integration-notes/p-c-contract.md §5 的两方向清单。
 // 一律用 **getter**：这些是活的模块级绑定（React / selection / 文案表在求值期才落地），
 // 值拷贝既会在求值期撞 TDZ，也会让子包拿到过期的引用。
+// 窄键常量（P-D S3b）：轮播节搬进子包半边后仍要回显「每 N 分钟」的默认间隔，但
+// `DEFAULTS` 整张表**不进** host 键面 ⇒ 只给这一格显式绑定。真源仍是
+// lib/settings-schema.js 的 DEFAULTS.rotationInterval（verify-client 有同源判据 + 负对照）。
+const ROTATION_INTERVAL_DEFAULT = DEFAULTS.rotationInterval;
+
 const HOST_BRIDGE_BINDINGS = {
   selection: () => selection,
   weNow: () => weNow,
@@ -6044,6 +6049,24 @@ const HOST_BRIDGE_BINDINGS = {
   uploadWallpaperFile: () => uploadWallpaperFile,
   removeUploadWallpaper: () => removeUploadWallpaper,
   renderConfirmRow: () => renderConfirmRow,
+  // ── 壁纸子包浏览器半边（packages/wallpaper，P-D S3b：切换过场 / 自动轮播两节）的显式键集 ─
+  // 来源 = 两个被搬渲染器（packages/wallpaper/src/wallpaper-{transition,rotation}-section.js，
+  // 原 src/panel-tabs-wallpaper.js:108-167 / :169-316）里的**自由标识符**逐个点名；
+  // 动作体 / 默认值 / 持久化全留主包（ADR-0013 D20）⇒ 这里给活绑定 getter，不是值拷贝。
+  // 轮播间隔走窄键 rotationIntervalDefault（同源 = DEFAULTS.rotationInterval，见上方常量）。
+  switchTransitionOf: () => switchTransitionOf,
+  SWITCH_TRANSITIONS: () => SWITCH_TRANSITIONS,
+  SWITCH_DIRS: () => SWITCH_DIRS,
+  SWITCH_DIR_LABELS: () => SWITCH_DIR_LABELS,
+  SWITCH_SPEEDS: () => SWITCH_SPEEDS,
+  groupWallpapers: () => groupWallpapers,
+  startCreateGroup: () => startCreateGroup,
+  startEditGroup: () => startEditGroup,
+  saveEditingGroup: () => saveEditingGroup,
+  cancelEditGroup: () => cancelEditGroup,
+  importPlaylistIntoDraft: () => importPlaylistIntoDraft,
+  Toggle: () => Toggle,
+  rotationIntervalDefault: () => ROTATION_INTERVAL_DEFAULT,
 };
 const HOST_BRIDGE_KEYS = Object.keys(HOST_BRIDGE_BINDINGS);
 for (const bridgeKey of HOST_BRIDGE_KEYS) {

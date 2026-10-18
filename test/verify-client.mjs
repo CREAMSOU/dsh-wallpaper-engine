@@ -11,6 +11,8 @@ import vm from 'node:vm';
 import { stripComments, stripExportBlocks } from './tools/js-text.mjs';
 // 刀3：样式族取文（8 个域模块 + 组装点，构建序拼接）——别再自己 readFileSync 单文件。
 import { styleText, panelText, scopeText } from './tools/src-scope.mjs';
+// P-D S3b：窄键 `rotationIntervalDefault` 必须与设置 schema 的默认值**同源**（下面有判据）。
+import { DEFAULTS as SCHEMA_DEFAULTS } from '../lib/settings-schema.js';
 // 分支级"改了 store 却没通知"的分析与审计工具**同源**（避免两份判据分叉）；
 // `DEF`/`defName` 也从工具导入 —— 定义形态只有一份，形态补齐时两处一起动。
 import { pathNotifications, definitionsOf, DEF, defName } from './tools/branch-notify.mjs';
@@ -428,6 +430,27 @@ try { exportsObj.apply(ctx); } catch (e) { thrown = (e && (e.stack || e.message)
 assert.equal(thrown, null, 'apply(ctx) 不得抛（夹具已给 slots/effect/document/fetch）：' + thrown);
 console.log('apply threw: (none)');
 console.log('slot registrations:', JSON.stringify(registrations));
+
+// P-D S3b：浏览器半边新增的 host 键必须在**主 bundle 的公开键面**里。两种失败形状都钉住：
+// ①键没登记 ⇒ `undefined`（子包自检会大声抛，但这条要在产物层面先红，不等运行期）；
+// ②`rotationIntervalDefault` 允许"抄成同一个数字"——那是两份真源，改默认值就静默分叉，
+//   所以必须钉**同源**（=== 设置 schema 的 DEFAULTS.rotationInterval）；负对照证明判据不恒真。
+const NEW_WALLPAPER_HOST_KEYS = [
+  'switchTransitionOf', 'SWITCH_TRANSITIONS', 'SWITCH_SPEEDS', 'SWITCH_DIR_LABELS', 'SWITCH_DIRS',
+  'groupWallpapers', 'startCreateGroup', 'startEditGroup', 'saveEditingGroup', 'cancelEditGroup',
+  'importPlaylistIntoDraft', 'Toggle', 'rotationIntervalDefault',
+];
+for (const key of NEW_WALLPAPER_HOST_KEYS) {
+  assert.ok(exportsObj.hostBridgeKeys.includes(key), '主 bundle 键面必须包含 P-D S3b 键：' + key);
+  assert.notEqual(exportsObj[key], undefined, 'P-D S3b 键不得落到 undefined：' + key);
+}
+const rotationIntervalDefaultSameSource = (actual, schemaDefaults) =>
+  actual === schemaDefaults.rotationInterval;
+assert.ok(rotationIntervalDefaultSameSource(exportsObj.rotationIntervalDefault, SCHEMA_DEFAULTS),
+  'rotationIntervalDefault 必须与 DEFAULTS.rotationInterval 同源（当前 '
+  + exportsObj.rotationIntervalDefault + ' vs schema ' + SCHEMA_DEFAULTS.rotationInterval + '）');
+assert.ok(!rotationIntervalDefaultSameSource(SCHEMA_DEFAULTS.rotationInterval + 1, SCHEMA_DEFAULTS),
+  'negative control：把错值喂进同源判据必须判红（否则判据恒真）');
 
 const sectionReg = registrations.find((r) => r.key === 'settings.section');
 console.log('registered as first-level settings.section:', !!sectionReg);
@@ -4193,6 +4216,11 @@ setTimeout(async () => {
     // 对包内文件成立（否则"搬出去"等于把这条判据的射程悄悄缩小，正是刀4 那次的教训）。
     { file: '../packages/wallpaper/src/wallpaper-uploads-section.js', user: '壁纸库自定义壁纸节',
       anchor: ['function renderWallpaperUploadsSection(ctx) {', 'we-picker__uploads-list'] },
+    // P-D S3b：切换过场 / 自动轮播两节也搬进包内 ⇒ 同一条接缝纪律必须对包内文件成立。
+    { file: '../packages/wallpaper/src/wallpaper-transition-section.js', user: '壁纸库切换过场节',
+      anchor: ['function renderWallpaperTransitionSection(ctx) {', 'we-picker__seg'] },
+    { file: '../packages/wallpaper/src/wallpaper-rotation-section.js', user: '壁纸库自动轮播节',
+      anchor: ['function renderWallpaperRotationSection(ctx) {', 'we-picker__rotation-interval'] },
   ];
   for (const r of RENDERERS) {
     // 刀4：`family` 条目按构建序扫**族并集**（节渲染器搬出去了，单文件读法会漏掉它们）。

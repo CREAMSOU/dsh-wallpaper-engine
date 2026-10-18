@@ -334,7 +334,7 @@ const INLINE_MODULES = [
     //    组装点里的 render*Tab 按名字直接调它们的 render*Section / renderMascotFormCards 等，
     //    内联后同作用域；函数声明本身有提升，但排在调用方前面才读得出依赖方向）。
     file: 'src/panel-tabs-wallpaper.js',
-    why: '「壁纸库」页签的节渲染器（原 src/panel-tabs.js 的 38–508 行原样搬移；第四节「自定义壁纸」P-D S3a 起住在 packages/wallpaper 的浏览器半边）',
+    why: '「壁纸库」页签第一节「当前壁纸」的渲染器（原 src/panel-tabs.js 的 38–104 行原样搬移；其余三节 P-D S3a/S3b 起住在 packages/wallpaper 的浏览器半边，见该包 client.build.json）',
     markers: ['function renderWallpaperCurrentSection(ctx) {',
       '    const { current, isLiveScene, onClear, onOpenPicker, onRefresh, onToggleAudio, onTogglePlay, onTogglePropsPanel, playbackLive, propsPanelOpen, renderUserPropsPanel, sel, setPickerOpener } = ctx;'],
   },
