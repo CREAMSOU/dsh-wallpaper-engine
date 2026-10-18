@@ -12,6 +12,36 @@ All changes target `main`. The plugin is **one natively cross-platform tree** (W
 
 所有改动都提交到 `main`。本插件是**一份原生跨平台代码**（Windows / WSL / macOS / Linux），没有平台分支 —— 平台专属改动不得让其它平台回退。
 
+## Repository layout and subpackages / 仓库结构与子包
+
+This repository is a **multi-package tree**: the main package (`lib/` host half, `src/` browser half, root `cordis.patch.yml`) plus subpackages under `packages/`:
+
+- `packages/{fx,parallax,fonts}` — independent subpackages; each carries its own host half and browser half (`packages/<pkg>/src/` → built `packages/<pkg>/lib/client.<pkg>.js`);
+- `packages/{about-notice,mascot-avatar,wallpaper}` — component rows; their host half is the row's routes plus the view the row consumes (`wallpaper` also ships a browser half, `packages/wallpaper/lib/client.wallpaper.js`, which mounts its panel sections back into the main package);
+- `packages/pet-link` — optional pet integration.
+
+The root `cordis.patch.yml` is the **single source of truth for the row set**: one row for the main package, one per component row, one per subpackage row. A row `name` is the **real package name** (never a subpath of the main package), so development and release share one patch (`adr/0014` §S4). A subpackage's host half talks to the main package **only** through the Cordis service `wallpaperEngineHost` (frozen seven keys, read-only); its `inject` is the only connection and its code carries **no main-package specifier** (`test/verify-subpackage-purity.mjs`).
+
+本仓是**多包形态**：主包（`lib/` 宿主半边、`src/` 浏览器半边、根 `cordis.patch.yml`）＋ `packages/` 下的子包：
+
+- `packages/{fx,parallax,fonts}` —— 独立子包，各自带宿主半边与浏览器半边（`packages/<pkg>/src/` → 构建出 `packages/<pkg>/lib/client.<pkg>.js`）；
+- `packages/{about-notice,mascot-avatar,wallpaper}` —— 组件行：宿主半边 = 该行的路由族 + 该行消费的视图（`wallpaper` 另带浏览器半边 `packages/wallpaper/lib/client.wallpaper.js`，把它的面板节挂回主包）；
+- `packages/pet-link` —— 可选桌宠联动。
+
+根 `cordis.patch.yml` 是**行集的唯一真源**：主包一行、每个组件行一行、每个子包行一行。行的 `name` 一律是**子包真名**（不是主包子路径），开发期与发布期因此共用同一份 patch（`adr/0014` §S4）。子包宿主半边与主包之间**只有** Cordis 服务 `wallpaperEngineHost`（冻结七键、只读）这一条通道：`inject` 是唯一接线，代码里**零主包说明符**（`test/verify-subpackage-purity.mjs`）。
+
+### Subpackage development / 子包开发
+
+- `devDependencies` uses `file:packages/*` for every subpackage — no publish step and no registry access is needed to resolve them locally.
+- A `link:` install does **not** install the main package's dependencies into the profile, so the subpackage rows would never resolve. `scripts/dev-link-subpackages.mjs` creates the missing directory junctions in the profile's `node_modules` (and in this repo's `node_modules`, which the host-side startup self-check resolves against). It is idempotent — re-run it after any `pnpm install` in a profile.
+- `npm run build` generates the browser half of every subpackage from its in-package recipe (`packages/<pkg>/client.build.json`) into `packages/<pkg>/lib/client.<pkg>.js`. These artifacts are **not tracked in git**, and the only external specifier a subpackage artifact may carry is `require("<main package real name>")`.
+- A subpackage that declares `dsh.client` must have that artifact on disk, otherwise its browser half silently does not load (`test/verify-subpackage-client-half.mjs`). The full registration checklist for a new subpackage is `adr/0014` §S10.
+
+- `devDependencies` 用 `file:packages/*` 接上每个子包 —— 本地解析不需要发布、也不需要 registry。
+- `link:` 安装**不会**把主包的依赖装进 profile，子包行因此永远解析不到。`scripts/dev-link-subpackages.mjs` 负责在 profile 的 `node_modules`（以及本仓的 `node_modules`，宿主侧启动自检就是在那儿 resolve）补建目录 junction；它幂等 —— profile 里跑过 `pnpm install` 之后重跑一次即可。
+- `npm run build` 按各包自带的配方（`packages/<pkg>/client.build.json`）生成子包浏览器半边 `packages/<pkg>/lib/client.<pkg>.js`。这些产物**不入库**；子包产物允许的唯一外部说明符是 `require("<主包真名>")`。
+- 声明了 `dsh.client` 的子包必须真的产出该产物，否则它的浏览器半边会**静默不加载**（`test/verify-subpackage-client-half.mjs`）。新增一个子包要登记的各个点见 `adr/0014` §S10。
+
 ## Build from the canonical source / 从唯一源码构建
 
 - `src/client.js` is the canonical browser source. Edit it, then run `npm run build` to regenerate `lib/client.js`.
@@ -118,6 +148,9 @@ If Steam is installed in a non-standard location, the host auto-detects it via `
 npm ci              # 本地取工具链（CI 不装依赖，见下）
 npm run verify:all  # = build + verify（硬档）+ verify:docs（软档）+ smoke
 ```
+
+`npm run verify:static`（独立静态棘轮）与 `npm run verify:e2e`（真浏览器端到端）**不在**上面这条链里，按需单独跑；
+`verify:all` 的组成（build + verify + docs + smoke）以 `test/run-guards.mjs` 的 `MANIFEST` 为准。
 
 **提交前必须全绿的是硬档**（`npm run verify`：真机行为 / 发布面 / 平台契约 / 打包面）。
 软档（`npm run verify:docs`：仓库内务 —— 模块布局 / 可达性 / 退役线 / 声明孤儿）

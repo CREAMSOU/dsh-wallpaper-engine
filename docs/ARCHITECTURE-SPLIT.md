@@ -42,7 +42,7 @@ graph LR
     P --> PET["可选独立行 pet-link<br/>（PR #5，2026-10-17；非组件行）"]
     MAIN --> BOOT["lib/host-boot.js<br/>BASE · 内核单例 · 组件记账"]
     BOOT --> KN["lib/kernel/*<br/>套件实例 · 会话 · 组件视图"]
-    MAIN --> R["lib/routes/*.js<br/>跨组件共享的路由族"]
+    MAIN --> R["lib/routes/*.js<br/>主包余下 4 族（settings / presets / diag / cache-dir）"]
     C1 --> R1["packages/about-notice/lib/*<br/>（P-F 2026-10-16 出户）"]
     C2 --> R2["packages/mascot-avatar/lib/*<br/>（P-F 2026-10-16 出户）"]
     C3 --> R3["packages/wallpaper/lib/*（P-F 批 1c 2026-10-16 出户）<br/>P-D S3a–S3d 补浏览器半边：src/** + client.build.json<br/>产物 lib/client.wallpaper.js（2026-10-18）"]
@@ -50,9 +50,8 @@ graph LR
 ```
 
 （**P-F 组件行统一已完成**（2026-10-16）：`about-notice`、`mascot-avatar` 与 `media-bridge` 三格已全部出户到
-`packages/<组件>/`（真名行 + 独立清单；`media-bridge` 为 P-F 批 1c）；该格于 P-D 阶段1（2026-10-18）机械改名 `wallpaper`（落点 `packages/wallpaper/`，见 `wip/BUNDLE-SPLIT.md` §7.4 / §14 `D-15`）；随后 `visibility.js` 移到
-`lib/component-visibility.js` ⇒ **`lib/components/` 目录已删除**。计划、时间线与须知见
-[`wip/BUNDLE-SPLIT.md`](./wip/BUNDLE-SPLIT.md) §15。）
+`packages/<组件>/`（真名行 + 独立清单；`media-bridge` 为 P-F 批 1c）；该格于 P-D 阶段1（2026-10-18）机械改名 `wallpaper`（落点 `packages/wallpaper/`，见 [`adr/0014`](./adr/0014-subpackage-contract.md) §S4.3 与 [`SUBPACKAGE-GRAPH.md`](./SUBPACKAGE-GRAPH.md) §五）；随后 `visibility.js` 移到
+`lib/component-visibility.js` ⇒ **`lib/components/` 目录已删除**。计划与时间线见 [`CHANGELOG.md`](./CHANGELOG.md) 的 v1.3.3 多包重构条目；须知见 [`adr/0014`](./adr/0014-subpackage-contract.md)。）
 
 （**2026-10-18 追加：`wallpaper` 那格已补浏览器半边**：P-D 阶段1 的 S3a–S3d 把六节面板渲染器搬进
 `packages/wallpaper/src/`（library 侧 `wallpaper-current` / `transition` / `rotation` / `uploads`，playback 侧
@@ -60,7 +59,7 @@ graph LR
 `('playback')`）挂回原页签，包内 `client.build.json` 自出 `lib/client.wallpaper.js`；主包侧
 `src/panel-tabs-wallpaper.js` 已整文件删除、`src/panel-tabs-effects.js` 只留「画面 / 实况 / 来源」三节，
 宿主机面 `HOST_BRIDGE_BINDINGS` 扩到 57 键（包内申报 28 键）。渲染内核 / 层单例仍留主包（宿主半边与
-声音 / 省电属 S5）—— 落地账见 [`wip/BUNDLE-SPLIT.md`](./wip/BUNDLE-SPLIT.md) §7.4。）
+声音 / 省电属 S5）—— 落地账见 [`CHANGELOG.md`](./CHANGELOG.md) v1.3.3 的 P-D 条目。）
 
 （**另有第七个包 `pet-link`，它不是组件行**：PR #5（2026-10-17）合入的可选桌宠联动独立子包
 `packages/pet-link/`，**不属于** P-F 组件行统一 —— 它属「独立子包行」一档（与 fx/parallax/fonts 同类），
@@ -68,8 +67,7 @@ graph LR
 声明 `inject: ['webServer', 'wallpaperEngineHost']`（走与组件行相同的宿主服务面），浏览器半边按包内
 `client.build.json` 自出产物 `packages/pet-link/lib/client.pet-link.js`（浏览器产物地板随之 4→5）；
 未安装 / 桥接未准备 / 桌宠不在网页时保留原生行为（主包侧 `host.registerPetLink()` 门面「缺席即回落」）。
-安装器形态见 [`adr/0014`](./adr/0014-subpackage-contract.md) §S3.8a，落地账见
-[`wip/BUNDLE-SPLIT.md`](./wip/BUNDLE-SPLIT.md) §7.10。）
+安装器形态见 [`adr/0014`](./adr/0014-subpackage-contract.md) §S3.8a，落地账见 [`CHANGELOG.md`](./CHANGELOG.md) v1.3.3（P-F 与 PR #5 条目）。）
 
 | 段 | 住在哪 | 是什么 | 契约 / 判据 |
 |---|---|---|---|
@@ -93,7 +91,7 @@ graph row 加载）；两种路径下可见面都由宿主行状态派生、双�
 与 `lib/component-visibility.js`）。**当前**组件行三格已按 `adr/0013` D6/D8 的「多包」终态出户到
 `packages/<组件>/`（开发期 `file:` 链接解析，发布形态未落地），但**不**做每组件一格客户端开关
 （[`adr/0013`](./adr/0013-bundle-multi-component-rows.md) D17 的非目标）；⚠️ **目标形态已于 2026-10-14 改为
-「多包」**（该 ADR 的 D6/D8 就地改写，实施计划见 [`wip/BUNDLE-SPLIT.md`](./wip/BUNDLE-SPLIT.md)）——
+「多包」**（该 ADR 的 D6/D8 就地改写，实施计划见 [`CHANGELOG.md`](./CHANGELOG.md) v1.3.3 与 [`SUBPACKAGE-GRAPH.md`](./SUBPACKAGE-GRAPH.md)）——
 本条描述的是**本分支的现状**，不是终态。
 
 ## 3. 门面现在只剩什么
@@ -213,8 +211,7 @@ graph row 加载）；两种路径下可见面都由宿主行状态派生、双�
   ⚠️ 两份 `CHANGELOG` 与归档件里出现的 `ADR-0012` 是**当时的编号/账本**，保持原样
   （[`adr/0006`](./adr/0006-comment-discipline-as-written-convention.md)：历史文档不追溯）；
   读归档件时按 [`adr/README.md`](./adr/README.md) 里那张映射说明理解。
-- **本分支的过程手册**是 [`docs/wip/BUNDLE-SPLIT.md`](./wip/BUNDLE-SPLIT.md)（活手册：收口后按
-  `docs/README.md` §目录的寿命规则归档 ⇒ 那时路径会变，本文只在"过程记录"意义上引用它）。
+- **本分支的过程手册已收口归档**（P-A … P-E 全部落地）：现行结论按落点读 —— 机制见 `lib/subpackage-boot.js` / `src/client.js` 的文件头，判据见 `test/verify-*.mjs`，取舍见 [`adr/0013`](./adr/0013-bundle-multi-component-rows.md) 与 [`adr/0014`](./adr/0014-subpackage-contract.md)，账见 [`CHANGELOG.md`](./CHANGELOG.md) 的 v1.3.3 段。
 
 ## 参考
 

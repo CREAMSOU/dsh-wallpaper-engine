@@ -145,10 +145,10 @@ runtime the wallpaper is remembered and degrades to the legacy plain iframe (no 
 
 ### Host / client split
 
-- **Host half** (`lib/index.js` + `lib/routes/*.js`): a Cordis plugin that
+- **Host half** (`lib/index.js` + its four remaining route families in `lib/routes/*.js` — `settings` / `presets` / `diag` / `cache-dir`; the wallpaper domain's twelve families live in `packages/wallpaper/lib/routes/*.js`): a Cordis plugin that
   1. locates the Wallpaper Engine install by reading Steam's `libraryfolders.vdf` (so it works even when Steam is on a non-default drive),
   2. enumerates wallpapers from `projects/defaultprojects`, `projects/myprojects`, and `steamapps/workshop/content/431960/*`,
-  3. registers same-origin HTTP routes on the DSH webserver so the browser half can fetch data and stream media directly. They are grouped by responsibility — **assets** · **transcode** · **live rendering** · **out-figure & capture** · **settings & system**.
+  3. registers same-origin HTTP routes on the DSH webserver so the browser half can fetch data and stream media directly. They are grouped by responsibility — **assets** · **transcode** · **live rendering** · **out-figure & capture** · **settings & system**; most of them now live in `packages/wallpaper/lib/routes/*.js` (P-D), while the main package keeps `settings` / `presets` / `diag` / `cache-dir`.
      **The authoritative list (each route's source line, registration shape and context contract) is [`ROUTE-INDEX.md`](../ROUTE-INDEX.md)** — this file no longer hand-writes the path table *or a route count* (hand-writing always rots: that table long listed `/scene-runtime`, `/scene-manifest` and `/scene-resource`, **all three deleted**, while missing most of the routes that existed; the count drifted the same way).
 - **Client half** (`lib/client.js`): a browser module that fetches the inventory and renders the selected
   wallpaper into a fixed layer *behind* the app columns; it registers the first-level settings page

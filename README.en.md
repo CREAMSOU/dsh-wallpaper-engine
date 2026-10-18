@@ -119,24 +119,36 @@ Step-by-step recovery (`ERR_PNPM_UNEXPECTED_VIRTUAL_STORE`, etc.) lives in
 
 ### The plugin bundle and its sub-plugins (per-row toggles)
 
-Once installed, this plugin shows up in the plugin manager as **several rows**: the main row (the wallpaper
-engine itself) plus one row per **sub-plugin**. Each row can be **disabled on its own**.
+One install still means **one npm package** — but that package is a bundle: the plugin manager lists
+**several rows**, the main row (the wallpaper engine itself) plus one row per **sub-plugin** —
+`about-notice`, `mascot-avatar`, `wallpaper`, `fx`, `parallax`, `fonts` and the optional `pet-link`. Each row can be
+**disabled on its own**, and upgrading needs no extra sub-packages either.
 
 - ⚠️ **A restart / reload is required for a row toggle to take effect.** Row state lives in the bundle's own
   manifest, which is not on the hot-reload watch list — the UI will **not** change the moment you flip the switch.
 - After disabling a row: that sub-plugin's **host capabilities (its HTTP routes) disappear entirely**, and
   the **browser-side blocks that belong to it stop rendering** (its UI and its settings go away together).
-- Conversely, **the browser half is loaded per package**: as long as the main row is enabled the whole settings
-  UI is there. Disabling the **main** row disables the entire plugin (wallpaper and UI both go away).
-- `wallpaper` (renamed from the system media bridge in P-D phase 1) is the **exception**: it is currently the host half
-  of the wallpaper sub-plugin, so it does **not** yet participate in this "UI follows the row" semantics (its browser
-  half will be folded into the wallpaper/UI core split later).
+- Conversely, **the browser half is loaded per package, and only from an active row**: a sub-package that ships
+  one stops contributing its UI as soon as its row is disabled. Disabling the **main** row disables the entire
+  plugin — wallpaper and UI both go away; the sub-plugin rows stay listed but are **parked** ("paused because the
+  main row is disabled") and activate nothing until the main row is re-enabled.
+- `wallpaper` (the package formerly named `media-bridge`) is **no longer an exception**: its host half
+  (wallpaper inventory, media / scene serving, custom uploads, live frames, per-wallpaper properties, occlusion
+  pause and the system-media routes) and its browser-side sections now live in the package — current wallpaper,
+  switch transition, rotation and custom uploads on the Library tab; playback speed / fps cap and fit / flip on
+  the Playback tab. The rendering kernel and the wallpaper-layer singleton still stay in the main package — a
+  known boundary. If the package's browser half is absent, the **Library tab hides itself** and the settings
+  page falls back to the first visible tab, instead of opening a blank panel.
 
-| Sub-plugin row | Capabilities that disappear | UI that stops rendering |
+| Sub-plugin row | Host capabilities that disappear | UI that stops rendering |
 |---|---|---|
-| `about-notice` | `/star-count`, `/about-qr/*` | Star count, the two group-QR images and the update notice inside the About tab (intro and credits stay) |
-| `mascot-avatar` | `/mascot`, `/avatar/<side>` | The mascot form + artwork/avatar uploads on the System tab, the avatar card on the Extensions tab, the message avatar decoration (the tabs and their other sections stay) |
-| `wallpaper` (formerly `media-bridge`) | `/now-playing*`, `/media-status`, `/audio-spectrum`, `/media-control` | (not applicable yet, see above) |
+| `about-notice` | `/star-count`, `/about-qr` (the QQ / Douyin group QR images and the update-notice artwork) | Star count, the group-QR images and the update-notice artwork inside the About tab (intro and credits stay) |
+| `mascot-avatar` | `/mascot`, `/avatar` | The mascot form + artwork/avatar uploads on the System tab, the avatar card on the Extensions tab, the message avatar decoration (the tabs and their other sections stay) |
+| `wallpaper` | The wallpaper feature's own host side — inventory scanning, media / scene serving, custom uploads, live frames, per-wallpaper properties, occlusion pause and the system-media routes (`/inventory`, `/media`, `/scene-*`, `/upload`, `/live-frame`, `/props`, `/occlusion`, `/now-playing*`, …) | The in-panel wallpaper picker and the whole **Library tab**, plus the wallpaper-owned Playback sections (speed / fps cap, fit / flip); the render kernel and the layer stay in the main package |
+| `fx` | (no host routes — the host half is an empty shell; the whole feature is browser-side) | The click / trail effects and their settings module on the Extensions tab |
+| `parallax` | (no host routes — the host half is an empty shell; the whole feature is browser-side) | The 3D parallax layer and its settings module on the Extensions tab |
+| `fonts` | `/fontsets`, `/system-fonts` | The global-typography section and the font-set editor on the Appearance tab (the font keys themselves stay in the main package) |
+| `pet-link` (optional) | `/pet-link/capability` | The optional dsh-pet integration and the `Ctrl+Shift+D` maintenance panel; without this row the mascot keeps its native behaviour |
 
 ## Usage
 

@@ -40,7 +40,7 @@
 
 | | **随包发布** | **不发布（开发面）** |
 |---|---|---|
-| **浏览器进程** | `lib/client.js` —— **生成物，全仓唯一一个** | `src/**` —— 浏览器侧的**唯一真源** |
+| **浏览器进程** | `lib/client.js`（主包）+ 各子包 `packages/<pkg>/lib/client.<pkg>.js` —— **生成物** | `src/**` 与 `packages/<pkg>/src/**` —— 浏览器侧的**唯一真源** |
 | **宿主进程**（Node / Electron main） | `lib/index.js` ＋ 它 import 的 `lib/**` 模块 ＋ `lib/webwallgl/`（本仓渲染页适配层：`index.html` + `renderer.js` + `occlusion-bridge.js`；引擎本体走 npm 依赖 `webwallgl`，运行期由 `/scene-live/engine/` 从 `node_modules` 直出；`lib/vendor/` 是**约定**允许的另一个落点，当前为空——最后一份自带副本已随其唯一消费者退役） ＋ `lib/types/` | **`test/`（守门：`verify-*` + `*-smoke` + `e2e-*`）· `test/tools/`（诊断/分析/生成工具）** · `scripts/`（只有 `build-client` / `prepare`，构建与发布期用）· `docs/` ＋ 本机未跟踪的研究 / 取证目录（由忽略规则覆盖，**不入库、也不被入库文档引用**） |
 
 ### 1.1 一份代码，两个半边（两种运行形态）
@@ -103,24 +103,37 @@ graph TB
 
 ---
 
-## 2. 宿主半边：门面、内核、路由族与组件行
+## 2. 宿主半边：门面、内核、路由族、组件行与子包行
 
-`lib/index.js` 是**门面**：它做注册与协议聚合，**不装新逻辑**。宿主半边里住着五类东西
+`lib/index.js` 是**门面**：它做注册与协议聚合，**不装新逻辑**。宿主半边里住着这几类东西
 （"主包 + 组件行 + 内核化"这套形态、它与上游单包形态的差异与迁移路径见
 [`ARCHITECTURE-SPLIT.md`](./ARCHITECTURE-SPLIT.md)）：
 
 - **宿主内核** `lib/kernel/*` —— 门面在**模块加载期**一次建成的各套件实例（`host-kernel.js`）、
   一次 apply 的会话段（`host-session.js`）、组件行消费的组件视图与迷你会话（`component-session.js`）、
   配置与数据目录（`config.js` / `data-dir.js`）。
-- **路由族**（`lib/routes/<族>.js`，或组件包内的 `packages/<组件>/lib/routes/<族>.js`，一文件一族）—— 拿一个显式
-  context 对象，各自注册自己的路由。族的成员是**派生量**，本文不列：路由枚举的真源是
-  `test/tools/host-route-index.mjs` 的 `buildIndex()`（它把搬进 `lib/routes/` 的族按调用点放回原位），
-  路由级视图是生成物 `docs/ROUTE-INDEX.md`（`verify-route-index` 重算并逐字节比对）。
+- **路由族**（一文件一族）：`lib/routes/<族>.js` 是**主包自己**的族（P-D S5 把壁纸域族出户后只剩
+  `settings` / `presets` / `diag` / `cache-dir`）；壁纸域（场景 / 媒体 / 上传 / 遮挡 / 现在播放 / `we-assets` /
+  token 簇）随组件出户后住 `packages/wallpaper/lib/routes/<族>.js`，其余组件行的私有族各自在
+  `packages/<组件>/lib/routes/`。无论住哪，各族都拿一个显式 context 对象、各自注册自己的路由。族的成员是
+  **派生量**，本文不列：路由枚举的真源是 `test/tools/host-route-index.mjs` 的 `buildIndex()`（它按调用点把每个族
+  放回所属行），路由级视图是生成物 `docs/ROUTE-INDEX.md`（`verify-route-index` 重算并逐字节比对）。
   `verify-route-families` 另按账本 §7-6 的触发线盯「某族长到 ≥3 条 ⇒ 拆族或改线」。
 - **组件行**（**组件包** `packages/<组件>/lib/` —— P-F 组件行统一，旧落点 `lib/components/<组件>/` 已不存在，`packages/about-notice/`、`packages/mascot-avatar/`、`packages/wallpaper/`，2026-10-16）—— 一个 bundle 多行（[`adr/0013`](./adr/0013-bundle-multi-component-rows.md)）：
   组件入口 `index.js` + 它自己的路由族实现 + 该行消费的组件视图。行的开关是宿主的
   （`cordis.patch.yml`）；"哪个实现属于哪一行"由 `test/verify-route-ownership.mjs` 钉住，
   行的装载形态由 `test/verify-bundle-rows.mjs` 钉住。
+- **子包行与跨包服务面**（P-A / P-D 分包形态；契约 = [`adr/0014`](./adr/0014-subpackage-contract.md)）——
+  根 `cordis.patch.yml` 是**行集唯一真源**：主包一行 + 组件行（about-notice / mascot-avatar / wallpaper）＋
+  独立子包行（fx / parallax / fonts，可选 pet-link），行的 `name` 一律是子包**真名**（不是主包子路径）。
+  主包 `apply()` 的**第一步**经 `lib/subpackage-boot.js` 的 `provideSubpackageHost()` 提供 Cordis 服务
+  `wallpaperEngineHost`，值 = `createSubpackageHost()` 的**冻结七键** `ids` / `keyNames` / `keys` /
+  `handOff` / `schema` / `http` / `apply`（`apply` = 惰性的 per-apply 实例视图）；子包宿主入口
+  `packages/<pkg>/lib/index.js` 经 `inject` 声明 `wallpaperEngineHost`（需要 HTTP 的再加 `webServer`），
+  只读消费该服务，**零主包说明符**（`test/verify-subpackage-purity.mjs` 钉）。主包 `apply()` 另按 patch 行做**启动自检**
+  （`subpackageSpecifiers()` + `assertSubpackagesResolvable*()`）：行解析不到就**大声抛错**（宿主对行级
+  失败是静默的）。浏览器半边同理：声明了 `dsh.client` 的子包各有包内构建配方 `client.build.json` 与产物
+  `packages/<pkg>/lib/client.<pkg>.js`，唯一条外部说明符是 `require("<主包真名>")`。
 - **宿主侧套件**（`lib/*.js` 与 `lib/media/*.js` 里的非路由模块）—— 纯逻辑，不碰 `ctx.webServer`：发现与探测
   （`steam-discovery` + `wallpaper-scan` / `media/mp4-probe` / `media/scene-probe`）、清单与文件服务
   （`inventory` / `serve` / `mp4-vfs` / `faststart` / `pkg-read` / `scene-manifest`）、
@@ -138,8 +151,10 @@ graph LR
     IDX["lib/index.js<br/>（门面：apply 编排 + 共享闭包）"]
     BOOT["lib/host-boot.js<br/>BASE / 内核单例 / 组件记账"]
     KN["lib/kernel/*<br/>套件实例 · 会话 · 组件视图"]
-    IDX --> R["lib/routes/*.js<br/>跨组件共享的路由族"]
+    IDX --> R["lib/routes/*.js<br/>主包自己的路由族（settings / presets / diag / cache-dir）"]
+    IDX --> SP["lib/subpackage-boot.js<br/>跨包服务面：wallpaperEngineHost（冻结七键）"]
     IDX --> C["packages/&lt;组件&gt;/lib/<br/>（旧 lib/components/&lt;组件&gt;/ 已不存在）<br/>组件入口 + 自有路由族"]
+    C -.->|inject：只读消费| SP
     IDX --> KN
     BOOT --> KN
     C --> BOOT
@@ -167,9 +182,11 @@ sequenceDiagram
     participant CLI as lib/client.js
     DSH->>IDX: 装载 bundle patch 行
     Note over IDX: inject = ['webServer'] ⇒ 等 HTTP 服务就绪<br/>没有 webServer 的 profile 根本不加载本插件
+    IDX->>IDX: 提供 wallpaperEngineHost 服务（七键，apply 惰性）
+    IDX->>IDX: 子包行启动自检（patch 行可解析，否则大声抛）
     IDX->>IDX: 定位 WE 安装（libraryfolders.vdf）
     IDX->>IDX: 枚举壁纸 + 读播放列表
-    IDX->>WS: 注册同源路由（每族各自注册）
+    IDX->>WS: 注册主包自己的路由族（子包行各自注册自己的）
     IDX->>IDX: 缓存清扫 / 裁剪推迟到加载完成之后
     CLI->>WS: GET /wallpaper-engine/inventory
     WS-->>CLI: JSON 清单
@@ -183,6 +200,9 @@ sequenceDiagram
 - **一切注册都经 fiber**：路由、媒体源、定时器、子进程都在卸载时回退。这条不是可选的 ——
   否则卸载 / HMR 后会留下挂着的处理器。
 - **`ctx.webServer` 仍防御性读取**：路由表建不起来时要有明确失败，而不是 undefined 崩。
+- **`wallpaperEngineHost` 必须先于任何子包行就位**：`provide` 是 `apply()` 的第一步，而第七键 `apply` 是
+  **惰性**访问器（per-apply 实例视图在会话建好之后才有值 ⇒ 传值永远拿到 `null`）。子包只读消费，
+  不持有主包模块引用。
 
 ### 2.2 非路由套件：职责与「为什么单独成模块」
 
@@ -223,6 +243,13 @@ disposer、要门面闭包状态的，留在路由族或 `apply()` 里。
 或必须留判据锚点"的东西，不是待拆的巨石：
 
 - **注册与编排**：`apply(ctx)` 调 `createHostSession()`、按族注册路由、把 disposer 推进 fiber；
+- **跨包服务面与子包启动自检**：`apply()` 的第一步是 `provideSubpackageHost(ctx, { applyView })` ——
+  服务值 = 冻结七键（`ids` / `keyNames` / `keys` / `handOff` / `schema` / `http` / `apply`），
+  第七键是**惰性**的 per-apply 实例视图（键集 = `APPLY_VIEW`，`test/verify-token-domain.mjs` 冻结）。
+  随后按根 `cordis.patch.yml` 的行做启动自检（`subpackageSpecifiers()` /
+  `assertSubpackagesResolvable()` / `assertSubpackagesResolvableInHost()`）：子包行解析不到就**大声抛错**
+  （宿主对行级失败是静默的）。契约与判据 = [`adr/0014`](./adr/0014-subpackage-contract.md) S5.4 /
+  `test/verify-subpackage-boot.mjs`；
 - **一次 apply 的共享可变状态与访问器**：媒体源地址、载荷账本、token 表、faststart 账、缓存索引
   —— 住 `lib/kernel/host-session.js`，必须与 `/inventory` 同作用域，跨模块只能以**访问器**形式出去
   （传值就是陈旧快照）；
@@ -479,7 +506,7 @@ graph LR
 3. **名字必须唯一**：内联后与 `src/client.js` 同作用域 ⇒ 重复声明的名字会被构建**机器提取**后断言，冲突即构建失败。
 4. **`src/` 模块之间不得 `import`**：它们靠"同一作用域"协作，靠模块头写下的**契约**（需要的外界、对外提供什么）而不是显式依赖。
 5. **导出形态**：`src/` 模块用 `export { … }` 列出对外名字；构建剥掉 `export` 关键字与 `export {}` 块。**导出清单同时是守卫的接口**（守卫直接 `import` 模块做行为断言）。
-6. **产物出库**：`lib/client.js` 是生成物且**不入库**（v1.4，取舍见 [`adr/0012`](./adr/0012-artifact-untracking.md)）；本地 / CI / `prepack` 三条路径各自 `npm run build` 现场生成，CI 断言「`lib/client.js` 与 `docs/images` 不被 git 跟踪」，新鲜度由 `verify-client-sync` 真跑构建逐字节判。**永不手改 `lib/client.js`。**
+6. **产物出库**：客户端产物（主包 `lib/client.js` + 各子包的 `packages/<pkg>/lib/client.<pkg>.js`）都是生成物、**不入库**（v1.4，取舍见 [`adr/0012`](./adr/0012-artifact-untracking.md)；产物集合由 `scripts/build-client.mjs` 与各包的 `client.build.json` 配方决定）；本地 / CI / `prepack` 三条路径各自 `npm run build` 现场生成，CI 断言「客户端产物与 `docs/images` 不被 git 跟踪」，新鲜度由 `verify-client-sync` 真跑构建逐字节判。**永不手改这些产物。**
 7. **打包面**：`files` 覆盖 `lib/` 全部运行期文件（P1）；具名入口既存在又被发布（P3）；每个运行时模块的**相对导入目标都在磁盘上**（P7）；`dependencies` 每条都真的被 `lib/` import（P4）；build/verify/smoke 链**零裸依赖**（P5）；发布面文件**不得带 UTF-8 BOM**（P8）。
 8. **发布面必须"装上就能跑、且不多带东西"**（npm 方向的四条，见 `verify-package-publish`）：
    ① 活的代码所需文件（从 `lib/index.js` 出发的**可达闭包**）必须全在 `files` 里，且闭包里的每个相对
@@ -495,6 +522,8 @@ graph LR
 | 边界 | 规则 | 由什么兜住 |
 |---|---|---|
 | 宿主 ↔ 浏览器 | 只经**同源 HTTP 路由**；浏览器半边不得 `import` 宿主代码 | 无本地模块解析器（结构上不可能） |
+| 主包 ↔ 子包（宿主半边） | 只经 Cordis 服务 `wallpaperEngineHost`（冻结七键、**只读**）；子包宿主半边**零主包说明符** | `verify-subpackage-purity` · `verify-subpackage-boot` · `verify-inject-contracts` |
+| 主包 ↔ 子包（浏览器半边） | 构建期产物只允许一条外部说明符 `require("<主包真名>")`；子包源码面不许写 `require` / `import` | `verify-subpackage-client-half` · `verify-subpackage-purity` |
 | `lib/` → `src/` | **禁止**：`lib/**` 不得 import `src/**`（依赖方向单向） | `verify-module-layout` ②（零容忍） |
 | 发布面 | 留在 `lib/` 的一切都会被发布 ⇒ 死码不许留 | `verify-package-files` · `verify-reachability` |
 | 门面 | `lib/index.js` 只做注册与协议聚合，不装新逻辑 | `verify-module-layout`『路由模块不得继承门面 import』 |
@@ -530,7 +559,7 @@ graph LR
 | **相对说明符必须解析到真实文件**：搬动代码后相对路径按新位置重解析（动态 `import()` 的失败是运行期、且常被吞成业务错误 ⇒ 必须静态判定） | ✅ 同守卫 ④『相对说明符必须解析到真实文件』（Node 式解析 + 负对照）・**软档** | — |
 | **类型面与代码同源**：`lib/types/*.d.ts` 必须与实现一致 | ✅ `test/verify-types.mjs`：`.d.ts` 的**声明集 == 手工钉住的必需字段集**，且每个字段在实现里确有生产者 | — |
 | **收 body 的路由必须有上限，且收完只解码一次**：逐块累加而不比较长度 ⇒ 宿主堆无界增长；逐块 `toString()` ⇒ 跨 TCP 分片的多字节码点被切成 U+FFFD（用户可见字符串被静默写坏） | ✅ `test/verify-body-caps.mjs`（**从磁盘枚举**每个 `req.on('data')` 站点，8 条正/负对照 + 覆盖面地板；"裸标识符回调"是**结构性**豁免，不是名单）・**硬档** | —（P4-13 已收敛：共享读体器在 `lib/http-body.js`，两条棘轮钉住"内联收集器 ≤2 处流式豁免 / 共享读体器调用点 ≥9"） |
-| **路由族触发线**：某个路径首段族达到 ≥3 条路由 ⇒ 回来裁决（按族拆出 `lib/routes/<族>.js`，或改账本 §7-6 那条线并同改判据） | ✅ `test/verify-route-families.mjs`（枚举口径 = `host-route-index` 的 `buildIndex()`；归族规则与 `analyze-host-apply.mjs` ② 组逐字相同；带正/负对照与覆盖面地板）・**硬档** | — |
+| **路由族触发线**：某个路径首段族达到 ≥3 条路由 ⇒ 回来裁决（按族拆出 `lib/routes/<族>.js`；壁纸域的族拆到 `packages/wallpaper/lib/routes/<族>.js`） | ✅ `test/verify-route-families.mjs`（枚举口径 = `host-route-index` 的 `buildIndex()`；归族规则与 `analyze-host-apply.mjs` ② 组逐字相同；带正/负对照与覆盖面地板）・**硬档** | — |
 
 **已从本表撤除**（各自的原因写在对应 ADR 里）：
 
@@ -555,6 +584,8 @@ graph LR
 | **界面语言 + 译词表** | **宿主 locale 服务**的 `getSnapshot().active`（不是插件设置，缺省 `zh`，`?we-lang` 可覆盖） | `src/i18n.js` 订阅广播 ⇒ 客户端 `weT(...)`；非 React 的 DOM 补丁走 `weOnLocaleChange` | 词表住 `src/i18n-copy.js` 两张（客户端 / 宿主）；键集由 `verify-i18n` **双向对账**（漏译、孤儿键、`weT` 未包的中文各一条判据）。**不落 `config.json`** |
 | **活动字体集** | `config.json` 的根字段 `fontSetId` ⇒ `lib/fontsets/*.json`（随包只读预设）+ `pluginDataDir()/fontsets`（用户层，写时复制） | 宿主路由 `/fontsets`；客户端 `src/fontset-store.js` | **与设置平行的另一条真源**（`build-client.mjs` 的 `why` 原话）—— 字体键**不在** settings 白名单里；`localStorage` 的 `we-fontset-active` 只是缓存 |
 | **路由表** | `docs/ROUTE-INDEX.md`（生成物） | 人 + 守卫 | 由 `test/tools/host-route-index.mjs` 复算 |
+| **子包行 / 跨包服务面** | 根 `cordis.patch.yml`（行集唯一真源）+ `lib/subpackage-boot.js` 的 `SUBPACKAGE_KEY_TABLE` | 主包 `apply()` 的启动自检 + 各子包 `inject` | 服务名 `wallpaperEngineHost`，冻结七键；契约 = [`adr/0014`](./adr/0014-subpackage-contract.md) S5.4；判据 = `verify-subpackage-boot` / `verify-inject-contracts` / `verify-subpackage-manifests` |
+| **客户端产物（主包 + 子包）** | `scripts/build-client.mjs`（主包 `INLINE_MODULES`）+ 各子包的 `client.build.json` 配方 | 构建 + `verify-client-sync` | 产物集合**不在文档里写死**：构建打印清单，守卫重建后逐字节比对并判不入库 |
 | **构建期内联清单** | `scripts/build-client.mjs` 的 `INLINE_MODULES` | 构建 + 守卫 | 带 `markers` 锚点 |
 | **发布面** | `package.json` 的 `files` | 守卫 P1–P8 | 留在 `lib/` 的一切都会被打进包 |
 | **star 数缓存**（全插件唯一出站请求的状态） | `packages/about-notice/lib/routes/github-stars.js`（2026-10-16 前在 `lib/components/about-notice/`）：进程内 TTL + `pluginDataDir()/star-count.json` | 客户端 `src/client.js` 的 `starCount` 镜像（**自己一份同量级 TTL**） | 仓库地址的真源是 `package.json` 的 `repository`，宿主**现读**（不另抄字面量）；拉到失败**不写**时间戳 |

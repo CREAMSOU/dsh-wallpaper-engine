@@ -231,9 +231,9 @@ You will see a **liquid-glass card** holding every wallpaper-related control.
 
 ### Step 3: pick a wallpaper
 
-1. Click the **「选择壁纸」 (choose wallpaper)** button on that card — a **thumbnail grid** window opens.
+1. Click the **「选择壁纸」 (choose wallpaper)** button on that card — a **thumbnail grid** expands **in place** inside the page (it is **not** a modal window and there is no overlay).
 2. It lists every wallpaper in your Wallpaper Engine (with preview images). **Click one you like** and it appears behind the chat interface.
-3. Click outside, press `ESC`, or click 「关闭」 (close) to dismiss the window.
+3. Leave the library view (go back) to return to the settings page.
 
 🎉 **Done!** There should now be a wallpaper behind your chat interface.
 

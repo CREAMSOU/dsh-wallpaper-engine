@@ -1,3 +1,18 @@
+> **状态：已落地并归档（2026-10-18）** —— 本文覆盖的 P-A … P-E 各阶段**已全部落地**，本文自此是
+> **历史记录**：不再反映现行实现，也不记进度。归档原因：全部落地 —— 留在 `docs/wip/` 会让
+> "未完成"的印象与实况不符。
+>
+> | 结论类型 | 现在的落点 |
+> |---|---|
+> | 机制与不变量 | 实现文件的头注释：`lib/subpackage-boot.js`（宿主服务面与冻结键集）· `lib/index.js`（门面装配 / 启动自检）· `src/client.js`（浏览器半边 / 面板节注册）· 渲染内核各文件 |
+> | 判据（不变量 / 覆盖面 / 作用域 / 一致性） | `test/verify-*.mjs`：子包契约 `verify-subpackage-boot` / `-manifests` / `-purity` / `-client-half` / `-toggle-roundtrip`、token 域 `verify-token-domain`、层所有权 `verify-layer-ownership`、occlusion `verify-occlusion-hub`、页签 gate `verify-client` |
+> | 取舍与被证伪的方案 | `docs/adr/0013-bundle-multi-component-rows.md` · `docs/adr/0014-subpackage-contract.md` |
+> | 用户口径与产品边界 | ADR-0013 的 Decision + ADR-0014 的 S1–S10；本文对应节号保留原样 |
+> | 账（阶段 / 命令） | `docs/CHANGELOG.md` 的 v1.3.3 三条重构与收口条目 + git 历史 |
+>
+> 本文节号（§x.y）保留原样；活文档不再指向本文路径（`docs/README.md` §写作纪律第 9 条），
+> 需要那条信息时按上表去活落点找。
+
 # 插件包重构手册 —— 多包拆分（主包 + 核心子插件 + 边缘子插件）
 
 > **哈希说明（这条线被重写过两次，旧哈希多半已不在现行 `main` 上）**：本文件里的短哈希是**当时那条线上的**历史哈希。

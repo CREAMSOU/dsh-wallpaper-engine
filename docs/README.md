@@ -161,6 +161,7 @@
 | [audits/TEST-ANTIPATTERN-AUDIT.md](./archive/audits/TEST-ANTIPATTERN-AUDIT.md) | **测试框架的反模式审计（逐条现状）** —— `test/` 的 72 个 `.mjs`（顶层 57 + `test/tools/` 15）与 2 份夹具按 A1–A4（面向结果编程）/ B1–B4（无意义测试）/ C1–C6（自欺欺人）三族口径逐条过了一遍：每条守什么、**牙齿**（`yes` / `no` / `partial`，即"产品真按它声称守护的方式回归时它会不会红"）如何、现址 `file:line` 在哪。**106 处发现已全部定案**（R 47 / H 33 / D 20 / 不改·声明 5 / 取消 2），未决 0 |
 | [audits/TEST-ANTIPATTERN-FIX-PLAN.md](./archive/audits/TEST-ANTIPATTERN-FIX-PLAN.md) | 同一轮审计的**遗留与风险清单**（收口后重写为"现在还有什么问题"）—— 只剩仍未解决或本机证明不了的项（F4/F5 两个手动工具、harness 与 e2e 的覆盖空洞、M16 只剩正判据、设置夹具是漂移棘轮、`%TEMP%` 里删不掉的探针）+ 需要决定的事 + 复核命令。逐条现状在审计报告里，不在这里重复 |
 | [wip/](./archive/wip/) 的**第二期收口批** | **追版本第二期（追链 / 文档注释同步 / 测试锚定）的过程记录整体归档**：`TEST-ANCHORING.md`（task-8 判据锚定）· `TEST-CREDIBILITY-AUDIT.md`（对抗性审计 + 修复落地账）· `UNWIRED-MODULES.md`（task-9 孤儿盘点）· `DOC-DRIFT-REPORT.md` + `DOC-ROT-REPORT-2.md` + `DOC-ROT-REPORT-3.md`（三轮文档 / 注释腐化复核）· `COMPONENT-TOGGLE-REPORT.md`（P2-11 开关语义实测取证）· `ISSUE-190-FX-PERF-DESIGN.md`（#190 光效层治理）· `ISSUE-AUDIT-148PLUS.md`（issue ≥148 核查；**残留 6 条未做项写在它的归档横幅里**）。各件的结论已分头落位：机制 → 实现文件头注释、判据 → `test/`、取舍 → [`adr/`](./adr/README.md) |
+| [wip/BUNDLE-SPLIT.md](./archive/wip/BUNDLE-SPLIT.md) | **插件包多包拆分重构（P-A … P-E 全部落地，整体归档）** —— 计划 / 判据 / 阶段账 / 风险 / 待决策。**结论落点**：机制 → 实现文件头注释（`lib/subpackage-boot.js`、`src/client.js`、渲染内核各文件）；判据 → `test/verify-*.mjs`（跨包契约、token 域、层所有权、occlusion、页签 gate）；取舍 → [`adr/0013`](./adr/0013-bundle-multi-component-rows.md) 与 [`adr/0014`](./adr/0014-subpackage-contract.md)；账 → [`CHANGELOG.md`](./CHANGELOG.md) 的 v1.3.3 三条 |
 
 ### 其它归档
 
