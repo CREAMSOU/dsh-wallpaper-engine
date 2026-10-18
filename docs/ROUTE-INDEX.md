@@ -55,12 +55,12 @@
 | 36 | `/system-fonts` | packages/fonts/lib/routes/system-fonts.js:487 | async 箭头 | disposers base http | 3 |
 | 37 | `/mascot` | packages/mascot-avatar/lib/routes/mascot.js:50 | 箭头 | disposers base serveFile http mascotDir mascotPath …(+5) | 5 |
 | 38 | `/avatar` | packages/mascot-avatar/lib/routes/avatar.js:54 | 箭头 | disposers base serveFile http avatarDir avatarPath …(+6) | 5 |
-| 39 | `/media-status` | packages/media-bridge/lib/routes/now-playing.js:87 | 箭头 | disposers base | 2 |
-| 40 | `/audio-spectrum` | packages/media-bridge/lib/routes/now-playing.js:97 | 箭头 | disposers base | 2 |
-| 41 | `/now-playing` | packages/media-bridge/lib/routes/now-playing.js:116 | 箭头 | disposers base | 3 |
-| 42 | `/now-playing/artwork` | packages/media-bridge/lib/routes/now-playing.js:130 | 箭头 | disposers base serveFile | 2 |
-| 43 | `/media-control` | packages/media-bridge/lib/routes/now-playing.js:148 | 箭头 | disposers base CONTROL_JSON_MAX_BYTES http | 3 |
-| 44 | `/pet-link/capability` | packages/pet-link/lib/routes/pet-link.js:14 | 箭头 | disposers base | 2 |
+| 39 | `/pet-link/capability` | packages/pet-link/lib/routes/pet-link.js:14 | 箭头 | disposers base | 2 |
+| 40 | `/media-status` | packages/wallpaper/lib/routes/now-playing.js:87 | 箭头 | disposers base | 2 |
+| 41 | `/audio-spectrum` | packages/wallpaper/lib/routes/now-playing.js:97 | 箭头 | disposers base | 2 |
+| 42 | `/now-playing` | packages/wallpaper/lib/routes/now-playing.js:116 | 箭头 | disposers base | 3 |
+| 43 | `/now-playing/artwork` | packages/wallpaper/lib/routes/now-playing.js:130 | 箭头 | disposers base serveFile | 2 |
+| 44 | `/media-control` | packages/wallpaper/lib/routes/now-playing.js:148 | 箭头 | disposers base CONTROL_JSON_MAX_BYTES http | 3 |
 
 **零提及（拆分前必须先补守卫）**：（无）
 
@@ -93,6 +93,6 @@
 | `packages/fonts/lib/routes/system-fonts.js` | `registerSystemFontsRoutes(webServer, c)` | 1 | `disposers` `base` `cachePath` `log` `schema` `http` `platform` `home` `fontDirs` `runFontCommand` | — |
 | `packages/mascot-avatar/lib/routes/avatar.js` | `registerAvatarRoutes(webServer, c)` | 1 | `disposers` `base` `serveFile` `http` `avatarDir` `avatarPath` `AVATAR_SIDES` `AVATAR_EXT` `AVATAR_MAX_BYTES` `atomicWriteFileP` `armBodyIdleTimeout` `lingerClose` | — |
 | `packages/mascot-avatar/lib/routes/mascot.js` | `registerMascotRoutes(webServer, c)` | 1 | `disposers` `base` `serveFile` `http` `mascotDir` `mascotPath` `MASCOT_EXT` `MASCOT_MAX_BYTES` `atomicWriteFileP` `armBodyIdleTimeout` `lingerClose` | — |
-| `packages/media-bridge/lib/routes/now-playing.js` | `registerNowPlayingRoutes(webServer, c)` | 5 | `disposers` `base` `appendDiagLine` `configPath` `cacheBaseDir` `readConfig` `serveFile` `CONTROL_JSON_MAX_BYTES` `log` `http` | — |
 | `packages/pet-link/lib/routes/pet-link.js` | `registerPetLinkRoutes(webServer, c)` | 1 | `disposers` `base` | — |
+| `packages/wallpaper/lib/routes/now-playing.js` | `registerNowPlayingRoutes(webServer, c)` | 5 | `disposers` `base` `appendDiagLine` `configPath` `cacheBaseDir` `readConfig` `serveFile` `CONTROL_JSON_MAX_BYTES` `log` `http` | — |
 

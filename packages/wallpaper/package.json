@@ -1,7 +1,7 @@
 {
-  "name": "dsh-plugin-wallpaper-engine-media-bridge",
+  "name": "dsh-plugin-wallpaper-engine-wallpaper",
   "version": "1.3.3",
-  "description": "System media bridge host half: now-playing / spectrum / artwork / media control, plus the media-bridge child-process backend and its legacy fallback.",
+  "description": "Wallpaper sub-plugin host half (P-D phase 1): system media bridge routes (now-playing / spectrum / artwork / media control) plus the media-bridge child-process backend and its legacy fallback.",
   "icon": "./icon.png",
   "type": "module",
   "main": "./lib/index.js",

@@ -221,7 +221,7 @@ check('负对照：合成 apply 体（自检在前、provide 在后 = 顺序错�
 const HOST_SERVICE_LITERAL = 'wallpaperEngineHost';
 const HOST_KEYS = ['ids', 'keyNames', 'keys', 'handOff', 'schema', 'http'];
 const SCHEMA_KEYS = ['isFontSetId', 'sanitizeFontset', 'FONTSET_MIGRATED_ID', 'FONTSET_SCHEMA_TAG', 'systemFontKeyOf'];
-// P-F：`http` 面多了一个纯符号 —— 组件（media-bridge）读体的字节上限常量 `CONTROL_JSON_MAX_BYTES`
+// P-F：`http` 面多了一个纯符号 —— 组件（wallpaper；P-D 阶段1 前名 media-bridge）读体的字节上限常量 `CONTROL_JSON_MAX_BYTES`
 // 不能静态 import 主包模块（§5.2 禁"直接 import 另一个包的模块级导出"）⇒ 同样从服务面取。
 const HTTP_KEYS = ['sendJson', 'bodyReader', 'CONTROL_JSON_MAX_BYTES'];
 const notSameSet = (a, b) => JSON.stringify([...a].sort()) !== JSON.stringify([...b].sort());

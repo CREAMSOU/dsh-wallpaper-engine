@@ -4,7 +4,7 @@
  *
  * 回答的问题：`lib/components/<sub>/package.json`（三个组件子包的清单）会不会**漂回极简**？
  *
- * 为什么需要：本提交把 about-notice / mascot-avatar / media-bridge 拆成独立子包（各自的清单 /
+ * 为什么需要：本提交把 about-notice / mascot-avatar / media-bridge（P-D 阶段1 后第三格改名 `wallpaper`）拆成独立子包（各自的清单 /
  * icon / locale；主包 `exports` 里也给了 `./<sub>`、`./<sub>/package.json`、`./<sub>/locale/*.json`
  * 三连），而三份子包清单当时只有 `name` / `description` / `icon` / `type`。
  * `test/verify-bundle-rows.mjs` ④ 只对账「patch 子行 ⇄ 根 exports 三连 / 入口在盘上 / locale 名 /
@@ -465,7 +465,7 @@ function keyTableOf(src) {
   // 顶层键缩进 2 空格（内层对象是 4 空格）。
   // ⚠️ **为什么同时用 masked 与 raw**：`maskStructure()` 把字符串**内容**也换成空格（引号留着），
   // 而 P-F 之后组件行的键必须写成带引号的形态 —— 目录名带连字符（`'about-notice'` /
-  // `'mascot-avatar'` / `'media-bridge'`），裸标识符写不出来。只读 masked 会**读不到**这些键
+  // `'mascot-avatar'` / `'wallpaper'`（P-D 阶段1 前名 `media-bridge`）），裸标识符写不出来。只读 masked 会**读不到**这些键
   // （假绿：S10.1 变成"表里没有它"）；只读 raw 会把注释里的 `foo:` 也收进来。于是：
   //   · masked 用来判「这一行的键位置确实有东西」（注释行已被换成空白；负对照把键删空后同样全空白）
   //   · raw 用来取键名（含引号内的内容）

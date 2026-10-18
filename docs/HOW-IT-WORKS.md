@@ -118,7 +118,7 @@ HTML 里注入 WE API shim（运行期从 `webwallgl` 包的 `webwallgl.mjs` 中
      **组件私有的族随组件目录走、注册点在组件行入口**（`packages/about-notice/lib/` 的二维码与 star 数 ——
      P-F 2026-10-16 出户，原 `lib/components/about-notice/`；
      `packages/mascot-avatar/lib/` 的立绘与头像 —— 同样 P-F 2026-10-16 出户，原 `lib/components/mascot-avatar/`；
-     `packages/media-bridge/lib/routes/now-playing.js` 的五条媒体路由 —— P-F 批 1c 2026-10-16 出户，
+     `packages/wallpaper/lib/routes/now-playing.js` 的五条媒体路由 —— P-F 批 1c 2026-10-16 出户，
      原 `lib/components/media-bridge/now-playing.js`），`lib/routes/` 只留**跨组件共享**的族。
      **权威清单（含每条路由的名称、来源行、注册形态与 context 契约）见 [`ROUTE-INDEX.md`](./ROUTE-INDEX.md)** ——
      本文件不手写路径表，也不写条数（手写的必烂，且除生成物外没人复算它）。

@@ -163,7 +163,8 @@ export interface ComponentVisibilitySite {
  * Component row name → the browser-side render sites that must disappear when the row
  * is disabled (`ADR-0013 D3②`). The host half owns this declaration; the browser half
  * holds only the gate (`COMPONENT_GATE`), and `test/verify-component-visibility.mjs`
- * reconciles the two sides. `media-bridge` is deliberately absent (no browser surface).
+ * reconciles the two sides. `wallpaper` (P-D phase 1; formerly `media-bridge`) is deliberately
+ * absent (no browser surface).
  */
 export declare const COMPONENT_VISIBILITY: Record<string, ComponentVisibilitySite[]>;
 
@@ -173,7 +174,7 @@ export declare const COMPONENT_GATE: { file: string; symbol: string };
 /**
  * "Load by component" entry point (the component rows in `cordis.patch.yml` reach the
  * same implementations through their own `apply`). `component` is the sub-path segment
- * of the row name (`'about-notice'` / `'mascot-avatar'` / `'media-bridge'`); unknown
+ * of the row name (`'about-notice'` / `'mascot-avatar'` / `'wallpaper'`); unknown
  * names throw. Returns the implementation's disposer.
  */
 export declare function applyComponent(

@@ -547,7 +547,7 @@ node test/run-guards.mjs verify --list-json # 机器可读的有序步骤表（P
 | `lib/webwallgl/**`、`lib/we-focus-guard.js` | 进，带浏览器全局 | 物理在发布面、运行期在页面里 |
 
 **它已经抓到的真缺陷**（写在这里是为了说明"这一层值它占的 CI 分钟数"，不是编年史）：
-`packages/media-bridge/lib/routes/now-playing.js` 里漏解构的常量（`POST` 带体必 `ReferenceError`）、
+`packages/wallpaper/lib/routes/now-playing.js` 里漏解构的常量（`POST` 带体必 `ReferenceError`）、
 `src/client.js` 里两份同名函数（脚本语义下**后声明静默胜出**，删掉活的那份会让死的那份无声复活）、
 守卫自身的块作用域越界引用与重复对象键、以及 `tsc` 报出的一批属性名错配。
 

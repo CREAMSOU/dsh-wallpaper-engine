@@ -32,7 +32,7 @@
    开发期与发布期的两种依赖形态（`file:` ↔ 同号精确版本）都只写在注释与计划里。
 
 > **2026-10-16 修订（P-F 组件行统一）**：上面问题 1 与问题 2 的**形态**已消解 —— 三条组件行
-> （`about-notice` / `mascot-avatar` / `media-bridge`）全部出户到 `packages/<pkg>/`（ADR-0013 D6/D8 的终态），
+> （`about-notice` / `mascot-avatar` / `media-bridge`；第三格于 P-D 阶段1（2026-10-18）机械改名 `wallpaper`）全部出户到 `packages/<pkg>/`（ADR-0013 D6/D8 的终态），
 > 主包 patch 那一行改真名、`id` 不变，`lib/components/` 目录已删除；D3② 的可见面声明真源 `visibility.js`
 > 移到 `lib/component-visibility.js`（内容与 `lib/index.js` 的再导出位置不变）。本 ADR 的问题清单与 S1.1
 > 措辞**保留原样**，作为「为什么会有两种行」的历史记录。

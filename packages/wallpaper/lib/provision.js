@@ -3,7 +3,7 @@
  *
  * 中间件不是 npm 依赖，也没有自己的包名可以挂 optionalDependencies（这个插件在
  * npm 上的那个名字不是本仓库发的），所以产物只能**首次使用时按需取**：解析链每一
- * 级失败就落到下一级，全失败由上层回落 legacy 实现（见 packages/media-bridge/lib/backend.js）。
+ * 级失败就落到下一级，全失败由上层回落 legacy 实现（见 packages/wallpaper/lib/backend.js）。
  *
  *   1. 环境变量 `DSH_WE_MEDIA_BRIDGE`        ← 开发/自备产物（指向可执行文件）
  *   2. 插件目录旁的 `bin/<asset>`             ← 想随包分发就放这

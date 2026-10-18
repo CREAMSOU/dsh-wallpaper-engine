@@ -20,7 +20,7 @@
 
 **基线**：现行 `main` 相对 `origin/main` **behind 0**（复算：`git rev-list --left-right --count origin/main...HEAD`）。
 **拆包起点** = **单包 + 4 个插件行**（`dsh-plugin-wallpaper-engine`，即 `cordis.patch.yml` 的那四条 `insert`）；
-**现行形态**（2026-10-17，PR #5 之后）= **主包 + 7 个子包** = 3 个独立子包 `packages/{fx,parallax,fonts}` + 3 个已出户的组件包 `packages/{about-notice,mascot-avatar,media-bridge}` + 第 7 个**可选**子包 `packages/pet-link`（PR #5，merge `617b2b43`；安装器形态见 §7.10）（复算：`git ls-files 'packages/*/package.json'`，2026-10-18 = 7 条；`test/tools/packages.mjs` 的 `FLOORS.packages` = 7）⇒ patch 共**八条** `insert`
+**现行形态**（2026-10-17，PR #5 之后）= **主包 + 7 个子包** = 3 个独立子包 `packages/{fx,parallax,fonts}` + 3 个已出户的组件包 `packages/{about-notice,mascot-avatar,wallpaper}` + 第 7 个**可选**子包 `packages/pet-link`（PR #5，merge `617b2b43`；安装器形态见 §7.10）（复算：`git ls-files 'packages/*/package.json'`，2026-10-18 = 7 条；`test/tools/packages.mjs` 的 `FLOORS.packages` = 7）⇒ patch 共**八条** `insert`
 （1 条主行 + 3 条组件包行 + 4 条子包行 = 8；复算：数根 `cordis.patch.yml` 的 `- id:`，或 `node test/tools/host-route-index.mjs`；见 §7.1 的实况块、§7.8 与 §7.10）。
 **目标形态** = **主包 + N 个子插件包**（版本一致、一次安装落地、代码各自成包、第三方代码除外）。
 
@@ -33,7 +33,7 @@
 | 包 | 职责 | 备注 |
 |---|---|---|
 | **主包** `dsh-plugin-wallpaper-engine` | 设置面板、配置文件、WE 壁纸获取、多平台识别与差异处理、**留给其它插件的钩子**、以及"大部分组件都依赖的基础模块" | 唯一被"一次安装"的名字 |
-| **壁纸子插件** | WE 壁纸与自定义导入壁纸的**渲染**；壁纸库 + 播放-画面里的配置项、声音、省电 | 以现在的 `packages/media-bridge`（P-F 批 1c 出户，原 `lib/components/media-bridge`）为基础，**大改** |
+| **壁纸子插件** | WE 壁纸与自定义导入壁纸的**渲染**；壁纸库 + 播放-画面里的配置项、声音、省电 | 以现在的 `packages/wallpaper`（P-F 批 1c 出户，原 `lib/components/media-bridge`）为基础，**大改** |
 | **UI 子插件** | 玻璃面板、侧边栏圆角等**前端 UI**；外观里的配置项 | **字体除外** |
 | **字体系统子插件** | 字体集 / 排版 / 应用 | 已可自成一系；**目标形态 = 整个「字体自定义」配置类**（宿主半边 + 浏览器半边 + 外观页签字体节 + 字体键所有权），**定案 A**（2026-10-15，§7.8） |
 | **点击与拖尾效果子插件** | `src/fx-layer.js` 一族 | 天然低耦合 |
@@ -153,7 +153,7 @@ Cordis 的级联只有**一个判据**：`name in fiber.inject`（`cordis/src/re
 | `wallpaper-engine` | `dsh-plugin-wallpaper-engine` |
 | `wallpaper-engine-about-notice` | `dsh-plugin-wallpaper-engine-about-notice`（P-F 前 = `dsh-plugin-wallpaper-engine/about-notice`） |
 | `wallpaper-engine-mascot-avatar` | `dsh-plugin-wallpaper-engine-mascot-avatar`（P-F 前 = `…/mascot-avatar`） |
-| `wallpaper-engine-media-bridge` | `dsh-plugin-wallpaper-engine-media-bridge`（P-F 前 = `…/media-bridge`） |
+| `wallpaper-engine-wallpaper` | `dsh-plugin-wallpaper-engine-wallpaper`（P-F 前 = `…/media-bridge`） |
 | `wallpaper-engine-pet-link` | `dsh-plugin-wallpaper-engine-pet-link`（PR #5 新增；可选行、安装器形态 `S3.8a`，见 §7.10） |
 
 > 本表的**现行真源** = 根 `cordis.patch.yml`（共 8 条 `- id:`，复算：读该文件；`fx` / `parallax` / `fonts` 三行同用真名，
@@ -518,9 +518,11 @@ Cordis 的级联只有**一个判据**：`name in fiber.inject`（`cordis/src/re
 
 ### 7.4 P-D 壁纸子插件（**最大的一块，最后做**）
 
-以 `packages/media-bridge`（P-F 批 1c 2026-10-16 出户）为基础大改：WE 壁纸与自定义导入壁纸的渲染、壁纸库 + 播放-画面里的配置项、声音、省电。
+以 `packages/wallpaper`（P-F 批 1c 2026-10-16 出户）为基础大改：WE 壁纸与自定义导入壁纸的渲染、壁纸库 + 播放-画面里的配置项、声音、省电。
 **前置**：层的所有权（`LAYER_ID` / `SCRIM_ID` / iframe 的建立与退役）必须有唯一所有者，否则两个包各建层 = 撞单例 id。
 **注意**：引擎已是 npm 依赖（§9.4 定案 = 主包持有、不随子包）；`lib/webwallgl/**` 如今只剩自家模板/桥文件。
+
+**P-D 阶段1 落地账（2026-10-18）**：本阶段只做**机械改名 / 并入**、零行为变更（D5）—— 原「系统媒体桥」子包目录（`packages/` 下的 `media-bridge`）整包搬到 `packages/wallpaper/`；包名 / 行 `id` / 行 `name` / `SUBPACKAGE_KEY_TABLE` 键 / `COMPONENT_VIEW_KEYS` 键 / 守卫与测试里的包路径全部同步为新名。行 `id` 改为 `wallpaper-engine-wallpaper` 是 §14 `D-15` 的**唯一例外**（S4.3 强制 `id = wallpaper-engine-<目录名>`，且该行从未发布 ⇒ 无迁移负担）。**本阶段不做**：壁纸渲染的功能搬入 / 浏览器半边（§15 账③）与任何产品语义改动 —— 均属 P-D 后续批次。
 
 ### 7.5 P-E 收尾
 
@@ -641,10 +643,10 @@ Cordis 的级联只有**一个判据**：`name in fiber.inject`（`cordis/src/re
 （"原 D6 的形态（单包多行）是本次重构的**起点**、不是终态"，`docs/adr/0013-bundle-multi-component-rows.md:121-127`）。
 
 - **时机（用户口径，2026-10-16）**：账① 作**一次独立的机械提交**，**排在 P-D 之前** —— §7.4 的 P-D 要
-  "以 `packages/media-bridge` 为基础大改"（该格已由 P-F 批 1c 搬出），**先搬后改写只付一次路径成本**；反序要把那批实现与测试改两遍。
+  "以 `packages/wallpaper` 为基础大改"（该格已由 P-F 批 1c 搬出），**先搬后改写只付一次路径成本**；反序要把那批实现与测试改两遍。
   **不与 P-D 合批**（机械搬迁与行为重写混在一个提交 ⇒ `bisect` / `revert` 失能）。
 - **分批**：① 包边界 + 行名（行 `name` 改真名；机械、**零行为变化**，先行）→ ② 浏览器半边逐组件成产物
-  （`about-notice` 先、`mascot-avatar` 后；`media-bridge` 今天**没有**浏览器半边 ⇒ 交给 P-D）。
+  （`about-notice` 先、`mascot-avatar` 后；`wallpaper`（P-D 阶段1 前名 `media-bridge`）今天**没有**浏览器半边 ⇒ 交给 P-D）。
 - **前提已勘误**：三条组件行**从未发布**（已发布物只有主行）⇒ **不存在"曾关过该组件"的用户**，
   行 `name` 可直接改真名、**零迁移代价**（§15.1 / §3 的范围勘误）。
 - **完整计划与须知见 §15**（三笔账的边界 / 落点硬约束 / 判红面 / 前置决策 / 复算入口）。
@@ -783,11 +785,11 @@ Cordis 的级联只有**一个判据**：`name in fiber.inject`（`cordis/src/re
 |---|---|---|
 | `about-notice` | 可作为**独立子包**（与 UI 相关）或并入 UI 子包 | 判定见 §6.1 |
 | `mascot-avatar` | 同上（吉祥物/头像属 UI 面） | 与 `glass-presets` 的立绘资产交叉 |
-| `media-bridge` | **改造成壁纸子插件**（用户口径） | 最大的一块；后端/进程能力天然是宿主半边 |
+| `wallpaper`（P-D 阶段1 前名 `media-bridge`） | **改造成壁纸子插件**（用户口径） | 最大的一块；后端/进程能力天然是宿主半边；P-D 阶段1 已机械改名并入壁纸包 |
 
 > **2026-10-16 追加**：这三行**统一成独立子包**（`lib/components/<sub>/` → `packages/<pkg>/`）的时机
 > （**A = 排在 P-D 之前**）、分批与须知见 **§7.9 / §15**。表里"或并入 UI 子包"的候选不再取
-> —— 统一后一并成为各自的包（`packages/ui` 仍未建立，见 §7.3 末行）；`media-bridge` 的**代码归属**搬移
+> —— 统一后一并成为各自的包（`packages/ui` 仍未建立，见 §7.3 末行）；`wallpaper`（P-D 阶段1 前名 `media-bridge`）的**代码归属**搬移
 > （§15 账①）与它**被改造成壁纸子插件**（§7.4 / P-D）是两件事，前者在前。
 
 ### 9.4 第三方代码（引擎 = npm 依赖 `webwallgl`）
@@ -945,9 +947,9 @@ Cordis 的级联只有**一个判据**：`name in fiber.inject`（`cordis/src/re
 | D-12 | **开关档位 / 重启边界**（"不用重启"的射程） | **已定案（本轮细化）**：开关只承诺**能力**（同行切换宿主半边 + 浏览器可见面，§1.1 边界 1、§11）；**代码 / 版本 / 清单 / 增删行一律重启**（`U3` / `R3` / `I8`，§1.1 边界 2）。判据 = §7.6 第 4 条 |
 | D-13 | **主包被关掉时的用户可见语义**（§6.5） | ✅ **已定案（2026-10-15，用户口径）：B 明确连坐** —— 主包被关掉 = 整包被关掉，理由是大批组件在机制上依赖主包（配置模板逻辑 / `applyComponent` 门面 / §5.1 ② 的子包→主包 value import），见 §6.5 的表态块。**残余开口** ✅ **已裁决（2026-10-16）**：不自动撤子包行（`inject: ['wallpaperEngineHost']` 级联 park 已覆盖"半死状态"，自动撤行撞 §2.4 / `I8`）；"整族已停用"由主包行状态面渲染（复用 D3③）；判据归 §7.6 第 4 条整族实例 —— 见 §6.5 的 2026-10-16 裁决块 |
 | D-14 | **字体系统子插件的收口形态** | **定案（2026-10-15，用户口径 A）：目标 = 整个「字体自定义」配置类**（宿主半边 + 浏览器半边 + 外观页签字体节 + 字体键所有权）；**不必现在完成** —— 收口线 = P-B 的能力 + P-C（§6.1 / §6.3 表态）+ P-D（§6.4 预设）之后，见 §7.8 |
-| D-15 | **组件行统一后的行名** | ✅ **已定案（2026-10-16，用户口径）：组件行从未发布 ⇒ 沿用清单里已有的真名 `dsh-plugin-wallpaper-engine-<sub>` 做行 `name`，`id` 不变，零迁移**（§15.1 / §3 范围勘误） |
+| D-15 | **组件行统一后的行名** | ✅ **已定案（2026-10-16，用户口径）：组件行从未发布 ⇒ 沿用清单里已有的真名 `dsh-plugin-wallpaper-engine-<sub>` 做行 `name`，`id` 不变，零迁移**（§15.1 / §3 范围勘误）。**P-D 阶段1（2026-10-18）唯一例外**：`wallpaper` 一格随包改名，行 `id` 由「`wallpaper-engine-` + 旧目录名」改为 `wallpaper-engine-wallpaper` —— 理由 = S4.3 强制 `id = wallpaper-engine-<目录名>`，且该行**从未发布** ⇒ 仍是零迁移（落地账见 §7.4） |
 | D-16 | `visibility.js`（97 行）归属 | ✅ **已定案并落地（2026-10-16）**：移到 `lib/component-visibility.js`（顶层语义名，与 `lib/inventory.js` 同族），`lib/components/` 目录删除；`lib/index.js` 的再导出位置不变（§15.6 P-F-2） |
-| D-17 | 组件浏览器半边是否本轮搬进包 | 待定（§15.6 P-F-3；建议拆 2a `about-notice` / 2b `mascot-avatar` 两批，`media-bridge` 交 P-D） |
+| D-17 | 组件浏览器半边是否本轮搬进包 | 待定（§15.6 P-F-3；建议拆 2a `about-notice` / 2b `mascot-avatar` 两批，`media-bridge`（P-D 阶段1 已改名 `wallpaper`）交 P-D） |
 | D-18 | **统一后的发布形态排期** | 待定（§15.6 P-F-4；统一 ⇒ 主包必须**精确依赖**这 3 个包 ⇒ ADR-0014 `S8.2`「发布形态尚未执行过」由"没做过"变"必须做"，§12 的发布顺序要排期） |
 | D-19 | ADR 术语二分与触发线 | 待定（§15.6 P-F-5；ADR-0014 `S1.1` 的"组件行 / 子包"二分可删、ADR-0014 前言"问题 1 / 问题 2"结案、ADR-0013 §重新考虑的触发线是否补说明） |
 
@@ -1042,14 +1044,14 @@ Cordis 的级联只有**一个判据**：`name in fiber.inject`（`cordis/src/re
 > - **仍未做**：`media-bridge`（须排在 P-D 之前）；账③（组件浏览器半边）未动。
 
 > **落地账 · P-F 批 1c（`media-bridge`，2026-10-16，已提交 `6dfb431d`）**
-> - **搬迁**：`packages/media-bridge/{package.json, cordis.patch.yml, icon.png, locale/{en,zh}.json,
+> - **搬迁**：`packages/wallpaper/{package.json, cordis.patch.yml, icon.png, locale/{en,zh}.json,
 >   lib/{index.js, backend.js, legacy.js, provision.js, supervisor.js, audio-tap.swift},
 >   lib/routes/now-playing.js}`；`lib/components/media-bridge/` 已删 —— **`lib/components/` 当时只剩松散的
 >   `visibility.js`（无子目录）⇒ 账①（包边界）在三格上全部落完**（该目录随后删除，见 §15.6 P-F-2 / D-16）。
 > - **两处 `..` 级数修正（本批唯一"非逐字搬移"）**：`lib/legacy.js` 的 `TAP_SWIFT` 由 `SELF_DIR,'..','..'`
 >   改 `SELF_DIR`（`audio-tap.swift` 同批随包走：主包 `lib/audio-tap.swift` → 包内 `lib/audio-tap.swift`，
 >   根清单 `files` 里的 `"lib/audio-tap.swift"` 随之删除）；`lib/provision.js` 的 `PLUGIN_ROOT` 由
->   `SELF_DIR,'..','..','..'` 改 `SELF_DIR,'..'`（= **本包根**：开发期 `packages/media-bridge/`、安装期
+>   `SELF_DIR,'..','..','..'` 改 `SELF_DIR,'..'`（= **本包根**：开发期 `packages/wallpaper/`、安装期
 >   `<profile>/node_modules/<pkg>/` —— 主包与子包在安装形态下是两个目录，旧级数会指到主包上）。
 > - **键表登记 `'media-bridge'`（8 键）**：`base` / `pluginName`（`const:`）、`configPath`（`data:`）、
 >   `CONTROL_JSON_MAX_BYTES`（`http:`）、`componentViewFrom` / `createComponentSession`（`session:`）、
@@ -1064,7 +1066,7 @@ Cordis 的级联只有**一个判据**：`name in fiber.inject`（`cordis/src/re
 >   `RangeError: Maximum call stack size exceeded`）、`test/tools/packages.mjs` selftest（发现层不再有
 >   `kind==='subpath'` ⇒ `subNoClient` 改从任意 kind 找；⑥ 负对照断言"改名 ⇒ 行认领整条因果链"）、
 >   `verify-guard-map`（删掉 `verify-route-ownership` 的元守卫例外 —— 它现在**直读**模块了）。
-> - **生成物重算**：`docs/ROUTE-INDEX.md`（五条媒体路由归 `packages/media-bridge/lib/routes/now-playing.js`）、
+> - **生成物重算**：`docs/ROUTE-INDEX.md`（五条媒体路由归 `packages/wallpaper/lib/routes/now-playing.js`）、
 >   `docs/GUARD-MAP.md`（模块 159 · 守卫 88 · 零覆盖 5）。
 > - **读数**：`verify` 72/72 · `docs` 6/6 · `smoke` 6/6 · `all` 85/85 · `npm run verify:static` ALL PASSED
 >   （ESLint 283 文件 / 0 规则超限 · tsc 0；`lib/client.js` 未被 build 改动）。
@@ -1095,7 +1097,7 @@ Cordis 的级联只有**一个判据**：`name in fiber.inject`（`cordis/src/re
 
 | 选项 | 内容 | 判定 |
 |---|---|---|
-| **A（取）** | ① 作**独立机械提交** → P-D → ③ | §7.4 的 P-D 要"**以 `packages/media-bridge` 为基础大改**"：先搬后改写**只付一次路径成本**；反序要让 media-bridge 的实现与其测试改两遍 |
+| **A（取）** | ① 作**独立机械提交** → P-D → ③ | §7.4 的 P-D 要"**以 `packages/wallpaper` 为基础大改**"：先搬后改写**只付一次路径成本**；反序要让 media-bridge 的实现与其测试改两遍 |
 | B | 与 P-D 合批 | **不取**：机械搬迁与行为重写混进一个提交 ⇒ `bisect` / `revert` 失能、review 噪声吞掉机械改动 |
 | C | 排在 P-D 之后 | **不取**：二次改动（P-D 在旧路径上动刀）+ 双位置术语债继续付 |
 
@@ -1202,7 +1204,7 @@ Cordis 的级联只有**一个判据**：`name in fiber.inject`（`cordis/src/re
 ```powershell
 npm view dsh-plugin-wallpaper-engine time --json            # 已发布版本与时间（1.3.3 = 2026-10-15T09:27:18Z）
 npm pack dsh-plugin-wallpaper-engine@1.3.3                   # 解包后：patch 只有一行、无 lib/components/
-npm view dsh-plugin-wallpaper-engine-about-notice version    # 期望 E404（mascot-avatar / media-bridge 同）
+npm view dsh-plugin-wallpaper-engine-about-notice version    # 期望 E404（mascot-avatar / wallpaper 同）
 git grep -n "lib/components" -- lib src test scripts package.json   # 引用面（lib/client.js 是构建产物，须排除）
 node test/tools/packages.mjs            # 包 / 行 / 产物发现层（带地板与负对照）
 node test/tools/guard-targets.mjs       # 模块面（复算守卫覆盖率）
@@ -1223,7 +1225,7 @@ node test/run-guards.mjs all            # 硬档 + 软档 + docs + smoke；必�
   `lib/*.js`（serve / inventory / faststart / upload-store / upload-dir / cache-dir / fs-paths / pkg-read /
   scene-manifest / shim-seed / diag-trace / http-lifecycle / http-body / json-response / wallpaper-scan /
   steam-discovery / we-assets / we-props / we-focus-guard / media-origin / mp4-vfs / startup-sweep / host-boot /
-  log / notice …）、`packages/<pkg>/**`（**七个独立子包**：三格组件行 `about-notice` / `mascot-avatar` / `media-bridge` + `fonts` / `fx` / `parallax` + 可选桌宠 `pet-link`（安装器形态，§7.10）；`lib/components/` 已随 `6dfb431d` 删除）、`lib/webwallgl/*`（自家模板 / 宿主桥，**不是引擎**）。
+  log / notice …）、`packages/<pkg>/**`（**七个独立子包**：三格组件行 `about-notice` / `mascot-avatar` / `wallpaper` + `fonts` / `fx` / `parallax` + 可选桌宠 `pet-link`（安装器形态，§7.10）；`lib/components/` 已随 `6dfb431d` 删除）、`lib/webwallgl/*`（自家模板 / 宿主桥，**不是引擎**）。
 - **浏览器半边**：主包 `src/**` 的构建期内联模块（清单的**唯一真源** = `scripts/build-client.mjs` 的 `INLINE_MODULES`）
   → 主包单产物 `lib/client.js`（生成物，不入库）；各带浏览器半边的子包按包内 `client.build.json` 配方自产
   `packages/<pkg>/lib/client.<pkg>.js` —— **共 5 份**（`FLOORS.clientArtifacts`，含 `pet-link`）。

@@ -128,14 +128,15 @@ engine itself) plus one row per **sub-plugin**. Each row can be **disabled on it
   the **browser-side blocks that belong to it stop rendering** (its UI and its settings go away together).
 - Conversely, **the browser half is loaded per package**: as long as the main row is enabled the whole settings
   UI is there. Disabling the **main** row disables the entire plugin (wallpaper and UI both go away).
-- `media-bridge` is the **exception**: it is currently a transitional form of the wallpaper sub-plugin, so it does
-  **not** yet participate in this "UI follows the row" semantics (it will be folded into the wallpaper/UI core split later).
+- `wallpaper` (renamed from the system media bridge in P-D phase 1) is the **exception**: it is currently the host half
+  of the wallpaper sub-plugin, so it does **not** yet participate in this "UI follows the row" semantics (its browser
+  half will be folded into the wallpaper/UI core split later).
 
 | Sub-plugin row | Capabilities that disappear | UI that stops rendering |
 |---|---|---|
 | `about-notice` | `/star-count`, `/about-qr/*` | Star count, the two group-QR images and the update notice inside the About tab (intro and credits stay) |
 | `mascot-avatar` | `/mascot`, `/avatar/<side>` | The mascot form + artwork/avatar uploads on the System tab, the avatar card on the Extensions tab, the message avatar decoration (the tabs and their other sections stay) |
-| `media-bridge` | `/now-playing*`, `/media-status`, `/audio-spectrum`, `/media-control` | (not applicable yet, see above) |
+| `wallpaper` (formerly `media-bridge`) | `/now-playing*`, `/media-status`, `/audio-spectrum`, `/media-control` | (not applicable yet, see above) |
 
 ## Usage
 

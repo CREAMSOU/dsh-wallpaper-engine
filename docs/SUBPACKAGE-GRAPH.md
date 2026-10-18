@@ -27,7 +27,7 @@ node test/tools/guard-targets.mjs --write                 # 重算 docs/GUARD-MA
 ```mermaid
 graph TD
   MAIN["主包 · 行 id=wallpaper-engine<br/>name='dsh-plugin-wallpaper-engine'"]
-  MAIN -->|"真名行 —— 已出户的组件行（P-F 批 1c，2026-10-16）"| C3["id=wallpaper-engine-media-bridge<br/>name='dsh-plugin-wallpaper-engine-media-bridge'<br/>住 packages/media-bridge/，独立清单"]
+  MAIN -->|"真名行 —— 已出户的组件行（P-F 批 1c，2026-10-16）"| C3["id=wallpaper-engine-wallpaper<br/>name='dsh-plugin-wallpaper-engine-wallpaper'<br/>住 packages/wallpaper/，独立清单"]
   MAIN -->|"真名行 —— 已出户的组件行（P-F，2026-10-16）"| C1["id=wallpaper-engine-about-notice<br/>name='dsh-plugin-wallpaper-engine-about-notice'<br/>住 packages/about-notice/，独立清单"]
   MAIN -->|"同上（P-F 批 2a，2026-10-16）"| C2["id=wallpaper-engine-mascot-avatar<br/>name='dsh-plugin-wallpaper-engine-mascot-avatar'<br/>住 packages/mascot-avatar/，独立清单"]
   MAIN -->|"真名行 —— 独立子包行（本规范）"| S1["id=wallpaper-engine-fx<br/>name='dsh-plugin-wallpaper-engine-fx'<br/>住 packages/fx/，独立清单 + 独立发布"]
@@ -41,7 +41,7 @@ graph TD
   它的清单就是主包清单，没有"子包清单契约"这回事。
 - **独立子包行**：真名行，代码在自己仓库目录里，**有独立清单、独立发布、独立开关**（S3–S10 管的是它）。
 - **已出户的组件行**（P-F 组件行统一：`packages/about-notice/` 批 1、`packages/mascot-avatar/` 批 2a、
-  `packages/media-bridge/` 批 1c，均 2026-10-16）：`id` 不变、`name` 改真名、
+  `packages/wallpaper/` 批 1c，均 2026-10-16）：`id` 不变、`name` 改真名、
   代码与清单都在自己的 `packages/<pkg>/` 里 ⇒ 它**同时**是"组件行"（`lib/kernel/component-session.js` 的
   `COMPONENT_VIEW_KEYS` 声明面）与"独立子包行"（S3–S10）。**三格已全部出户** ⇒ 上面两种行在本仓已合并成一种
   （组件是否"是组件"从此由 `COMPONENT_VIEW_KEYS` 声明面回答，不再由落点目录回答）。
@@ -61,7 +61,7 @@ graph LR
   SVC -->|"只读 + 自带 webServer 面"| FT["packages/fonts 宿主半边<br/>inject ['webServer','wallpaperEngineHost']<br/>packages/fonts/lib/routes/fontsets.js · packages/fonts/lib/routes/system-fonts.js"]
   SVC -->|"只读 + 自带 webServer 面（P-F）"| AN["packages/about-notice 宿主半边<br/>inject ['webServer','wallpaperEngineHost']<br/>packages/about-notice/lib/routes/about-qr.js · github-stars.js"]
   SVC -->|"同上（P-F 批 2a）"| MA["packages/mascot-avatar 宿主半边<br/>inject ['webServer','wallpaperEngineHost']<br/>packages/mascot-avatar/lib/routes/avatar.js · mascot.js"]
-  SVC -->|"同上（P-F 批 1c）"| MB["packages/media-bridge 宿主半边<br/>inject ['webServer','wallpaperEngineHost']<br/>packages/media-bridge/lib/routes/now-playing.js"]
+  SVC -->|"同上（P-F 批 1c）"| MB["packages/wallpaper 宿主半边<br/>inject ['webServer','wallpaperEngineHost']<br/>packages/wallpaper/lib/routes/now-playing.js"]
   SVC -->|"同上（PR #5）"| PL["packages/pet-link 宿主半边<br/>inject ['webServer','wallpaperEngineHost']<br/>packages/pet-link/lib/routes/pet-link.js（仅 /pet-link/capability）"]
   FX --- N1["零主包说明符"]
   PX --- N2["零主包说明符"]
@@ -103,7 +103,7 @@ graph LR
   （`src/client.js` + 外观页签字体节 + 字体集编辑器 ⇒ 产物 `lib/client.fonts.js`），与 fx / parallax 同形。
   host-only **形态本身仍然合法**（宿主侧功能为主的包可以只有宿主半边）：本仓今天**两种形态并存** ——
   在册的四个独立子包（`packages/fx` / `parallax` / `fonts` / `pet-link`）都带浏览器半边；三格已出户的组件行
-  （`packages/about-notice` / `mascot-avatar` / `media-bridge`）仍是 host-only，浏览器半边仍内联在主包 `src/**` 内；
+  （`packages/about-notice` / `mascot-avatar` / `wallpaper`）仍是 host-only，浏览器半边仍内联在主包 `src/**` 内；
   **不要**为了"看起来统一"给 host-only 包补一个空的 `./client`（S3.4）。
 - ~~**第三种形态（PR #5 引入，2026-10-16）：源码在包内、构建归主包**~~ ⇒ **已于 2026-10-17 收口成一般形态**
   （`refactor/pet-link-client-half`）：`packages/pet-link` 的浏览器半边源码仍住 `packages/pet-link/src/**`，但已补齐
@@ -147,7 +147,7 @@ graph LR
 
 每加一个 `packages/<pkg>/`，下表每一格都要有人负责 —— 有判据的格子会自己变红，没判据的格子靠这张表提醒。
 
-| 登记点 | fx | parallax | fonts | about-notice | mascot-avatar | media-bridge | pet-link | 依据 / 谁负责 |
+| 登记点 | fx | parallax | fonts | about-notice | mascot-avatar | wallpaper | pet-link | 依据 / 谁负责 |
 |---|---|---|---|---|---|---|---|---|
 | `packages/<pkg>/package.json` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓（含 **S3.8a 安装器形态**：`files` 八项 = 基础五项 + `tools/`·`assets/`·`src/`） | S2.1 / S3.*（含 S3.8 模板与同形态逐字对账，有判据） |
 | 包内安装器入口 `exports['./install']`（**安装器形态**，S3.8a） | — | — | — | — | — | — | ✓ | S3.8a（有判据） |
@@ -162,7 +162,7 @@ graph LR
 | 根清单 `devDependencies: file:packages/<pkg>` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | S8.1（有判据） |
 | 发布形态：根 `dependencies` 同号精确版 + 删 `file:` | **未执行**（七包一致） | **未执行** | **未执行** | **未执行** | **未执行** | **未执行** | **未执行** | S8.2（人工执行 + `verify-package-publish.mjs` ⑨ 钉「全有或全无」） |
 | `package-lock.json` 同一次提交重算 | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | S8.3（有判据） |
-| `lib/subpackage-boot.js` 的 `SUBPACKAGE_KEY_TABLE` 一项（键 = id 去前缀） | ✓ `fx` | ✓ `parallax` | ✓ `fonts` | ✓ `about-notice` | ✓ `mascot-avatar` | ✓ `media-bridge` | ✓ `pet-link` | S10.1（有判据） |
+| `lib/subpackage-boot.js` 的 `SUBPACKAGE_KEY_TABLE` 一项（键 = id 去前缀） | ✓ `fx` | ✓ `parallax` | ✓ `fonts` | ✓ `about-notice` | ✓ `mascot-avatar` | ✓ `wallpaper` | ✓ `pet-link` | S10.1（有判据） |
 | 包内配方 `packages/<pkg>/client.build.json`（`artifact` = `exports['./client']` 落点） | ✓ | ✓ | ✓（P-C 第一刀新增） | 无（浏览器半边仍在主包 `src/**` 内联） | 无（同上） | 无（同上） | ✓（2026-10-17 收口成一般形态新增） | S10.2（有判据） |
 | 生成物重算 `docs/ROUTE-INDEX.md` / `docs/GUARD-MAP.md` | 复算 | 复算 | 复算 | 复算 | 复算 | 复算 | 复算 | S10.3（生成物判据） |
 | 守卫的自动发现面（`test/tools/packages.mjs` 包发现层：磁盘枚举 + 根 patch 行；`host-route-index` / `guard-targets` / `verify-client-sync` 都读它） | 免手改 | 免手改 | 免手改 | 免手改 | 免手改 | 免手改 | 免手改 | S10.3 |

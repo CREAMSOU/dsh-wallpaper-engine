@@ -1,5 +1,6 @@
 /**
- * `media-bridge` 子包宿主入口（P-F 第三格：`lib/components/media-bridge/` → `packages/media-bridge/`）。
+ * `wallpaper` 子包宿主入口（P-D 阶段1：由 `media-bridge` 子包机械改名而来；
+ * P-F 第三格：`lib/components/media-bridge/` → `packages/wallpaper/`）。
  *
  * 为什么这一格独立成行：这五条路由（`/media-status`、`/audio-spectrum`、`/now-playing`、
  * `/now-playing/artwork`、`/media-control`）与它们的后端实现（media-bridge 子进程 + 内置回落）
@@ -10,16 +11,16 @@
  *
  * 两处加载路径共用同一份实现（照抄 dsh-ops 的组件真形）：
  *   ① 宿主把 patch 行的 `name` 当**独立 plugin** 加载 ⇒ `apply(ctx, config)` 是入口；
- *   ② 门面的 `applyComponent(root, rawConfig, 'media-bridge')` 是"按组件加载"入口。
+ *   ② 门面的 `applyComponent(root, rawConfig, 'wallpaper')` 是"按组件加载"入口。
  * P-F 之后两条路径的 deps **不再是两份各写各的字面量**：门面与入口都从
- * `lib/subpackage-boot.js` 的 `subpackageKeys('media-bridge', ctx)` 取**同一份冻结键视图**
+ * `lib/subpackage-boot.js` 的 `subpackageKeys('wallpaper', ctx)` 取**同一份冻结键视图**
  * ⇒ 两条路径不可能漂移（对账面 = `test/verify-inject-contracts.mjs` ② 的叶子冻结表逐键对账）。
  *
- * `export const name` 与 patch 行的 `name` 逐字相等（`dsh-plugin-wallpaper-engine-media-bridge`）。
+ * `export const name` 与 patch 行的 `name` 逐字相等（`dsh-plugin-wallpaper-engine-wallpaper`）。
  *
  * ⚠️ **跨包纪律（ADR-0014 S5.1 / S5.2，判据 `test/verify-subpackage-purity.mjs`）**：本模块
  * **零主包说明符、零相对路径逃出本包** —— 只 import 本包内的路由族。宿主能力一律经
- * `ctx.wallpaperEngineHost` 的键视图（`host.keys('media-bridge', ctx)`）取。这不是风格问题：
+ * `ctx.wallpaperEngineHost` 的键视图（`host.keys('wallpaper', ctx)`）取。这不是风格问题：
  * 相对 import 主包文件、或 import 主包名，都是该判据的硬红。
  *
  * ⚠️ **取服务姿势**：先声明 `export const inject = ['webServer', 'wallpaperEngineHost']`，再直接读
@@ -42,12 +43,12 @@
  * 曾由本入口直接 import 主包叶子模块（`lib/kernel/data-dir.js` / `lib/http-body.js`）——出户后
  * 那两条相对路径既不可解析、也违反跨包纪律。现在它们分别走键表的 `data:<名>` 与 `http:<名>` 源型
  * （`lib/subpackage-boot.js` 的 `DATA_VIEW` / `HTTP_VIEW`），**仍然是同一份模块级绑定**（不是副本）。
- * 键集见 `lib/kernel/component-session.js` 的 `COMPONENT_VIEW_KEYS['media-bridge']` 注释。
+ * 键集见 `lib/kernel/component-session.js` 的 `COMPONENT_VIEW_KEYS['wallpaper']` 注释。
  */
 import { registerNowPlayingRoutes } from './routes/now-playing.js';
 
 /** patch 行 slug（`cordis.patch.yml` 里该行 `name` 的完整值，两处逐字相等）。 */
-export const name = 'dsh-plugin-wallpaper-engine-media-bridge';
+export const name = 'dsh-plugin-wallpaper-engine-wallpaper';
 
 /**
  * 硬依赖 web 服务 + 主包宿主服务：与主行 `lib/index.js` 的 `inject` 同一套语义。
@@ -65,16 +66,16 @@ export function apply(ctx, config) {
   const host = ctx.wallpaperEngineHost;
   // 拿不到服务名就大声失败：静默 `undefined` 会让下面每一步都在 undefined 上取属性（半死态）。
   if (!host) {
-    throw new Error('[wallpaper-engine] media-bridge 没拿到 wallpaperEngineHost 服务'
+    throw new Error('[wallpaper-engine] wallpaper 没拿到 wallpaperEngineHost 服务'
       + '（inject 声明与宿主装载顺序不匹配）');
   }
   // 键视图 = `lib/subpackage-boot.js` 的 SUBPACKAGE_KEY_TABLE 里本包那一行（值全部来自主包模块级绑定）。
   // 记账 / 错误留证 / 「失败仍原样抛」三件事都在 `keys.runComponent()`（门面 `applyComponent`
   // 走的是同一个函数）⇒ 两条装载路径共用一份语义，不可能一条记了、另一条忘了。
-  const keys = host.keys('media-bridge', ctx);
+  const keys = host.keys('wallpaper', ctx);
   // `http` 面（`sendJson` / `bodyReader`）不在冻结键表里，与 `packages/fonts` 同款：按需显式带上。
   const deps = Object.freeze({ ...keys, http: host.http });
-  return keys.handOffTeardown(ctx, keys.runComponent('media-bridge', ctx, config, deps, applyImpl));
+  return keys.handOffTeardown(ctx, keys.runComponent('wallpaper', ctx, config, deps, applyImpl));
 }
 
 /**
@@ -93,9 +94,9 @@ export function applyImpl(root, _rawConfig, c) {
   // 与门面 `apply()` 同款早退：服务在、但 register 面还没挂上（或换成了别的 webServer 实现）。
   if (!webServer || typeof webServer.register !== 'function') return () => {};
 
-  // P2-7B 注入面收窄：从内核取**本组件声明的视图**（`COMPONENT_VIEW_KEYS['media-bridge']`），
+  // P2-7B 注入面收窄：从内核取**本组件声明的视图**（`COMPONENT_VIEW_KEYS['wallpaper']`），
   // 不再 `const { … } = hostKernel` 现解构；视图缺键即抛，不静默 `undefined`。
-  const view = componentViewFrom('media-bridge');
+  const view = componentViewFrom('wallpaper');
   // 迷你会话（disposers / log / serveFile / 同序 teardown）收在内核侧；`appendDiagLine` 由会话
   // 一并交出（它在 SESSION_SERVE_KEYS 里，入口若自己再从视图解构一次，`verify-component-face` ③
   // 的「入口 ∩ 会话 = ∅」会红）。

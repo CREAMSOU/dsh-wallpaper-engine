@@ -1,16 +1,16 @@
 /**
  * legacy.js — 「系统正在播放」的两路数据源（宿主侧实现，现为**回落路径**）。
  *
- * 首选实现是 media-bridge 子进程（packages/media-bridge/lib/supervisor.js：
+ * 首选实现是 media-bridge 子进程（packages/wallpaper/lib/supervisor.js：
  * macOS 走 MediaRemote + CoreAudio Process Tap、Windows 走 GSMTC + WASAPI、
  * Linux 走 MPRIS + PulseAudio/PipeWire，三平台同一套 API）。本文件保留一个版本
  * 做兜底：产物取不到、子进程起不来、协议版本不匹配、或连续崩溃超预算时，**媒体后端门面**
- * （packages/media-bridge/lib/backend.js 的 `createMediaBackend()`）自动切回这里 —— 能力降级，但功能不消失。
+ * （packages/wallpaper/lib/backend.js 的 `createMediaBackend()`）自动切回这里 —— 能力降级，但功能不消失。
  *
  * 两路数据源：
  *
  *   1. 音频频谱（64 段）：macOS 走随包分发的 CoreAudio Process Tap 小工具
- *      （packages/media-bridge/lib/audio-tap.swift，首次使用用 swiftc -O 编译并缓存；采集的是**系统输出**
+ *      （packages/wallpaper/lib/audio-tap.swift，首次使用用 swiftc -O 编译并缓存；采集的是**系统输出**
  *      的 loopback，不是麦克风）；Linux/Windows 走 ffmpeg + monitor/虚拟设备。
  *      统一输出 64 段（0-255），由宿主 /audio-spectrum 提供。
  *   2. Now Playing（歌名/歌手/专辑/播放态/进度/封面）：macOS 用 media-control
@@ -32,7 +32,7 @@ import { fileURLToPath } from 'node:url';
 
 const BANDS = 64;
 const SELF_DIR = dirname(fileURLToPath(import.meta.url));
-/** audio-tap.swift 随本包走（与本文件同目录）—— P-F 出户后本文件在 `packages/media-bridge/lib/`，不再跨包指向主包 `lib/`。 */
+/** audio-tap.swift 随本包走（与本文件同目录）—— P-F 出户后本文件在 `packages/wallpaper/lib/`，不再跨包指向主包 `lib/`。 */
 const TAP_SWIFT = resolve(SELF_DIR, 'audio-tap.swift');
 
 // ── 迷你 radix-2 FFT（Linux/Windows 的 ffmpeg 源用；macOS 的 Swift 工具自带 vDSP）──

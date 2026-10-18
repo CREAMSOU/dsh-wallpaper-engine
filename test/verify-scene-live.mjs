@@ -340,14 +340,14 @@ const host = hostMod.default || hostMod;
 const apply = host.apply || (host.inject && host.apply);
 const dispose = apply(mockCtx);
 
-// ── 组件行也要 boot（本分支的路由族归属：媒体状态族归 `media-bridge` 组件行）──
+// ── 组件行也要 boot（本分支的路由族归属：媒体状态族归 `wallpaper` 组件行；P-D 阶段1 前名 `media-bridge`）──
 // ⚠️ 这不是"放宽判据"，而是夹具的 boot 段要跟上本分支结构：`/media-status`、`/audio-spectrum`、
 // `/now-playing`、`/now-playing/artwork`、`/media-control` 五条路由的实现住在
-// `packages/media-bridge/lib/`（P2-2 入包、P-F 批 1c 出户，ADR-0013 D14「实现入包、主包不留注册点」，
+// `packages/wallpaper/lib/`（P2-2 入包、P-F 批 1c 出户，ADR-0013 D14「实现入包、主包不留注册点」，
 // 由 `verify-route-ownership` 的 M10 钉住）。上游那条判据按"门面 apply 后即可用"写（单包单行假设）。
 // 处置与第 4 轮 `/avatar` 一致：**连组件一起 boot**，判据判什么一个字没改。
 if (typeof hostMod.applyComponent === 'function') {
-  for (const comp of ['media-bridge', 'mascot-avatar', 'about-notice']) {
+  for (const comp of ['wallpaper', 'mascot-avatar', 'about-notice']) {
     try { hostMod.applyComponent(mockCtx, {}, comp); } catch (err) {
       console.log('  · 组件行 boot 失败（' + comp + '）：' + String(err && err.message));
     }
@@ -2182,12 +2182,12 @@ const hostLib = hostLibComposed;
 }
 
 // ⚠️ 门面面 = lib/index.js + **组件行真源**。本分支把媒体桥实现搬进了
-// lib/components/media-bridge/**（P2 拆包）→ **P-F 批 1c 出户到 `packages/media-bridge/lib/**`**，
+// lib/components/media-bridge/**（P2 拆包）→ **P-F 批 1c 出户到 `packages/wallpaper/lib/**`**，
 // "中间件优先 / legacy 回落 / 音频已关透传"这些形态住在那儿 ⇒ 只扫门面会误报丢失
 // （判据纪律同 hostHalfSrc："拆出的模块必须加进来"）。
-const componentMediaSources = ['packages/media-bridge/lib/index.js', 'packages/media-bridge/lib/legacy.js',
-  'packages/media-bridge/lib/routes/now-playing.js', 'packages/media-bridge/lib/provision.js',
-  'packages/media-bridge/lib/supervisor.js']
+const componentMediaSources = ['packages/wallpaper/lib/index.js', 'packages/wallpaper/lib/legacy.js',
+  'packages/wallpaper/lib/routes/now-playing.js', 'packages/wallpaper/lib/provision.js',
+  'packages/wallpaper/lib/supervisor.js']
   .map((f) => { try { return readFileSync(join(root, f), 'utf8'); } catch { return ''; } }).join('\n');
 // 再补 **P0 拆出的 lib 模块**：这些模块的实现形态（如 upload-dir 的 `up-dir-${name}` 前缀与
 // `resolveSceneMainFileP` 解析）本就是"原门面里那段代码"，判据按门面面扫时必须能看到它们。
@@ -2475,12 +2475,12 @@ check('negative control: 调用点保持语句形态（加赋值前缀会被路�
 // 这套现为**回落实现**（lib/media/legacy.js），首选是 media-bridge 子进程（lib/media/*）
 // —— 断言因此两边都盯：回落能力不能退化，新链路的接缝要在。
 // ⚠️ 实现归属随 P2 拆包搬进**组件行**（lib/components/media-bridge/legacy.js），P-F 批 1c 出户到
-// `packages/media-bridge/lib/legacy.js`：判据按**真源**读，候选表兼容三种排布，缺锚即判红。
-const legacyBridgePath = ['packages/media-bridge/lib/legacy.js', 'lib/components/media-bridge/legacy.js',
+// `packages/wallpaper/lib/legacy.js`：判据按**真源**读，候选表兼容三种排布，缺锚即判红。
+const legacyBridgePath = ['packages/wallpaper/lib/legacy.js', 'lib/components/media-bridge/legacy.js',
   'lib/media/legacy.js']
   .find((rel) => existsSync(join(root, rel)));
 const legacyBridgeSrc = legacyBridgePath ? readFileSync(join(root, legacyBridgePath), 'utf8') : '';
-check('回落实现住在 media-bridge 组件行 legacy.js（回落路径还在）',
+check('回落实现住在 wallpaper 组件行 legacy.js（回落路径还在）',
   Boolean(legacyBridgePath) && !existsSync(join(root, 'lib', 'media-bridge.js')),
   legacyBridgePath || '未找到 legacy 实现（组件行与 lib/media 都没有）');
 check('封面走 media-control 的 artworkData（通用，不限 Spotify）',
@@ -2501,16 +2501,16 @@ check('host 按扩展名回封面 Content-Type', serveSrc.includes("bmp: 'image/
 // ── media-bridge 中间件的接缝（首选路径）────────────────────────────────────
 // ── media 域真源映射（P2 拆包把实现搬进组件行）────────────────────────────────
 // 上游把媒体域放在 `lib/media/<f>`；本分支随 P2 把整套实现搬进了**组件行**、P-F 批 1c 再出户到
-// `packages/media-bridge/lib/**`。判据按真源读：出户包优先、组件行兼容、`lib/media` 兜底；
+// `packages/wallpaper/lib/**`。判据按真源读：出户包优先、组件行兼容、`lib/media` 兜底；
 // 三处都没有时返回首选路径（后续 readFileSync 会响亮地 ENOENT）—— 绝不回落到"再调一次自己"。
-const mediaSrcCandidates = (f) => ['packages/media-bridge/lib/' + f, 'packages/media-bridge/lib/routes/' + f,
+const mediaSrcCandidates = (f) => ['packages/wallpaper/lib/' + f, 'packages/wallpaper/lib/routes/' + f,
   'lib/components/media-bridge/' + f, 'lib/media/' + f].map((rel) => join(root, rel));
 const mediaSrcPath = (f) => mediaSrcCandidates(f).find((abs) => existsSync(abs)) || mediaSrcCandidates(f)[0];
 const provSrc = readFileSync(mediaSrcPath('provision.js'), 'utf8');
 const supSrc = readFileSync(mediaSrcPath('supervisor.js'), 'utf8');
 // ⚠️ 门面面 = 媒体桥子包的**整面**（不是只有 index.js）：'中间件优先/回落/音频已关透传'这些形态
 // 分布在 index.js 与 legacy.js/supervisor.js 里 ⇒ 只读一个文件会误报丢失（判据纪律：拆出的模块必须加进来）。
-const mediaPkgDir = ['packages/media-bridge/lib', 'lib/components/media-bridge']
+const mediaPkgDir = ['packages/wallpaper/lib', 'lib/components/media-bridge']
   .map((rel) => join(root, rel)).find((abs) => existsSync(abs));
 const facadeSrc = (mediaPkgDir ? readdirSync(mediaPkgDir) : [])
   .filter((f) => f.endsWith('.js'))
@@ -2563,11 +2563,11 @@ const winHideSites = [
 const winHideBad = [];
 for (const site of winHideSites) {
   // ⚠️ 真源解析：表内保留**上游坐标**（lib/transcode.js、lib/media/legacy.js），读取时按候选表
-  // 定位本分支的真源 —— P2 拆包把媒体域实现搬进了组件行（P-F 批 1c 再出户到 `packages/media-bridge/lib/`），
+  // 定位本分支的真源 —— P2 拆包把媒体域实现搬进了组件行（P-F 批 1c 再出户到 `packages/wallpaper/lib/`），
   // 而 lib/transcode.js 在本分支是 lib/media/transcode.js。找不到就落回原路径（下面的判据会以"读了空/缺失"响亮地判红）。
   const siteBase = site.file.split('/').pop();
   const siteAbs = [join(root, site.file), join(root, 'lib', 'media', siteBase),
-    join(root, 'packages', 'media-bridge', 'lib', siteBase),
+    join(root, 'packages', 'wallpaper', 'lib', siteBase),
     join(root, 'lib', 'components', 'media-bridge', siteBase)]
     .find((abs) => existsSync(abs)) || join(root, site.file);
   const body = readFileSync(siteAbs, 'utf8');

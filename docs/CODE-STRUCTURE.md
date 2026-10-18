@@ -117,7 +117,7 @@ graph TB
   `test/tools/host-route-index.mjs` 的 `buildIndex()`（它把搬进 `lib/routes/` 的族按调用点放回原位），
   路由级视图是生成物 `docs/ROUTE-INDEX.md`（`verify-route-index` 重算并逐字节比对）。
   `verify-route-families` 另按账本 §7-6 的触发线盯「某族长到 ≥3 条 ⇒ 拆族或改线」。
-- **组件行**（**组件包** `packages/<组件>/lib/` —— P-F 组件行统一，旧落点 `lib/components/<组件>/` 已不存在，`packages/about-notice/`、`packages/mascot-avatar/`、`packages/media-bridge/`，2026-10-16）—— 一个 bundle 多行（[`adr/0013`](./adr/0013-bundle-multi-component-rows.md)）：
+- **组件行**（**组件包** `packages/<组件>/lib/` —— P-F 组件行统一，旧落点 `lib/components/<组件>/` 已不存在，`packages/about-notice/`、`packages/mascot-avatar/`、`packages/wallpaper/`，2026-10-16）—— 一个 bundle 多行（[`adr/0013`](./adr/0013-bundle-multi-component-rows.md)）：
   组件入口 `index.js` + 它自己的路由族实现 + 该行消费的组件视图。行的开关是宿主的
   （`cordis.patch.yml`）；"哪个实现属于哪一行"由 `test/verify-route-ownership.mjs` 钉住，
   行的装载形态由 `test/verify-bundle-rows.mjs` 钉住。

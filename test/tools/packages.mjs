@@ -599,7 +599,7 @@ function runSelftest() {
   const clone = (m) => JSON.parse(JSON.stringify(m));
   const abs = (rel) => absOf(ROOT, rel);
   // P-F 批 1c 起三格组件也已出户 ⇒ 发现层不再有任何 `kind === 'subpath'` 的包；"没有浏览器半边的包"
-  // 改从**任意** kind 里找（today = about-notice / mascot-avatar / media-bridge 三个 standalone）。
+  // 改从**任意** kind 里找（today = about-notice / mascot-avatar / wallpaper 三个 standalone）。
   // 负对照不许依赖"盘面上恰好有某个形态的包"（≥ P-C 那次 `subNoClient` 崩掉的教训）。
   const subNoClient = base.packages.find((p) => p.clientArtifact === null);
   if (!subNoClient) throw new Error('[selftest] 负对照 ③/⑦ 需要至少一个不带浏览器半边的包（main 之外的任一形态）');

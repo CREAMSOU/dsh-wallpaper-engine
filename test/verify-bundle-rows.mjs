@@ -932,7 +932,7 @@ section('⑥ 组件行（P2-1/P2-2，逐行数据驱动）：patch 子行 ⇄ ex
   // 它调用的路由族的条数之和（`rowRegistrationCounts`）。单点真源 = 这张行清单 × 那份族表。
   //
   // 写死的快照数字会烂：行清单或族表一变它就过期 ⇒ 判据恒红（且红得没有信息量）。
-  // 现算出来的期望 = 门面 34 + about-notice 2 + mascot-avatar 2 + media-bridge 5 = 43；
+  // 现算出来的期望 = 门面 34 + about-notice 2 + mascot-avatar 2 + wallpaper 5 = 43；
   // 并集 43、跨行零重复、无孤儿 ⇒ 与"多注册"是两回事：真出事时并集会大于 Σ 行声明。
   // ⚠️ 这条对账同时覆盖**门面**的注册数（原先只有组件行逐行对账，门面的 34 条只被总数隐性约束）。
   const rowExpected = MAIN_MODULES.map((rel) => ({ rel, ...rowRegistrationCounts(rel, routeMods) }));
