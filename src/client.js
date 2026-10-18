@@ -6035,6 +6035,15 @@ const HOST_BRIDGE_BINDINGS = {
   wallSidebarClose: () => wallSidebarClose,
   wallSidebarToggle: () => wallSidebarToggle,
   registerPetLink: () => petLinkRegister,
+  // ── 壁纸子包浏览器半边（packages/wallpaper，P-D S3a）的显式键集 ─────────────────────
+  // 来源 = 被搬渲染器（packages/wallpaper/src/wallpaper-uploads-section.js，原
+  // src/panel-tabs-wallpaper.js 的「自定义壁纸」节）里的**自由标识符**逐个点名。
+  // 动作体全留主包（ADR-0013 D20）：这里给的是活绑定 getter，不是值拷贝。
+  changeUploadDir: () => changeUploadDir,
+  changeWeAssetsDir: () => changeWeAssetsDir,
+  uploadWallpaperFile: () => uploadWallpaperFile,
+  removeUploadWallpaper: () => removeUploadWallpaper,
+  renderConfirmRow: () => renderConfirmRow,
 };
 const HOST_BRIDGE_KEYS = Object.keys(HOST_BRIDGE_BINDINGS);
 for (const bridgeKey of HOST_BRIDGE_KEYS) {

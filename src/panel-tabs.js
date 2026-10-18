@@ -62,11 +62,18 @@ function weComponentVisibleOf(components, name) {
   // 本页签只把 ctx **转交**给各节、自己不读字段 —— 所以那不是无操作声明，是"要什么写在签名处"。
   function renderWallpaperTab(ctx) {
     const { } = ctx;
+    // 第四节「自定义壁纸」在 P-D S3a 已搬进 packages/wallpaper 的浏览器半边 ⇒ 这里按面板节
+    // 注册表续接，屏上位置仍在**最后**（描述符写 order 40；三个内置节的顺序不变）。
+    // ⚠️ 注册表为空 = 该子包没装 / 被关：前三个内置节照画，**不**整页签消失
+    //    （D3①/D3③ 在这条通道上的形态：缺的是那一节，不是这一页）。
+    const registered = wePanelSectionsOf("library").map((section) => (
+      React.createElement(React.Fragment, { key: section.id }, section.render(ctx))
+    ));
     return React.createElement(React.Fragment, null,
       renderWallpaperCurrentSection(ctx),
       renderWallpaperTransitionSection(ctx),
       renderWallpaperRotationSection(ctx),
-      renderWallpaperUploadsSection(ctx),
+      registered,
     );
   }
 

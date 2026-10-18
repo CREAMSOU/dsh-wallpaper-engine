@@ -135,6 +135,15 @@ async function loadExtensionRegistry() {
     get title() { return globalThis.weT('全局字体'); },
     render: fontSectionMod.renderAppearanceFontSection,
   });
+  // P-D S3a：「壁纸库」页签第四节「自定义壁纸」同理 —— 按标准包内源文件 import 真渲染器，
+  // 描述符与 packages/wallpaper/src/client.js 逐字同形（title 是 accessor + order 40）。
+  const wallpaperSectionMod = await import(pathToFileURL(join(root, 'packages', 'wallpaper', 'src', 'wallpaper-uploads-section.js')).href);
+  reg.weRegisterPanelSection('library', 'wallpaper-uploads', {
+    id: 'wallpaper-uploads',
+    get title() { return globalThis.weT('自定义壁纸'); },
+    order: 40,
+    render: wallpaperSectionMod.renderWallpaperUploadsSection,
+  });
   return reg;
 }
 // Keep every cache/config write inside the workspace (same stance as
@@ -1004,6 +1013,11 @@ const tabsSrc = panelText();
 const fontSectionSrc = readFileSync(join(root, 'packages', 'fonts', 'src', 'appearance-font-section.js'), 'utf8')
   .replace(/\r\n/g, '\n');
 const tabsSrcWithFontSection = tabsSrc + '\n;\n' + fontSectionSrc;
+// P-D S3a：「壁纸库」页签第四节「自定义壁纸」的渲染器也随壁纸子包搬出
+// （packages/wallpaper/src/wallpaper-uploads-section.js）⇒ 同一条口径：判"该节画什么 /
+// 解构了哪些 ctx 字段"的判据读 **页签族 + 包内各节** 的并集。
+const wallpaperUploadsSrc = readFileSync(join(root, 'packages', 'wallpaper', 'src', 'wallpaper-uploads-section.js'), 'utf8')
+  .replace(/\r\n/g, '\n');
 // 组装点自身：只喂给"8 个 render*Tab 声明在 src/panel-tabs.js"那条不变量（族并集会让它变弱）。
 const tabsHubSrc = readFileSync(join(root, 'src', 'panel-tabs.js'), 'utf8');
 // `fnBody` 的实现在 `test/tools/assert-harness.mjs`（`fnNameBody`，取首个 `\n}`；
@@ -3718,7 +3732,8 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
   // 这一节的），于是判据会把整个词表都报成"漏解构"。这类"切错了还照旧报"正是判据要防的形状。
   const tabsSrcNow = panelText()
     .replace(/\r\n/g, '\n')
-    + '\n;\n' + fontSectionSrc;
+    + '\n;\n' + fontSectionSrc
+    + '\n;\n' + wallpaperUploadsSrc;
   // 这些名字在产物里是**内联同一作用域**的常量 / 纯组件 / 纯函数；单独 import 时按内联规则
   // 补 globalThis 替身（`weT` 由 tools/weT-shim.mjs 装、React 等由上面那块装）。
   Object.assign(globalThis, {
@@ -4047,7 +4062,7 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
     // ⚠️ 刀4 之后节的渲染器搬到了 src/panel-tabs-*.js 域模块 ⇒ 扫**页签族全文**（组装点在末尾），
     //    而不是组装点单文件（否则六处调用全在域模块里 ⇒ 假红 missing=theme,detail,…）。
     const appearanceModules = ['theme', 'detail', 'corners', 'uiColor', 'font'];
-    const panelAllSrc = panelText() + '\n;\n' + fontSectionSrc;
+    const panelAllSrc = panelText() + '\n;\n' + fontSectionSrc + '\n;\n' + wallpaperUploadsSrc;
     const missingModules = appearanceModules.filter((m) => !panelAllSrc.includes('moduleResetButton("' + m + '"'));
     check('#192 外观六模块各挂 ↺ + 玻璃 UI 也挂 + 共用构件阻止冒泡',
       missingModules.length === 0

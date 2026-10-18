@@ -560,8 +560,15 @@ section('⑥ 组件行（P2-1/P2-2，逐行数据驱动）：patch 子行 ⇄ ex
     // `files` 条目是**相对清单所在目录**的：未出户时清单在仓库根 ⇒ 与仓库相对路径同形；
     // 已出户后清单在 `packages/<sub>/` ⇒ 比对前必须把包前缀剥掉，否则整包都判"未覆盖"。
     const prefix = pkgRoot + '/';
+    // P-D S3a：组件行也可以有自己的**浏览器半边**（packages/wallpaper 是第一个：client.build.json
+    // 配方 + src/*.js 构建输入 ⇒ lib/client.<short>.js 产物）。构建输入按设计**不进** npm tarball
+    // 的 `files`（字体包先例：files 只列 lib/ cordis.patch.yml locale/ icon.png package.json），
+    // 产物本身由 `lib/` 覆盖 ⇒ 这里对"有声明的浏览器半边"的包豁免配方与 src/ 两类文件。
+    const hasBrowserHalf = Boolean(own.exports && own.exports['./client'])
+      || Boolean(own.dsh && own.dsh.client);
     for (const f of componentFiles.filter((x) => x.startsWith(prefix))) {
       const ownPath = ownRel === 'package.json' ? f : f.slice(prefix.length);
+      if (hasBrowserHalf && (ownPath === 'client.build.json' || ownPath.startsWith('src/'))) continue;
       if (!coveredBy(own.files, ownPath)) uncovered.push(f);
     }
   }

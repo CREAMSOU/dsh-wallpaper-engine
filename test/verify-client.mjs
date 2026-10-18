@@ -374,6 +374,10 @@ const SUBPACKAGE_CLIENT_ARTIFACTS = [
   // 主 bundle 显式键集里的 registerPetLink 把服务登记回主包（门面缓冲 + 登记到达时补做）。
   // 求值在 apply() **之前** ⇒ 这里正是"子包先到"那一半的真实形态。
   ['../packages/pet-link/lib/client.pet-link.js', 'dsh-plugin-wallpaper-engine-pet-link'],
+  // P-D S3a：「壁纸库」页签第四节「自定义壁纸」随壁纸子包出产物（packages/wallpaper/lib/
+  // client.wallpaper.js）。它的 factory 会往面板节注册表登记 library 节（order 40）⇒ 与真实
+  // loader 同形，求值在 apply() **之前**，否则：788 那条「library tab has 自定义壁纸」会红。
+  ['../packages/wallpaper/lib/client.wallpaper.js', 'dsh-plugin-wallpaper-engine-wallpaper'],
 ];
 const subRequireMock = (spec) => {
   if (spec === 'dsh-plugin-wallpaper-engine') return exportsObj;
@@ -4185,6 +4189,10 @@ setTimeout(async () => {
       anchor: ['function renderWallpaperTab(ctx)', 'function renderAppearanceTab(ctx)',
         'function renderEffectsTab(ctx)', 'function renderAdvancedTab(ctx)',
         'function renderExtensionsTab(ctx)'] },
+    // P-D S3a：「自定义壁纸」节搬进了 packages/wallpaper 的浏览器半边 ⇒ 同一条接缝纪律必须
+    // 对包内文件成立（否则"搬出去"等于把这条判据的射程悄悄缩小，正是刀4 那次的教训）。
+    { file: '../packages/wallpaper/src/wallpaper-uploads-section.js', user: '壁纸库自定义壁纸节',
+      anchor: ['function renderWallpaperUploadsSection(ctx) {', 'we-picker__uploads-list'] },
   ];
   for (const r of RENDERERS) {
     // 刀4：`family` 条目按构建序扫**族并集**（节渲染器搬出去了，单文件读法会漏掉它们）。

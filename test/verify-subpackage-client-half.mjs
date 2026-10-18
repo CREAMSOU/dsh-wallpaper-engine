@@ -176,9 +176,11 @@ check('packages/ 下至少有一个子包（P-A 未落判红）', pkgs.length > 
 check('每个子包 manifest 可解析', usable.length === pkgs.length, pkgs.filter((p) => p.error).map((p) => p.dir + '：' + p.error).join('；'));
 
 // P-C 契约 §1 / ADR-0014 S3.1：字体包的浏览器半边**不再是"明确排除"**，而是必被覆盖。
+// P-D S3a（2026-10-18）起壁纸子包（packages/wallpaper）也出浏览器半边（「自定义壁纸」节），
+// 同属必被覆盖。
 // 棘轮（有意硬编码）：这张清单只许随契约显式改动；每个包名都必须在 packages/ 下命中真实目录，
 // 否则改名/搬家会让棘轮**静默失效**（判据变成恒真）—— 命中 0 处即红。
-const REQUIRED_CLIENT_HALF = ['dsh-plugin-wallpaper-engine-fonts'];
+const REQUIRED_CLIENT_HALF = ['dsh-plugin-wallpaper-engine-fonts', 'dsh-plugin-wallpaper-engine-wallpaper'];
 
 const requiredDirs = [];
 for (const n of REQUIRED_CLIENT_HALF) {
@@ -223,6 +225,73 @@ if (browserHalfNoDecl.length > 0) console.log('    · 有浏览器半边但未�
 check('必被覆盖清单里的包不出现在"有浏览器半边但停在主 bundle"信息行里（两个触点同向）',
   !browserHalfNoDecl.some((x) => REQUIRED_CLIENT_HALF.indexOf(x.name) >= 0),
   browserHalfNoDecl.map((x) => x.text).join(' / ') || '（信息行为空）');
+
+// ── D-7（P-D S3a）：子包申报键 ⊆ 主 bundle 提供键（机械反向对账）──────────────────
+// 每个声明 dsh.client 的子包在 src/client.js 里有一张 *_HOST_REQUIRED 申报表（缺键当场抛）。
+// 判据：把**全部** packages/*/src/client.js 的申报表并集拿出来，断言 ⊆ 主 bundle
+// src/client.js 的 HOST_BRIDGE_BINDINGS 键集。只堵"子包申报了、主包没给"这一向；
+// "主包多给了没人用的键"由 verify-client.mjs 的显式键集/死键口径管。
+const declaredKeyViolations = ({ declarations, hostKeys }) => {
+  const bad = [];
+  const hosts = new Set(hostKeys);
+  for (const d of declarations) {
+    for (const k of d.keys) {
+      if (!hosts.has(k)) {
+        bad.push(d.dir + '（' + d.name + '）申报键 "' + k + '" 不在主 bundle HOST_BRIDGE_BINDINGS 里');
+      }
+    }
+  }
+  return bad;
+};
+const hostBridgeKeysOf = () => {
+  const src = stripComments(read('src/client.js'));
+  const at = src.indexOf('const HOST_BRIDGE_BINDINGS = {');
+  if (at < 0) throw new Error('主包 src/client.js 里找不到 `const HOST_BRIDGE_BINDINGS = {`');
+  const end = src.indexOf('\n};', at);
+  if (end < 0) throw new Error('HOST_BRIDGE_BINDINGS 没有收尾 `\\n};`');
+  const keys = [...src.slice(at, end).matchAll(/^ {2}([A-Za-z_$][\w$]*):\s*\(\)\s*=>/gm)].map((m) => m[1]);
+  if (keys.length === 0) throw new Error('HOST_BRIDGE_BINDINGS 解析出 0 个键（形状变了？）');
+  return keys;
+};
+const hostDeclarationsOf = () => {
+  const out = [];
+  for (const p of usable) {
+    const text = readAbs(join(ROOT, p.dir, 'src', 'client.js'));
+    if (text === null) continue;
+    const m = stripComments(text).match(/const\s+([A-Z][A-Z0-9_]*_HOST_REQUIRED)\s*=\s*\[([\s\S]*?)\];/);
+    if (!m) continue;
+    out.push({
+      dir: p.dir,
+      name: p.manifest.name,
+      constName: m[1],
+      keys: [...m[2].matchAll(/'([^']+)'/g)].map((x) => x[1]),
+    });
+  }
+  return out;
+};
+const hostKeys = hostBridgeKeysOf();
+const declarations = hostDeclarationsOf();
+check('D-7：至少解析出一张子包申报表（0 张 = 判据空转）',
+  declarations.length >= 1,
+  declarations.map((d) => d.dir + '（' + d.constName + '）').join(' / '));
+check('D-7 反向对账：子包申报键 ⊆ 主 bundle HOST_BRIDGE_BINDINGS（'
+  + declarations.length + ' 张申报表 / ' + hostKeys.length + ' 个 host 键）',
+  declaredKeyViolations({ declarations, hostKeys }).length === 0,
+  declaredKeyViolations({ declarations, hostKeys }).join('\n      '));
+// 负对照两条（+ 一条"删申报不制造假红"）：同一条判据必须两向都有牙。
+check('D-7 负对照：某张申报表删掉一个键（其余键都在）⇒ 仍 0 违反（删申报不制造假红）',
+  declaredKeyViolations({
+    declarations: declarations.map((d) => ({ ...d, keys: d.keys.slice(0, 1) })),
+    hostKeys,
+  }).length === 0);
+check('D-7 负对照：主 bundle 少给一个被申报的键 ⇒ 判红',
+  declaredKeyViolations({ declarations, hostKeys: hostKeys.filter((k) => k !== declarations[0].keys[0]) })
+    .some((s) => s.includes(declarations[0].keys[0])));
+check('D-7 负对照：子包申报了主包没有的键 ⇒ 判红',
+  declaredKeyViolations({
+    declarations: [{ dir: 'packages/fake', name: 'dsh-plugin-wallpaper-engine-fake', keys: ['definitelyNotAKey'] }],
+    hostKeys,
+  }).some((s) => s.includes('definitelyNotAKey')));
 
 // -- 负对照 ------------------------------------------------------------------
 const okDshClient = rootDshClient || { platform: 'web', immediately: true, inject: [] };

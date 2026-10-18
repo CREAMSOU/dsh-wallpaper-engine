@@ -1,0 +1,14 @@
+{
+  "entry": "src/client.js",
+  "artifact": "lib/client.wallpaper.js",
+  "inline": [
+    {
+      "file": "src/wallpaper-uploads-section.js",
+      "why": "「壁纸库」页签第四节「自定义壁纸」的渲染器（原 src/panel-tabs-wallpaper.js:316-475，逐字搬来）；入口的 registerPanelSection 把它的 render 登记进面板节注册表（library，order 40）",
+      "markers": [
+        "function renderWallpaperUploadsSection(ctx) {",
+        "we-picker__uploads-list"
+      ]
+    }
+  ]
+}

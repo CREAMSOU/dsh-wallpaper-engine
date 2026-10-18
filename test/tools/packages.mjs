@@ -16,7 +16,7 @@
  *   export function parseRows(patchText)    → [{ id, name }]，按文件顺序。
  *   export function discoverPackages(root=ROOT) → 模型（见下）。
  *   export function enumerateViolations(model, io) → string[]（**纯函数**，io 注入）。
- *   export const FLOORS = { packages: 7, clientArtifacts: 5, rows: 8 }
+ *   export const FLOORS = { packages: 7, clientArtifacts: 6, rows: 8 }
  *   CLI: `node test/tools/packages.mjs selftest`（退出码 0/1，逐条打印 ✓/✗）、
  *        可选 `--json`（打印模型）、无参（打印摘要，有违规则退出码 1）。
  *
@@ -48,13 +48,14 @@ export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '
 
 /**
  * 地板取当前实测值：主包 + 7 个独立子包，主 patch 共 8 行。
- * 浏览器半边产物 5 份：主包（src/client.js）、fx、parallax、fonts、pet-link
+ * 浏览器半边产物 6 份：主包（src/client.js）、fx、parallax、fonts、pet-link、wallpaper
  * （pet-link 收口前源码由主包构建内联、无自有产物；2026-10-15 收口成一般形态后自出
- * packages/pet-link/lib/client.pet-link.js，地板随之 4→5）。
+ * packages/pet-link/lib/client.pet-link.js，地板随之 4→5；P-D S3a 2026-10-18 壁纸子包
+ * 出 packages/wallpaper/lib/client.wallpaper.js，地板 5→6）。
  * ⚠️ `clientArtifacts` 与 `test/verify-client-sync.mjs` 的产物面地板**共用这一个常量**（那边 import 它）
  * ⇒ 抬地板是**一处改动**，两边的正/负对照自动同批跟着走（原先两处各写一个数字、必须手动同批抬的隐患已消）。
  */
-export const FLOORS = { packages: 7, clientArtifacts: 5, rows: 8 };
+export const FLOORS = { packages: 7, clientArtifacts: 6, rows: 8 };
 
 // ── 路径小工具（模型一律根相对 POSIX）─────────────────────────────────────────
 
@@ -606,7 +607,7 @@ function runSelftest() {
   const standaloneClient = base.packages.find((p) => p.kind === 'standalone' && p.clientArtifact !== null);
 
   // ① 模型里删掉一个包（挑带浏览器半边的 standalone：删它同时摘掉 clientPackages 一项 ⇒
-  //    产物数 5→4 低于地板 5 —— "删包"这一个缺陷的因果链里因此同时含产物地板，
+  //    产物数 6→5 低于地板 6 —— "删包"这一个缺陷的因果链里因此同时含产物地板，
   //    预期标签已含 floor/clientArtifacts）。
   //    ⚠️ 曾经这里挑的是"不带浏览器半边的 standalone"（当时的 host-only 包）；P-C 之后字体包
   //    也有产物了、本仓已无这种真实包 ⇒ 该写法会 `undefined.dir` 崩掉。负对照不许依赖
@@ -615,6 +616,8 @@ function runSelftest() {
   //    pet-link 收口（PR #5，2026-10-17）再 4→5（+ packages/pet-link/lib/client.pet-link.js），
   //    且 `test/verify-client-sync.mjs` 的产物地板**直接 import 同一个常量** ⇒ 两处不会再一高一低
   //    （它那边的"地板 − 1 份 ⇒ 不达标"负对照也自动跟着走）。
+  //    P-D S3a（2026-10-18）再 5→6（+ packages/wallpaper/lib/client.wallpaper.js：
+  //    壁纸子包浏览器半边「自定义壁纸」节的产物）。
   {
     const m = clone(base);
     const victim = m.packages.find((p) => p.kind === 'standalone' && p.clientArtifact !== null);

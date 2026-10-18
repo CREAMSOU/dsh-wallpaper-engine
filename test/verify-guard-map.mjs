@@ -92,6 +92,8 @@ const ZERO_COVERAGE_WHY = {
   //    词条表 `src/i18n-copy-pet-link.js` 已按 fonts 惯例归主包 src/（verify-i18n 的整族词表对账覆盖它）
   //    ⇒ 旧的那条例外登记随之删除（登记了反而会被判"例外表空转"）。
   [M('packages', 'pet-link', 'src', 'client.js')]: '桌宠联动浏览器半边入口（收口成一般形态后自出 packages/pet-link/lib/client.pet-link.js）：注入键契约由 verify-subpackage-client-half 隔产物断言（dsh.client / exports["./client"] / 产物 id / 构建期 require 主包），宿主键集与包间纯度由 verify-subpackage-purity 动态扫 packages/*/src 覆盖，行为面由 test/verify-pet-*.mjs 那组离线回归与 verify-scene-live 的真求值覆盖，本工具只认字面量路径 ⇒ 按口径算零覆盖',
+  // ── P-D S3a（2026-10-18）：壁纸子包自出浏览器半边（「自定义壁纸」节搬出主 bundle）──
+  [M('packages', 'wallpaper', 'src', 'client.js')]: '壁纸子包浏览器半边入口（P-D S3a 起自出 packages/wallpaper/lib/client.wallpaper.js）：缺键自检与 library 节登记由 verify-scene-live（按包内源文件真 import + installExtensionRegistry 登记）与 verify-client（在同一 vm 里真求值产物）覆盖，注入键契约由 verify-subpackage-client-half 隔产物断言（含 D-7「申报键 ⊆ hostBridgeKeys」反向对账），宿主键集与包间纯度由 verify-subpackage-purity 动态扫 packages/*/src 覆盖；本工具只认字面量路径 ⇒ 按口径算零覆盖',
 };
 
 /**
