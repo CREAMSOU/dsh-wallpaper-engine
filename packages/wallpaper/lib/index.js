@@ -47,6 +47,18 @@
  */
 import { registerNowPlayingRoutes } from './routes/now-playing.js';
 import { registerWeAssetsRoutes } from './routes/we-assets.js';
+// S5c 刀2：9 族宿主路由（21 条）从主包搬进本包 —— 实现在本包 `lib/routes/`，注册点只在
+// `applyImpl` 里；c 面 = 键表（`...keys`：`kernel:` / `apply:` / `schema:` / `log:` 四种源型）
+// ＋ 本组件会话自己的 `disposers` ＋ `http` 面（`sendJson`/`bodyReader`）。
+import { registerInventoryRoutes } from './routes/inventory.js';
+import { registerUploadRoutes } from './routes/upload.js';
+import { registerPropsRoutes } from './routes/props.js';
+import { registerMediaBytesRoutes } from './routes/media-bytes.js';
+import { registerMediaDerivedRoutes } from './routes/media-derived.js';
+import { registerSceneFrameRoutes } from './routes/scene-frame.js';
+import { registerSceneServeRoutes } from './routes/scene-serve.js';
+import { registerSceneMediaRoutes } from './routes/scene-media.js';
+import { registerLiveFrameRoutes } from './routes/live-frame.js';
 
 /** patch 行 slug（`cordis.patch.yml` 里该行 `name` 的完整值，两处逐字相等）。 */
 export const name = 'dsh-plugin-wallpaper-engine-wallpaper';
@@ -105,7 +117,8 @@ export function applyImpl(root, _rawConfig, c) {
   // 本组件自己要的两个键：后端启动决策每次现读设置（`readConfig`），缓存根传**访问器**。
   const { readConfig, cacheBaseDir } = view;
 
-  // ⚠️ **注册期必须包 try**（P2-4）：本组件两族一次性注册**七条**路由（媒体状态 5 + WE 素材源 2），
+  // ⚠️ **注册期必须包 try**（P2-4）：本组件一次性注册**二十八条**路由（媒体状态 5 + WE 素材源 2
+  // + S5c 刀2 的 9 族 21 条），
   // 中途抛错时已经推进 `disposers` 的那几条会留下（`mediaBackend.stop()` 也在同一个 disposer 列表里，一并丢）
   // ⇒ 下一次启用撞 `webserver: duplicate … route`，且桥的子进程无人收。`teardown()` 自己吞异常，
   // 原错照抛（装载失败必须仍然是红的）。
@@ -124,6 +137,59 @@ export function applyImpl(root, _rawConfig, c) {
     //       `WE_ASSETS_DIR` 都在那个文件里；这里只声明它的依赖（与门面调用点逐键相同）。
     registerWeAssetsRoutes(webServer, {
       ...keys, disposers, base, serveFile, CONTROL_JSON_MAX_BYTES, http: keys.http,
+    });
+
+    // ── S5c 刀2：9 族宿主路由（21 条；注册顺序与主包门面逐字一致）──────────────────
+    // `...keys` 提供键表里本包的**全部**键（kernel:/apply:/schema:/log: 四种源型同源）；
+    // `disposers` **只用本组件会话的**（S7.1 行级开关：组件被关时只回滚它自己登记的这 21 条，
+    // 不碰主包其它族）；`http` 面按需显式带上（S5b 同款，`verify-json-response` 来路 c）。
+    // ⚠️ 这里**不能**再显式覆盖 `serveFile` / `mediaMap` / `tokenFor`：它们来自 `...keys` 的
+    // `apply:` 面（= 主包本次 apply 会话的同一份实例，R1 token 域单主权）；覆盖成本组件会话
+    // 那份会让 token 查不到（组件会话自建第二张 mediaMap）。
+
+    // 1. 壁纸清单 JSON（`/inventory`）→ 本包 `lib/routes/inventory.js`。
+    registerInventoryRoutes(webServer, {
+      ...keys, disposers,
+    });
+
+    // 2/3a. 派生媒体族（源元信息 / 抽帧转码 + 进度 / 视频缩略图）→ 本包 `lib/routes/media-derived.js`。
+    registerMediaDerivedRoutes(webServer, {
+      ...keys, disposers,
+    });
+
+    // 2/3. 媒体 + 预览原始字节（`/media`、`/preview`）→ 本包 `lib/routes/media-bytes.js`。
+    registerMediaBytesRoutes(webServer, {
+      ...keys, disposers,
+    });
+
+    // 3c-3b/3c-5. 场景帧服务族（实时抓帧缓存 / 自定义画面）→ 本包 `lib/routes/scene-frame.js`。
+    registerSceneFrameRoutes(webServer, {
+      ...keys, disposers, http: keys.http,
+    });
+
+    // 3c-2/3c-3. 场景载荷服务族（live 渲染页 / 场景文件 / 媒体源诊断）→ 本包 `lib/routes/scene-serve.js`。
+    registerSceneServeRoutes(webServer, {
+      ...keys, disposers,
+    });
+
+    // 3c-3c. 壁纸属性（WE 用户属性）→ 本包 `lib/routes/props.js`。
+    registerPropsRoutes(webServer, {
+      ...keys, disposers, http: keys.http,
+    });
+
+    // 3c-4. 网页壁纸首帧缓存（`__wp.capture` 回填的 JPEG）→ 本包 `lib/routes/live-frame.js`。
+    registerLiveFrameRoutes(webServer, {
+      ...keys, disposers, http: keys.http,
+    });
+
+    // 3e. 场景内嵌媒资（动画 MP4 + 独立音频）→ 本包 `lib/routes/scene-media.js`。
+    registerSceneMediaRoutes(webServer, {
+      ...keys, disposers,
+    });
+
+    // 4/5/6. 上传资产族（导入 / 删除 / 切换上传目录）→ 本包 `lib/routes/upload.js`。
+    registerUploadRoutes(webServer, {
+      ...keys, disposers, http: keys.http,
     });
   } catch (error) {
     teardown();

@@ -289,6 +289,14 @@
         {
           "kind": "guard",
           "npm": null,
+          "file": "test/verify-token-domain.mjs",
+          "args": [],
+          "tier": "hard",
+          "probe": false
+        },
+        {
+          "kind": "guard",
+          "npm": null,
           "file": "test/verify-cache-dir.mjs",
           "args": [],
           "tier": "hard",
@@ -1095,6 +1103,14 @@
           "kind": "guard",
           "npm": null,
           "file": "test/verify-inject-contracts.mjs",
+          "args": [],
+          "tier": "hard",
+          "probe": false
+        },
+        {
+          "kind": "guard",
+          "npm": null,
+          "file": "test/verify-token-domain.mjs",
           "args": [],
           "tier": "hard",
           "probe": false

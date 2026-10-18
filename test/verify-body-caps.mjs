@@ -382,7 +382,7 @@ check('每个共享读体器调用点里被置位的标志，都在**它之前**
 console.log('');
 if (failed) {
   console.log(`BODY-CAP CHECKS FAILED — ${failed} 条不合格`);
-  console.log('修法：按 lib/routes/upload.js 文件头的两条不变量改 —— 边收边计字节（size += chunk.length）、'
+  console.log('修法：按 packages/wallpaper/lib/routes/upload.js 文件头的两条不变量改 —— 边收边计字节（size += chunk.length）、'
     + '超限即 413 早退、收完只 Buffer.concat(...).toString("utf8") 解码一次。');
   process.exit(1);
 }

@@ -5,7 +5,7 @@
 > 口径：只统计守卫**代码**里真正碰到的模块（先剥注释），并区分"直接读源文件"与"隔着产物 `lib/client.js`"。
 > 写法：字面量路径 / `join(...)` 拼接 / 唯一 basename / 产物配方 / **前缀族读法** `scopeFiles|scopeText(<前缀>)` / **经共享族助手读**（`import { panelText } from './tools/src-scope.mjs'` + 真调用；族口径封在那个库里，见 DEV-GUIDE §4.6「同时是守卫的库」）/ **真源定位读**（`locate('符号')` / `locateFile('文件名')`，`test/tools/source-locator.mjs`：符号唯一声明在哪就是读了哪个模块）。
 
-模块面 174 个 · 守卫 109 个
+模块面 174 个 · 守卫 110 个
 
 ## 守卫 → 模块
 
@@ -25,7 +25,7 @@
 | `verify-adapter.mjs` | `lib/index.js` `lib/settings-schema.js` `src/adapter.js` `src/client.js` `src/effects.js` `src/panel-tabs-advanced.js` `src/panel-tabs-appearance.js` `src/panel-tabs-effects.js` `src/panel-tabs-mascot.js` `src/panel-tabs.js` `src/persistence.js` `src/styles-base.js` `src/styles-chrome.js` `src/styles-ext.js` `src/styles-panel.js` `src/styles-quick.js` `src/styles-settings.js` `src/styles-shell.js` `src/styles-sidebar.js` `src/styles.js` |  |
 | `verify-api-client.mjs` | `src/api-client.js` `src/client.js` `src/panel-tabs.js` | ✅ |
 | `verify-asset-paths.mjs` | `lib/media/media-dirs.js` `lib/upload-dir.js` `lib/we-assets.js` |  |
-| `verify-body-caps.mjs` | `lib/http-body.js` `lib/routes/upload.js` | ✅ |
+| `verify-body-caps.mjs` | `lib/http-body.js` `packages/wallpaper/lib/routes/upload.js` | ✅ |
 | `verify-bridge-ci.mjs` | — |  |
 | `verify-bundle-rows.mjs` | `lib/host-boot.js` `lib/index.js` `lib/kernel/component-session.js` `lib/kernel/host-kernel.js` `lib/subpackage-boot.js` |  |
 | `verify-cache-dir.mjs` | `lib/faststart.js` `lib/index.js` `lib/kernel/data-dir.js` `lib/media/frame-store.js` `lib/media/media-dirs.js` `lib/media/transcode.js` `lib/media/video-preview.js` `lib/routes/cache-dir.js` `lib/upload-dir.js` `packages/wallpaper/lib/backend.js` `packages/wallpaper/lib/legacy.js` `packages/wallpaper/lib/routes/now-playing.js` |  |
@@ -36,7 +36,7 @@
 | `verify-client.mjs` | `lib/index.js` `lib/kernel/data-dir.js` `lib/settings-schema.js` `packages/fonts/src/appearance-font-section.js` `packages/wallpaper/src/playback-rate-section.js` `packages/wallpaper/src/wallpaper-current-section.js` `packages/wallpaper/src/wallpaper-fit-section.js` `packages/wallpaper/src/wallpaper-rotation-section.js` `packages/wallpaper/src/wallpaper-transition-section.js` `packages/wallpaper/src/wallpaper-uploads-section.js` `src/client.js` `src/effects.js` `src/focus-handback.js` `src/font/apply.js` `src/fontset-store.js` `src/glass-panel.js` `src/glass.js` `src/live-layer-watch.js` `src/live-layer.js` `src/media-prep.js` `src/nav-icon.js` `src/panel-tabs-advanced.js` `src/panel-tabs-appearance.js` `src/panel-tabs-effects.js` `src/panel-tabs-mascot.js` `src/panel-tabs.js` `src/persistence.js` `src/picker-modal.js` `src/picker-props-panel.js` `src/preset-store.js` `src/quick-panel.js` `src/styles-base.js` `src/styles-chrome.js` `src/styles-ext.js` `src/styles-panel.js` `src/styles-quick.js` `src/styles-settings.js` `src/styles-shell.js` `src/styles-sidebar.js` `src/styles.js` `src/system-fonts.js` `src/theme-follow.js` `src/video-layer.js` `src/we-cond.js` | ✅ |
 | `verify-component-face.mjs` | `lib/host-boot.js` `lib/kernel/component-session.js` `lib/kernel/host-kernel.js` |  |
 | `verify-component-fonts.mjs` | `lib/settings-schema.js` `src/client.js` `src/effects.js` `src/font/apply.js` `src/font/components.js` | ✅ |
-| `verify-component-visibility.mjs` | `lib/component-visibility.js` `lib/kernel/component-session.js` `lib/routes/inventory.js` `src/panel-tabs.js` |  |
+| `verify-component-visibility.mjs` | `lib/component-visibility.js` `lib/kernel/component-session.js` `packages/wallpaper/lib/routes/inventory.js` `src/panel-tabs.js` |  |
 | `verify-config-store.mjs` | `lib/kernel/config.js` `lib/media/transcode.js` |  |
 | `verify-contracts.mjs` | `lib/host-boot.js` `lib/index.js` `lib/kernel/host-kernel.js` `lib/media/media-dirs.js` `lib/settings-schema.js` `packages/fonts/lib/routes/fontsets.js` `packages/fonts/src/fontset-editor.js` `packages/mascot-avatar/lib/routes/avatar.js` `packages/mascot-avatar/lib/routes/mascot.js` `packages/wallpaper/lib/backend.js` `packages/wallpaper/lib/index.js` `packages/wallpaper/lib/legacy.js` `packages/wallpaper/lib/supervisor.js` `src/api-client.js` `src/client.js` `src/fontset-store.js` `src/panel-tabs-advanced.js` `src/panel-tabs-appearance.js` `src/panel-tabs-effects.js` `src/panel-tabs-mascot.js` `src/panel-tabs.js` |  |
 | `verify-dead-declarations.mjs` | — |  |
@@ -54,14 +54,14 @@
 | `verify-inventory-index.mjs` | `lib/inventory.js` |  |
 | `verify-json-response.mjs` | `lib/json-response.js` `lib/subpackage-boot.js` | ✅ |
 | `verify-layer-ownership.mjs` | `lib/routes/diag.js` `packages/fx/src/fx-layer.js` `packages/pet-link/src/pet-link-tuner.js` `src/client-audio-playback.js` `src/client.js` `src/layer-core.js` `src/live-layer-pointer.js` `src/live-layer-watch.js` `src/live-layer.js` `src/media-prep.js` `src/video-layer.js` |  |
-| `verify-logging.mjs` | `lib/host-boot.js` `lib/index.js` `lib/kernel/host-kernel.js` `lib/kernel/host-session.js` `lib/log.js` `lib/notice.js` `lib/routes/diag.js` `lib/routes/scene-serve.js` `lib/serve.js` `lib/webwallgl/renderer.js` `src/live-layer-diag.js` `src/live-layer-gate.js` `src/live-layer-pointer.js` `src/live-layer-underlay.js` `src/live-layer-watch.js` `src/live-layer.js` |  |
+| `verify-logging.mjs` | `lib/host-boot.js` `lib/index.js` `lib/kernel/host-kernel.js` `lib/kernel/host-session.js` `lib/log.js` `lib/notice.js` `lib/routes/diag.js` `lib/serve.js` `lib/webwallgl/renderer.js` `packages/wallpaper/lib/routes/scene-serve.js` `src/live-layer-diag.js` `src/live-layer-gate.js` `src/live-layer-pointer.js` `src/live-layer-underlay.js` `src/live-layer-watch.js` `src/live-layer.js` |  |
 | `verify-media-bridge.mjs` | `packages/wallpaper/lib/backend.js` `packages/wallpaper/lib/provision.js` `packages/wallpaper/lib/supervisor.js` |  |
 | `verify-media-probe.mjs` | `lib/media/mp4-probe.js` |  |
 | `verify-module-layout.mjs` | `lib/index.js` `lib/settings-schema.js` `src/client.js` | ✅ |
 | `verify-mp4-vfs.mjs` | `lib/faststart.js` `lib/host-boot.js` `lib/kernel/host-session.js` `lib/mp4-vfs.js` |  |
 | `verify-occlusion-client.mjs` | `src/api-client.js` `src/live-layer-diag.js` `src/live-layer-gate.js` `src/live-layer-pointer.js` `src/live-layer-underlay.js` `src/live-layer-watch.js` `src/live-layer.js` `src/occlusion.js` | ✅ |
 | `verify-occlusion-hub.mjs` | `lib/index.js` `lib/json-response.js` `lib/occlusion/index.js` `lib/occlusion/rects.js` `lib/occlusion/x11.js` `lib/routes/occlusion.js` |  |
-| `verify-package-files.mjs` | `lib/http-body.js` `lib/index.js` `lib/pkg-read.js` `lib/routes/upload.js` | ✅ |
+| `verify-package-files.mjs` | `lib/http-body.js` `lib/index.js` `lib/pkg-read.js` | ✅ |
 | `verify-package-publish.mjs` | `lib/index.js` `lib/pkg-read.js` `src/client.js` | ✅ |
 | `verify-pet-bubble-timing.mjs` | `packages/pet-link/src/pet-link-tuner.js` `packages/pet-link/src/pet-link.js` |  |
 | `verify-pet-egg1-motion.mjs` | `packages/pet-link/src/pet-link-tuner.js` `packages/pet-link/src/pet-link.js` |  |
@@ -91,13 +91,13 @@
 | `verify-readability.mjs` | `src/styles-base.js` `src/styles-chrome.js` `src/styles-ext.js` `src/styles-panel.js` `src/styles-quick.js` `src/styles-settings.js` `src/styles-shell.js` `src/styles-sidebar.js` `src/styles.js` | ✅ |
 | `verify-retired-lines.mjs` | — |  |
 | `verify-route-families.mjs` | — |  |
-| `verify-route-index.mjs` | `lib/index.js` `lib/kernel/component-session.js` `lib/routes/inventory.js` `lib/routes/media-bytes.js` |  |
+| `verify-route-index.mjs` | `lib/index.js` `lib/kernel/component-session.js` `packages/wallpaper/lib/routes/inventory.js` `packages/wallpaper/lib/routes/media-bytes.js` |  |
 | `verify-route-ownership.mjs` | `lib/index.js` `lib/kernel/component-session.js` |  |
-| `verify-scene-frame-master.mjs` | `lib/index.js` `lib/routes/scene-frame.js` |  |
+| `verify-scene-frame-master.mjs` | `lib/index.js` `packages/wallpaper/lib/routes/scene-frame.js` |  |
 | `verify-scene-live-occlusion.mjs` | `lib/webwallgl/occlusion-bridge.js` `lib/webwallgl/renderer.js` |  |
-| `verify-scene-live.mjs` | `lib/cache-dir.js` `lib/diag-trace.js` `lib/faststart.js` `lib/fs-paths.js` `lib/http-lifecycle.js` `lib/index.js` `lib/inventory.js` `lib/media-origin.js` `lib/mp4-vfs.js` `lib/routes/diag.js` `lib/routes/media-bytes.js` `lib/routes/scene-serve.js` `lib/serve.js` `lib/settings-schema.js` `lib/shim-seed.js` `lib/startup-sweep.js` `lib/upload-dir.js` `lib/upload-store.js` `lib/we-assets.js` `lib/we-focus-guard.js` `lib/we-props.js` `lib/webwallgl/renderer.js` `packages/fonts/src/appearance-font-section.js` `packages/fx/src/ext-fx.js` `packages/fx/src/fx-layer.js` `packages/parallax/src/ext-parallax.js` `packages/parallax/src/parallax-layer.js` `packages/wallpaper/lib/index.js` `packages/wallpaper/lib/legacy.js` `packages/wallpaper/lib/provision.js` `packages/wallpaper/lib/routes/now-playing.js` `packages/wallpaper/lib/routes/we-assets.js` `packages/wallpaper/lib/supervisor.js` `packages/wallpaper/src/playback-rate-section.js` `packages/wallpaper/src/wallpaper-current-section.js` `packages/wallpaper/src/wallpaper-fit-section.js` `packages/wallpaper/src/wallpaper-rotation-section.js` `packages/wallpaper/src/wallpaper-transition-section.js` `packages/wallpaper/src/wallpaper-uploads-section.js` `src/avatar-import.js` `src/avatar-layer.js` `src/client-audio-playback.js` `src/client-media-frame.js` `src/client-rotation.js` `src/client.js` `src/effects.js` `src/ext-avatar.js` `src/extension-registry.js` `src/font/color-roles.js` `src/font/typography.js` `src/glass-panel.js` `src/layer-core.js` `src/live-layer-diag.js` `src/live-layer-gate.js` `src/live-layer-pointer.js` `src/live-layer-underlay.js` `src/live-layer-watch.js` `src/live-layer.js` `src/media-prep.js` `src/module-reset.js` `src/panel-tabs-advanced.js` `src/panel-tabs-appearance.js` `src/panel-tabs-effects.js` `src/panel-tabs-mascot.js` `src/panel-tabs.js` `src/picker-modal.js` `src/quick-panel.js` `src/section-head.js` `src/sidebar-right.js` `src/styles-base.js` `src/styles-chrome.js` `src/styles-ext.js` `src/styles-panel.js` `src/styles-quick.js` `src/styles-settings.js` `src/styles-shell.js` `src/styles-sidebar.js` `src/styles.js` `src/system-fonts.js` `src/video-layer.js` `src/we-base.js` `src/we-cond.js` | ✅ |
+| `verify-scene-live.mjs` | `lib/cache-dir.js` `lib/diag-trace.js` `lib/faststart.js` `lib/fs-paths.js` `lib/http-lifecycle.js` `lib/index.js` `lib/inventory.js` `lib/media-origin.js` `lib/mp4-vfs.js` `lib/routes/diag.js` `lib/serve.js` `lib/settings-schema.js` `lib/shim-seed.js` `lib/startup-sweep.js` `lib/upload-dir.js` `lib/upload-store.js` `lib/we-assets.js` `lib/we-focus-guard.js` `lib/we-props.js` `lib/webwallgl/renderer.js` `packages/fonts/src/appearance-font-section.js` `packages/fx/src/ext-fx.js` `packages/fx/src/fx-layer.js` `packages/parallax/src/ext-parallax.js` `packages/parallax/src/parallax-layer.js` `packages/wallpaper/lib/index.js` `packages/wallpaper/lib/legacy.js` `packages/wallpaper/lib/provision.js` `packages/wallpaper/lib/routes/media-bytes.js` `packages/wallpaper/lib/routes/now-playing.js` `packages/wallpaper/lib/routes/scene-serve.js` `packages/wallpaper/lib/routes/we-assets.js` `packages/wallpaper/lib/supervisor.js` `packages/wallpaper/src/playback-rate-section.js` `packages/wallpaper/src/wallpaper-current-section.js` `packages/wallpaper/src/wallpaper-fit-section.js` `packages/wallpaper/src/wallpaper-rotation-section.js` `packages/wallpaper/src/wallpaper-transition-section.js` `packages/wallpaper/src/wallpaper-uploads-section.js` `src/avatar-import.js` `src/avatar-layer.js` `src/client-audio-playback.js` `src/client-media-frame.js` `src/client-rotation.js` `src/client.js` `src/effects.js` `src/ext-avatar.js` `src/extension-registry.js` `src/font/color-roles.js` `src/font/typography.js` `src/glass-panel.js` `src/layer-core.js` `src/live-layer-diag.js` `src/live-layer-gate.js` `src/live-layer-pointer.js` `src/live-layer-underlay.js` `src/live-layer-watch.js` `src/live-layer.js` `src/media-prep.js` `src/module-reset.js` `src/panel-tabs-advanced.js` `src/panel-tabs-appearance.js` `src/panel-tabs-effects.js` `src/panel-tabs-mascot.js` `src/panel-tabs.js` `src/picker-modal.js` `src/quick-panel.js` `src/section-head.js` `src/sidebar-right.js` `src/styles-base.js` `src/styles-chrome.js` `src/styles-ext.js` `src/styles-panel.js` `src/styles-quick.js` `src/styles-settings.js` `src/styles-shell.js` `src/styles-sidebar.js` `src/styles.js` `src/system-fonts.js` `src/video-layer.js` `src/we-base.js` `src/we-cond.js` | ✅ |
 | `verify-scene-probe.mjs` | `lib/media/scene-probe.js` `lib/pkg-read.js` `lib/scene-manifest.js` |  |
-| `verify-scene.mjs` | `lib/index.js` `lib/kernel/host-kernel.js` `lib/kernel/host-session.js` `lib/media/frame-store.js` `lib/pkg-read.js` `lib/routes/live-frame.js` `lib/routes/media-bytes.js` `lib/routes/props.js` `lib/routes/scene-frame.js` `lib/routes/scene-media.js` `lib/routes/settings.js` `lib/scene-manifest.js` | ✅ |
+| `verify-scene.mjs` | `lib/index.js` `lib/kernel/host-kernel.js` `lib/kernel/host-session.js` `lib/media/frame-store.js` `lib/pkg-read.js` `lib/routes/settings.js` `lib/scene-manifest.js` `packages/wallpaper/lib/index.js` `packages/wallpaper/lib/routes/live-frame.js` `packages/wallpaper/lib/routes/media-bytes.js` `packages/wallpaper/lib/routes/props.js` `packages/wallpaper/lib/routes/scene-frame.js` `packages/wallpaper/lib/routes/scene-media.js` | ✅ |
 | `verify-settings-namespaces.mjs` | `lib/index.js` `lib/kernel/data-dir.js` `lib/routes/settings.js` `lib/settings-schema.js` `src/persistence.js` |  |
 | `verify-settings-schema-exports.mjs` | `lib/index.js` `lib/subpackage-boot.js` | ✅ |
 | `verify-softrender.mjs` | — | ✅ |
@@ -112,7 +112,8 @@
 | `verify-theme-follow.mjs` | `lib/settings-schema.js` `src/client.js` `src/live-layer-diag.js` `src/live-layer-gate.js` `src/live-layer-pointer.js` `src/live-layer-underlay.js` `src/live-layer-watch.js` `src/live-layer.js` `src/media-prep.js` `src/panel-tabs-advanced.js` `src/panel-tabs-appearance.js` `src/panel-tabs-effects.js` `src/panel-tabs-mascot.js` `src/panel-tabs.js` `src/theme-follow.js` | ✅ |
 | `verify-theme-layer.mjs` | `lib/settings-schema.js` `packages/fonts/src/appearance-font-section.js` `src/client.js` `src/effects.js` `src/font/apply.js` `src/font/color-roles.js` `src/font/typography.js` `src/panel-tabs-advanced.js` `src/panel-tabs-appearance.js` `src/panel-tabs-effects.js` `src/panel-tabs-mascot.js` `src/panel-tabs.js` | ✅ |
 | `verify-token-contract.mjs` | `src/styles-base.js` `src/styles-chrome.js` `src/styles-ext.js` `src/styles-panel.js` `src/styles-quick.js` `src/styles-settings.js` `src/styles-shell.js` `src/styles-sidebar.js` `src/styles.js` |  |
-| `verify-transcode-state.mjs` | `lib/index.js` `lib/media/transcode.js` `lib/routes/media-derived.js` `src/client.js` `src/media-prep.js` `src/video-layer.js` | ✅ |
+| `verify-token-domain.mjs` | `lib/index.js` `lib/kernel/host-session.js` `lib/subpackage-boot.js` `packages/wallpaper/lib/index.js` |  |
+| `verify-transcode-state.mjs` | `lib/index.js` `lib/media/transcode.js` `packages/wallpaper/lib/index.js` `packages/wallpaper/lib/routes/media-derived.js` `src/client.js` `src/media-prep.js` `src/video-layer.js` | ✅ |
 | `verify-types.mjs` | `lib/index.js` `lib/inventory.js` `src/client.js` | ✅ |
 | `verify-undefined-refs.mjs` | — |  |
 | `verify-upload-store.mjs` | `lib/index.js` `lib/kernel/config.js` `lib/kernel/data-dir.js` `lib/upload-dir.js` `lib/upload-store.js` |  |
@@ -134,14 +135,14 @@
 | `lib/host-boot.js` | 7 | `verify-about` `verify-bundle-rows` `verify-component-face` `verify-contracts` `verify-logging` `verify-mp4-vfs` `verify-subpackage-purity` |
 | `lib/http-body.js` | 2 | `verify-body-caps` `verify-package-files` |
 | `lib/http-lifecycle.js` | 1 | `verify-scene-live` |
-| `lib/index.js` | 33 | `e2e-web-media-origin` `verify-about` `verify-adapter` `verify-bundle-rows` `verify-cache-dir` `verify-client` `verify-contracts` `verify-fontset` `verify-host-teardown` `verify-logging` `verify-module-layout` `verify-occlusion-hub` `verify-package-files` `verify-package-publish` `verify-pet-hotplug-integration` `verify-pet-package` `verify-presets` `verify-reachability` `verify-route-index` `verify-route-ownership` `verify-scene-frame-master` `verify-scene-live` `verify-scene` `verify-settings-namespaces` `verify-settings-schema-exports` `verify-steam-discovery` `verify-subpackage-boot` `verify-subpackage-purity` `verify-subpackage-toggle-roundtrip` `verify-transcode-state` `verify-types` `verify-upload-store` `verify-we-install-probe` |
+| `lib/index.js` | 34 | `e2e-web-media-origin` `verify-about` `verify-adapter` `verify-bundle-rows` `verify-cache-dir` `verify-client` `verify-contracts` `verify-fontset` `verify-host-teardown` `verify-logging` `verify-module-layout` `verify-occlusion-hub` `verify-package-files` `verify-package-publish` `verify-pet-hotplug-integration` `verify-pet-package` `verify-presets` `verify-reachability` `verify-route-index` `verify-route-ownership` `verify-scene-frame-master` `verify-scene-live` `verify-scene` `verify-settings-namespaces` `verify-settings-schema-exports` `verify-steam-discovery` `verify-subpackage-boot` `verify-subpackage-purity` `verify-subpackage-toggle-roundtrip` `verify-token-domain` `verify-transcode-state` `verify-types` `verify-upload-store` `verify-we-install-probe` |
 | `lib/inventory.js` | 4 | `verify-inventory-index` `verify-scene-live` `verify-types` `verify-we-install-probe` |
 | `lib/json-response.js` | 4 | `verify-about` `verify-json-response` `verify-occlusion-hub` `verify-system-fonts` |
 | `lib/kernel/component-session.js` | 6 | `verify-bundle-rows` `verify-component-face` `verify-component-visibility` `verify-route-index` `verify-route-ownership` `verify-subpackage-manifests` |
 | `lib/kernel/config.js` | 2 | `verify-config-store` `verify-upload-store` |
 | `lib/kernel/data-dir.js` | 4 | `verify-cache-dir` `verify-client` `verify-settings-namespaces` `verify-upload-store` |
 | `lib/kernel/host-kernel.js` | 5 | `verify-bundle-rows` `verify-component-face` `verify-contracts` `verify-logging` `verify-scene` |
-| `lib/kernel/host-session.js` | 3 | `verify-logging` `verify-mp4-vfs` `verify-scene` |
+| `lib/kernel/host-session.js` | 4 | `verify-logging` `verify-mp4-vfs` `verify-scene` `verify-token-domain` |
 | `lib/log.js` | 1 | `verify-logging` |
 | `lib/media-origin.js` | 1 | `verify-scene-live` |
 | `lib/media/frame-store.js` | 2 | `verify-cache-dir` `verify-scene` |
@@ -158,25 +159,16 @@
 | `lib/pkg-read.js` | 4 | `verify-package-files` `verify-package-publish` `verify-scene-probe` `verify-scene` |
 | `lib/routes/cache-dir.js` | 1 | `verify-cache-dir` |
 | `lib/routes/diag.js` | 3 | `verify-layer-ownership` `verify-logging` `verify-scene-live` |
-| `lib/routes/inventory.js` | 2 | `verify-component-visibility` `verify-route-index` |
-| `lib/routes/live-frame.js` | 1 | `verify-scene` |
-| `lib/routes/media-bytes.js` | 3 | `verify-route-index` `verify-scene-live` `verify-scene` |
-| `lib/routes/media-derived.js` | 1 | `verify-transcode-state` |
 | `lib/routes/occlusion.js` | 1 | `verify-occlusion-hub` |
 | `lib/routes/presets.js` | 1 | `verify-presets` |
-| `lib/routes/props.js` | 1 | `verify-scene` |
-| `lib/routes/scene-frame.js` | 2 | `verify-scene-frame-master` `verify-scene` |
-| `lib/routes/scene-media.js` | 1 | `verify-scene` |
-| `lib/routes/scene-serve.js` | 2 | `verify-logging` `verify-scene-live` |
 | `lib/routes/settings.js` | 2 | `verify-scene` `verify-settings-namespaces` |
-| `lib/routes/upload.js` | 2 | `verify-body-caps` `verify-package-files` |
 | `lib/scene-manifest.js` | 2 | `verify-scene-probe` `verify-scene` |
 | `lib/serve.js` | 2 | `verify-logging` `verify-scene-live` |
 | `lib/settings-schema.js` | 14 | `verify-adapter` `verify-client` `verify-component-fonts` `verify-contracts` `verify-extra-glass` `verify-fontset` `verify-glass-surfaces` `verify-module-layout` `verify-presets` `verify-scene-live` `verify-settings-namespaces` `verify-system-fonts` `verify-theme-follow` `verify-theme-layer` |
 | `lib/shim-seed.js` | 1 | `verify-scene-live` |
 | `lib/startup-sweep.js` | 1 | `verify-scene-live` |
 | `lib/steam-discovery.js` | 2 | `verify-steam-discovery` `verify-we-install-probe` |
-| `lib/subpackage-boot.js` | 10 | `verify-bundle-rows` `verify-inject-contracts` `verify-json-response` `verify-pet-hotplug-integration` `verify-pet-package` `verify-settings-schema-exports` `verify-subpackage-boot` `verify-subpackage-manifests` `verify-subpackage-purity` `verify-subpackage-toggle-roundtrip` |
+| `lib/subpackage-boot.js` | 11 | `verify-bundle-rows` `verify-inject-contracts` `verify-json-response` `verify-pet-hotplug-integration` `verify-pet-package` `verify-settings-schema-exports` `verify-subpackage-boot` `verify-subpackage-manifests` `verify-subpackage-purity` `verify-subpackage-toggle-roundtrip` `verify-token-domain` |
 | `lib/upload-dir.js` | 4 | `verify-asset-paths` `verify-cache-dir` `verify-scene-live` `verify-upload-store` |
 | `lib/upload-store.js` | 2 | `verify-scene-live` `verify-upload-store` |
 | `lib/wallpaper-scan.js` | 1 | `verify-wallpaper-scan` |
@@ -217,10 +209,19 @@
 | `packages/pet-link/src/pet-link.js` | 12 | `verify-pet-bubble-timing` `verify-pet-egg1-motion` `verify-pet-egg1-native-browser` `verify-pet-egg1-rebound` `verify-pet-egg2-motion` `verify-pet-follow` `verify-pet-hotplug-browser` `verify-pet-hotplug-client` `verify-pet-mascot-motion` `verify-pet-phase-browser` `verify-pet-tuner-browser` `verify-pet-tuner` |
 | `packages/wallpaper/lib/backend.js` | 3 | `verify-cache-dir` `verify-contracts` `verify-media-bridge` |
 | `packages/wallpaper/lib/client.wallpaper.js` | 8 | `live-frame-backfill-smoke` `verify-client-sync` `verify-client` `verify-picker-model` `verify-picker-props` `verify-picker-upload` `verify-playback-controls` `verify-transcode-state` |
-| `packages/wallpaper/lib/index.js` | 2 | `verify-contracts` `verify-scene-live` |
+| `packages/wallpaper/lib/index.js` | 5 | `verify-contracts` `verify-scene-live` `verify-scene` `verify-token-domain` `verify-transcode-state` |
 | `packages/wallpaper/lib/legacy.js` | 4 | `verify-cache-dir` `verify-child-kill` `verify-contracts` `verify-scene-live` |
 | `packages/wallpaper/lib/provision.js` | 3 | `e2e-web-media-origin` `verify-media-bridge` `verify-scene-live` |
+| `packages/wallpaper/lib/routes/inventory.js` | 2 | `verify-component-visibility` `verify-route-index` |
+| `packages/wallpaper/lib/routes/live-frame.js` | 1 | `verify-scene` |
+| `packages/wallpaper/lib/routes/media-bytes.js` | 3 | `verify-route-index` `verify-scene-live` `verify-scene` |
+| `packages/wallpaper/lib/routes/media-derived.js` | 1 | `verify-transcode-state` |
 | `packages/wallpaper/lib/routes/now-playing.js` | 2 | `verify-cache-dir` `verify-scene-live` |
+| `packages/wallpaper/lib/routes/props.js` | 1 | `verify-scene` |
+| `packages/wallpaper/lib/routes/scene-frame.js` | 2 | `verify-scene-frame-master` `verify-scene` |
+| `packages/wallpaper/lib/routes/scene-media.js` | 1 | `verify-scene` |
+| `packages/wallpaper/lib/routes/scene-serve.js` | 2 | `verify-logging` `verify-scene-live` |
+| `packages/wallpaper/lib/routes/upload.js` | 1 | `verify-body-caps` |
 | `packages/wallpaper/lib/routes/we-assets.js` | 1 | `verify-scene-live` |
 | `packages/wallpaper/lib/supervisor.js` | 3 | `verify-contracts` `verify-media-bridge` `verify-scene-live` |
 | `packages/wallpaper/src/client.js` | 0 | **（无）** |

@@ -15,8 +15,9 @@
  *   · `mediaMap`     ← token → 磁盘绝对路径（**同一张 Map 实例**：apply 建、teardown
  *                      `clear()` ⇒ 传值即可，因为它是原地改写而非重新赋值）
  *   · `userPropsFor` ← 读 `config.json` 里这张壁纸的覆盖值（`{}` 为无覆盖）
- * 纯函数 `parseUserPropDefs` / `entryDirPrefix` / `filterKnownOverrides` 由本模块**自己 import**
- * （来自 `../we-props.js`），不经 `c` —— 与 `bodyReader` 同一条全仓约定：库函数自足。
+ * 纯函数 `parseUserPropDefs` / `entryDirPrefix` / `filterKnownOverrides` 经调用点显式给的
+ * `schema` 面拿（主包纯符号视图，见 `lib/subpackage-boot.js` 的 `SCHEMA_VIEW`）——
+ * 本文件不再 import 主包；库函数自足的口径不变，只是来路从静态 import 改成注入面。
  *
  * 不变量：
  *   · 覆盖值只认 `project.json` 里**仍声明着**的属性名（作者删掉的属性，陈旧覆盖忽略）——
@@ -28,15 +29,15 @@
 
 import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { parseUserPropDefs, entryDirPrefix, filterKnownOverrides } from '../we-props.js';
-// JSON 应答的**唯一实现**（状态码 + 两个头 + end）—— 见 lib/json-response.js。
-import { sendJson } from '../json-response.js';
 
 /** 注入契约（P2-7A / ADR-0013 D12）：本族从 `c` 消费的**必需**键 —— 门面/组件行调用点必须逐键给到（判据 test/verify-inject-contracts.mjs 双向对账）。 */
-export const DEPS = ['disposers', 'base', 'mediaMap', 'userPropsFor'];
+export const DEPS = ['disposers', 'base', 'mediaMap', 'userPropsFor', 'parseUserPropDefs', 'entryDirPrefix', 'filterKnownOverrides', 'http'];
 
 export function registerPropsRoutes(webServer, c) {
-  const { disposers, base: BASE, mediaMap, userPropsFor } = c;
+  const {
+    disposers, base: BASE, mediaMap, userPropsFor,
+    parseUserPropDefs, entryDirPrefix, filterKnownOverrides, http,
+  } = c;
 
   // 3c-3c. 壁纸属性（WE 用户属性，project.json `general.properties`）：给「壁纸
   //        属性」面板读当前生效值（默认值 ⊎ 用户覆盖）与候选文件。
@@ -47,7 +48,7 @@ export function registerPropsRoutes(webServer, c) {
     path: `${BASE}/props`,
     handler: (req, res) => {
       // 薄别名：保留调用点写法，实现收敛到 lib/json-response.js（默认带 no-store）。
-      const json = (code, payload) => sendJson(res, code, payload);
+      const json = (code, payload) => http.sendJson(res, code, payload);
       if ((req.method || 'GET').toUpperCase() !== 'GET') { json(405, { ok: false, error: 'method-not-allowed' }); return; }
       let token;
       try {

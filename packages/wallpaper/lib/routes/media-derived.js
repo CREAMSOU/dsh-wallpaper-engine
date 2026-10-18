@@ -41,17 +41,18 @@
  */
 
 import { statSync } from 'node:fs';
-import { clampNum } from '../settings-schema.js';
+// 纯符号 `clampNum` 经调用点显式给的 `schema` 面拿（主包纯符号视图，见 lib/subpackage-boot.js
+// 的 `SCHEMA_VIEW`）；本文件不再 import 主包。
 
 /** 注入契约（P2-7A / ADR-0013 D12）：本族从 `c` 消费的**必需**键 —— 门面/组件行调用点必须逐键给到（判据 test/verify-inject-contracts.mjs 双向对账）。 */
-export const DEPS = ['disposers', 'base', 'mediaMap', 'serveFile', 'log', 'getMediaInfo', 'faststartVariant', 'transcodeJobs', 'transcodeToFps', 'registerTranscodeWaiter', 'generateVideoPreview', 'transcodeCached'];
+export const DEPS = ['disposers', 'base', 'mediaMap', 'serveFile', 'log', 'getMediaInfo', 'faststartVariant', 'transcodeJobs', 'transcodeToFps', 'registerTranscodeWaiter', 'generateVideoPreview', 'transcodeCached', 'clampNum'];
 
 export function registerMediaDerivedRoutes(webServer, c) {
   const {
     disposers, base: BASE, mediaMap, serveFile, log,
     getMediaInfo, faststartVariant, transcodeJobs,
     transcodeToFps, registerTranscodeWaiter, generateVideoPreview,
-    transcodeCached,
+    transcodeCached, clampNum,
   } = c;
 
   // Media metadata (source resolution / codec / fps) — the picker hint and the

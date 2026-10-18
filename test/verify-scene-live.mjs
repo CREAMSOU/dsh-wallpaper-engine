@@ -370,7 +370,7 @@ check('fallback page present: default-wallpaper/index.html exists',
 check('renderer page mounts the fallback page on error',
   pageJs.includes('./default-wallpaper/index.html') && /inst\.on\("error"/.test(pageJs));
 check('scene-serve serves default-wallpaper without long cache',
-  /rest === 'default-wallpaper\/index.html'/.test(readFileSync(join(root, 'lib', 'routes', 'scene-serve.js'), 'utf8')));
+  /rest === 'default-wallpaper\/index.html'/.test(readFileSync(join(root, 'packages', 'wallpaper', 'lib', 'routes', 'scene-serve.js'), 'utf8')));
 
 // 网页壁纸 shim：npm 包不单独发 web-shim.js，宿主从 bundle 的 `shimSource` 模板字面量提取
 // （lib/index.js 的 extractWebShim）。bundle 形态变了提取就静默得空串 —— 先钉住形态还在。
@@ -1821,7 +1821,7 @@ for (const [name, ok] of clientChecks) check(name, ok);
     //     `lib/serve.js`，**消费点**在 `lib/routes/media-bytes.js`。
     const faststartLib = readFileSync(join(root, 'lib', 'faststart.js'), 'utf8');
     const vfsLib = readFileSync(join(root, 'lib', 'mp4-vfs.js'), 'utf8');
-    const mediaBytesFam = readFileSync(join(root, 'lib', 'routes', 'media-bytes.js'), 'utf8');
+    const mediaBytesFam = readFileSync(join(root, 'packages', 'wallpaper', 'lib', 'routes', 'media-bytes.js'), 'utf8');
     // 服务面与接线面的源文本就地读：本文件别处的同名常量声明在更后面（TDZ）。
     const serveLib = readFileSync(join(root, 'lib', 'serve.js'), 'utf8');
     // ⚠️ 合成宿主面：门面 + 内核段 + P0 拆出的模块。**不要**只读 lib/index.js ——
@@ -2314,7 +2314,11 @@ const extraHostHalfSources = [
 const hostHalfSrc = [hostSrc, mediaOriginSrc, inventorySrc, serveSrc, faststartSrc,
   ...extraHostHalfSources,
   ...readdirSync(join(root, 'lib', 'routes')).filter((f) => f.endsWith('.js'))
-    .map((f) => readFileSync(join(root, 'lib', 'routes', f), 'utf8'))].join('\n');
+    .map((f) => readFileSync(join(root, 'lib', 'routes', f), 'utf8')),
+  // S5c 刀2：九族路由族随包出户 ⇒ 包内路由目录也要进"宿主半实现面"，否则这些族里的契约
+  //（路径围栏 / 指纹 / 不变量）会随搬移被误报为丢失（同 S5b 的纪律）。
+  ...readdirSync(join(root, 'packages', 'wallpaper', 'lib', 'routes')).filter((f) => f.endsWith('.js'))
+    .map((f) => readFileSync(join(root, 'packages', 'wallpaper', 'lib', 'routes', f), 'utf8'))].join('\n');
 // 宿主设置白名单已改为**派生**（唯一真源 lib/settings-schema.js，P1-5）。因此这几条不再
 // 抠实现里的字面量，而是把值喂给宿主的规范化函数看它收不收 —— 断言的是**行为**。
 const schemaMod = await import(pathToFileURL(join(root, 'lib', 'settings-schema.js')).href);

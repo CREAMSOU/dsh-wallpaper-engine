@@ -220,15 +220,23 @@ async function runHandler(route, url, headers) {
   }
   return res;
 }
-/** 一次新的 apply() = 一个干净的闩锁（闩锁住 apply 作用域，见 lib/index.js 的 3c-0）。 */
+/** 一次新的 apply() = 一个干净的闩锁（闩锁住 apply 作用域，见 lib/index.js 的 3c-0）。
+ *  S5c 刀2：`/inventory` 与 `/scene-live` 等族归 `wallpaper` 组件行 ⇒ 每次新闩锁都要把该组件
+ *  一起 boot，否则路由表里根本没有被钉的那几条（判据判什么没变，同 verify-scene-live 做法）。 */
 function freshApply() {
   const routes = [];
-  const dispose = apply({
+  const ctx = {
     webServer: {
       register(route) { routes.push(route); return () => {}; },
       tapIndex() { return () => {}; },
     },
-  });
+  };
+  const dispose = apply(ctx);
+  if (typeof hostMod.applyComponent === 'function') {
+    try { hostMod.applyComponent(ctx, {}, 'wallpaper'); } catch (err) {
+      console.log('  · 组件行 boot 失败（wallpaper）：' + String(err && err.message));
+    }
+  }
   return { routes, dispose, find: (p) => routes.find((r) => r.path === p) };
 }
 const FENCE = { 'x-dsh-desktop-renderer': '1', 'user-agent': 'Electron/33.2.0' };

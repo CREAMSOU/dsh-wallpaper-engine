@@ -147,6 +147,11 @@ const VERIFY_STEPS = [
   step('test/verify-route-index.mjs'),
   step('test/verify-route-families.mjs'),
   step('test/verify-inject-contracts.mjs'),   // ← 还原（旧链位：route-families 之后、cache-dir 之前）
+  // S5c 刀2：token 域单主权（R1，P-D S5.3）。9 族整簇同侧 + 只经 `...keys` 的 apply 面取实例 +
+  // 键表交出的 mediaMap/tokenFor/serveFile… 与服务面 `apply` **同一引用** + 门面 applyView 键集
+  // 恰好 15 键。硬档依据：token 域裂成两张 Map 时 /media、/props、/scene-* 对 /inventory 签发的
+  // token 全 404（静默、无日志）—— 用户侧只看到"壁纸黑屏"，没有别的判据会红。
+  step('test/verify-token-domain.mjs'),
   step('test/verify-cache-dir.mjs'),
   step('test/verify-cache-prune.mjs'),
   step('test/verify-we-install-probe.mjs'),

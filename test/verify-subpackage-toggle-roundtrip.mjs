@@ -115,20 +115,27 @@ const makeFiber = (webServer) => {
   const collected = [];
   let handoffs = 0;
   const provided = [];
+  const ctx = {
+    webServer,
+    // 跨包服务面（§5.1 ①）：子包宿主半边只经 ctx.<服务名> 取面，这里给**真值**
+    // （主包 createSubpackageHost() / 一次真主包 apply 捕获的 provide 值）——手搓 stub 等于把
+    // "服务面名字/键集"从本判据里挖掉，那一面由 test/verify-subpackage-boot.mjs 逐键对账，
+    // 这里只保证"取得到、能用"。
+    [HOST_SERVICE_NAME]: HOST_SERVICE,
+    // 真宿主的 provide：主包 apply() 第一件事就是 provideSubpackageHost(ctx)（服务随 fiber 撤销、
+    // 子包 inject 级联的物理基础）。真 cordis 里 provide 之后 ctx.<服务名> 就解析到该值 —— mock 也
+    // 把 provided 值写回 ctx（并记成后续 fiber 的默认面），否则「主包先 provide、子包后 inject」这条腿
+    // 在 mock 里永远走不到：S5c 刀2 起 wallpaper 组件行的 apply 视图（`apply:` 源型）只存在于这个值上。
+    provide(name, value) {
+      provided.push([name, value]);
+      if (name === HOST_SERVICE_NAME) { ctx[HOST_SERVICE_NAME] = value; HOST_SERVICE = value; }
+    },
+    effect(cb) { handoffs++; const d = cb(); if (typeof d === 'function') collected.push(d); return d; },
+  };
   return {
     // handoffs = 该行**交给 fiber 的 teardown 数目**（§7.6④ 的第二个观测面：路由之外唯一能看出
     // "拆卸有没有真交接"的量；纯浏览器空壳行宿主侧零路由，只有这一面能分辨真源码与变异体）。
-    ctx: {
-      webServer,
-      // 跨包服务面（§5.1 ①）：子包宿主半边只经 ctx.<服务名> 取面，这里给**真值**
-      // （主包 createSubpackageHost()）——手搓 stub 等于把"服务面名字/键集"从本判据里挖掉，
-      // 那一面由 test/verify-subpackage-boot.mjs 逐键对账，这里只保证"取得到、能用"。
-      [HOST_SERVICE_NAME]: HOST_SERVICE,
-      // 真宿主的 provide：主包 apply() 第一件事就是 provideSubpackageHost(ctx)（服务随 fiber 撤销、
-      // 子包 inject 级联的物理基础）。mock 里也放上，免得主包/子包将来走 provide 分支时静默失效。
-      provide(name, value) { provided.push([name, value]); },
-      effect(cb) { handoffs++; const d = cb(); if (typeof d === 'function') collected.push(d); return d; },
-    },
+    ctx,
     unload() { while (collected.length) collected.pop()(); },
     handoffs: () => handoffs,
     provided: () => provided,
@@ -379,10 +386,15 @@ check('所有行入口都装载成功', plugins.length === rows.filter((r) => r.
     const prov = fR.provided();
     const gotName = prov.length === 1 ? prov[0][0] : null;
     const gotVal = prov.length === 1 ? prov[0][1] : null;
-    check('主包行 apply() 通过 ctx.provide 挂出服务面（名字=' + HOST_SERVICE_NAME + '、6 键冻结、真宿主腿 = 子包 inject 级联成立）',
+    // S5c 刀2：服务面六键 -> 七键（+`apply` 视图）。键集逐键对账由 verify-subpackage-boot.mjs
+    // 承担；这里只判「主包真 provide 了、七键都在、apply 视图随 apply 建好」。
+    const faceKeys = gotVal && typeof gotVal === 'object' ? Object.keys(gotVal) : [];
+    check('主包行 apply() 通过 ctx.provide 挂出服务面（名字=' + HOST_SERVICE_NAME + '、7 键冻结、真宿主腿 = 子包 inject 级联成立）',
       provErr === null && gotName === HOST_SERVICE_NAME && gotVal !== null && typeof gotVal === 'object'
         && typeof gotVal.keys === 'function' && typeof gotVal.handOff === 'function'
-        && (gotVal.schema && gotVal.http ? true : false) && Object.isFrozen(gotVal),
+        && (gotVal.schema && gotVal.http ? true : false) && Object.isFrozen(gotVal)
+        && faceKeys.length === 7 && faceKeys.indexOf('apply') >= 0
+        && gotVal.apply !== null && typeof gotVal.apply === 'object' && Object.isFrozen(gotVal.apply),
       (provErr ? '装载抛错：' + String(provErr.message || provErr).split('\n')[0] + ' · ' : '')
         + 'ctx.provide 记录 ' + JSON.stringify(prov.map((x) => [x[0], x[1] ? Object.keys(x[1]).join(',') : String(x[1])])));
     fR.unload();

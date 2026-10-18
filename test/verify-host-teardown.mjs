@@ -57,9 +57,13 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const TARGET = join(ROOT, 'lib', 'index.js');
 const SCRATCH = join(ROOT, '.test-cache', 'host-teardown');
 
-// 注册面地板：apply() 在 mock 宿主上的真实注册条数至少这么多（2026-02 实测 32）。
-// 低于它说明 mock 没接上真注册链，判据会"真空为真" ⇒ 判红。
-const ROUTE_FLOOR = 20;
+// 注册面地板：apply() 在 mock 宿主上的真实注册条数至少这么多。
+// 历史：2026-02 实测 32（全部 15 族都在门面）。S5c 刀2 把 9 族 21 条搬进 `packages/wallpaper`
+// （组件行 `applyComponent` 装载，不经门面 `apply()` 的注册面）⇒ 门面自己的注册面收缩到
+// 5 族 9 条（occlusion 1 / diag 4 / presets 1 / settings 1 / cache-dir 2）；包内 21 条由
+// `test/verify-scene-live.mjs` 等行为臂覆盖。地板随实测降到 9：任何一族在门面里静默掉线
+// 都会立刻低于地板（防"mock 没接上真注册链、判据真空为真"）。
+const ROUTE_FLOOR = 9;
 
 let failed = 0;
 function check(name, ok, detail) {

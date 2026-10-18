@@ -45,8 +45,7 @@
 
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
-import { dirname, join, resolve, sep } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join, resolve, sep } from 'node:path';
 
 /**
  * 桥 script 的缓存破坏参数：**桥文件内容的 sha256 前 12 位**（不是插件版本）——
@@ -54,10 +53,12 @@ import { fileURLToPath } from 'node:url';
  *（no-store 的 index.html 本就带着新引用）。
  */
 let occlusionBridgeVersionCache;
-function occlusionBridgeVersion() {
+function occlusionBridgeVersion(webwallglDir) {
   if (occlusionBridgeVersionCache !== undefined) return occlusionBridgeVersionCache;
   try {
-    const bridgePath = resolve(dirname(fileURLToPath(import.meta.url)), '../webwallgl/occlusion-bridge.js');
+    // 桥文件住在主包 `lib/webwallgl/`（渲染内核不出户，D-S5-2）⇒ 本族搬进子包后**不能**再用
+    // `import.meta.url` 相对定位自己；目录由调用点经 `c.WEBWALLGL_DIR`（`kernel:` 源）显式给。
+    const bridgePath = join(webwallglDir, 'occlusion-bridge.js');
     occlusionBridgeVersionCache = createHash('sha256').update(readFileSync(bridgePath)).digest('hex').slice(0, 12);
   } catch {
     occlusionBridgeVersionCache = '0';
@@ -131,7 +132,7 @@ export function registerSceneServeRoutes(webServer, c) {
           try { html = readFileSync(join(WEBWALLGL_DIR, 'index.html'), 'utf8'); } catch { html = ''; }
           if (html) {
             // `?v=<桥内容哈希>` 做缓存破坏：任何一次桥改动都换 URL，不依赖重验证往返。
-            const tag = `<script src="${BASE}/scene-live/occlusion-bridge.js?v=${occlusionBridgeVersion()}"></script>`;
+            const tag = `<script src="${BASE}/scene-live/occlusion-bridge.js?v=${occlusionBridgeVersion(WEBWALLGL_DIR)}"></script>`;
             const m = /<head[^>]*>/i.exec(html);
             html = m
               ? html.slice(0, m.index + m[0].length) + tag + html.slice(m.index + m[0].length)

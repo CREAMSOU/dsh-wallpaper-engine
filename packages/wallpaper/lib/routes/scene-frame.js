@@ -53,15 +53,13 @@
 
 import { createReadStream, createWriteStream, existsSync, renameSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
-// 收 body 的**唯一缓冲实现**（累加 + 字节计闸 + 一次解码）—— 见 lib/http-body.js。
+// 收 body 的**唯一缓冲实现**（累加 + 字节计闸 + 一次解码）与 JSON 应答的**唯一实现**都经
+// 调用点显式给的 `http` 面拿（`http.bodyReader` / `http.sendJson`）—— 本文件不再 import 主包。
 // ⚠️ 本文件既用共享实现（GPU 帧 PUT / `/scene-frame-cache/...`）、又有一处**结构性豁免**
 // （`/custom-frame` 边收边写流 + 背压），豁免的理由见 lib/http-body.js 文件头。
-import { bodyReader } from '../http-body.js';
-// JSON 应答的**唯一实现**（状态码 + 两个头 + end）—— 见 lib/json-response.js。
-import { sendJson } from '../json-response.js';
 
 /** 注入契约（P2-7A / ADR-0013 D12）：本族从 `c` 消费的**必需**键 —— 门面/组件行调用点必须逐键给到（判据 test/verify-inject-contracts.mjs 双向对账）。 */
-export const DEPS = ['disposers', 'base', 'mediaMap', 'trackStream', 'serveFile', 'GPU_FRAME_AREA_TOL', 'GPU_FRAME_MAX_BYTES', 'GPU_WRITE_INFLIGHT', 'CUSTOM_FRAME_EXT', 'CUSTOM_FRAME_MAX_BYTES', 'armBodyIdleTimeout', 'atomicWriteFileP', 'customFrameDir', 'customFramePath', 'customIdFromAbs', 'gpuFrameFileFor', 'lingerClose', 'looksLikePng', 'pngDimsOfBuf', 'pngSizeOf', 'sceneFrameSlot'];
+export const DEPS = ['disposers', 'base', 'mediaMap', 'trackStream', 'serveFile', 'GPU_FRAME_AREA_TOL', 'GPU_FRAME_MAX_BYTES', 'GPU_WRITE_INFLIGHT', 'CUSTOM_FRAME_EXT', 'CUSTOM_FRAME_MAX_BYTES', 'armBodyIdleTimeout', 'atomicWriteFileP', 'customFrameDir', 'customFramePath', 'customIdFromAbs', 'gpuFrameFileFor', 'lingerClose', 'looksLikePng', 'pngDimsOfBuf', 'pngSizeOf', 'sceneFrameSlot', 'http'];
 
 export function registerSceneFrameRoutes(webServer, c) {
   const {
@@ -70,6 +68,7 @@ export function registerSceneFrameRoutes(webServer, c) {
     CUSTOM_FRAME_EXT, CUSTOM_FRAME_MAX_BYTES,
     armBodyIdleTimeout, atomicWriteFileP, customFrameDir, customFramePath, customIdFromAbs,
     gpuFrameFileFor, lingerClose, looksLikePng, pngDimsOfBuf, pngSizeOf, sceneFrameSlot,
+    http,
   } = c;
 
   // 出图来源（**唯一权威顺序**）：**实时抓帧**（`<key>_gpu.png`，由 live 渲染页
@@ -173,7 +172,7 @@ export function registerSceneFrameRoutes(webServer, c) {
       const url = new URL(req.url || '/', 'http://x');
       // 薄别名：保留调用点写法，实现收敛到 lib/json-response.js；**第四参 null 保行为** ——
       // 本条副本本来就不写 `Cache-Control`（见 lib/json-response.js 文件头"缓存头口径"）。
-      const json = (code, payload) => sendJson(res, code, payload, null);
+      const json = (code, payload) => http.sendJson(res, code, payload, null);
       let token;
       try {
         token = decodeURIComponent(url.pathname.slice(`${BASE}/scene-frame-cache/`.length));
@@ -218,7 +217,7 @@ export function registerSceneFrameRoutes(webServer, c) {
         lingerClose(req, res);
       };
       armBodyIdleTimeout(req, () => fail(408, { error: 'request timeout' }));
-      const reader = bodyReader(req, {
+      const reader = http.bodyReader(req, {
         maxBytes: GPU_FRAME_MAX_BYTES,
         shouldStop: () => failed,
         onOverflow: () => fail(413, { error: 'frame too large' }),

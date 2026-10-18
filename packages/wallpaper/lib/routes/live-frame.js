@@ -24,15 +24,15 @@
  */
 
 import { statSync } from 'node:fs';
-import { bodyReader } from '../http-body.js';
+// 收 body 的共享实现经调用点显式给的 `http` 面拿（`http.bodyReader`）；本文件不再 import 主包。
 
 /** 注入契约（P2-7A / ADR-0013 D12）：本族从 `c` 消费的**必需**键 —— 门面/组件行调用点必须逐键给到（判据 test/verify-inject-contracts.mjs 双向对账）。 */
-export const DEPS = ['disposers', 'base', 'mediaMap', 'serveFile', 'traceRequests', 'liveFrameFile', 'atomicWriteFileSync', 'lingerClose'];
+export const DEPS = ['disposers', 'base', 'mediaMap', 'serveFile', 'traceRequests', 'liveFrameFile', 'atomicWriteFileSync', 'lingerClose', 'http'];
 
 export function registerLiveFrameRoutes(webServer, c) {
   const {
     disposers, base: BASE, mediaMap, serveFile, traceRequests,
-    liveFrameFile, atomicWriteFileSync, lingerClose,
+    liveFrameFile, atomicWriteFileSync, lingerClose, http,
   } = c;
 
   // 3c-4. Automatic first-frame cache for WEB wallpapers: once live rendering is
@@ -71,7 +71,7 @@ export function registerLiveFrameRoutes(webServer, c) {
         res.statusCode = code; res.end();
         lingerClose(req, res);
       };
-      const reader = bodyReader(req, {
+      const reader = http.bodyReader(req, {
         maxBytes: 4 * 1024 * 1024,
         shouldStop: () => done,
         onOverflow: () => fail(413),

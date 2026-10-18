@@ -500,6 +500,13 @@ async function udFreshInstance(tag) {
   const mod = await import(pathToFileURL(join(ROOT, 'lib', 'index.js')).href + '?' + tag);
   const host = mod.default || mod;
   const dispose = (host.apply || host.apply)(ctx);
+  // S5c 刀2：`/upload-dir` 归 `wallpaper` 组件行（upload 族随包出户）⇒ 每次新实例都把该组件
+  // 一起 boot；判据判什么没变（同 verify-scene-live 的既有做法）。
+  if (typeof mod.applyComponent === 'function') {
+    try { mod.applyComponent(ctx, {}, 'wallpaper'); } catch (err) {
+      console.log('  · 组件行 boot 失败（wallpaper）：' + String(err && err.message));
+    }
+  }
   return { route: routes.find((r) => r.path === '/wallpaper-engine/upload-dir'), dispose };
 }
 

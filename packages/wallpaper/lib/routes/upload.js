@@ -54,18 +54,19 @@
 import { createHash } from 'node:crypto';
 import { createWriteStream, existsSync, mkdirSync, renameSync, statSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
-// 收 body 的**唯一缓冲实现**（累加 + 字节计闸 + 一次解码）；流式落盘那两处是本模块的
-// 结构性豁免，见 `lib/http-body.js` 文件头与下面的"流式落盘"不变量。
-import { bodyReader } from '../http-body.js';
+// 收 body 的**唯一缓冲实现**（累加 + 字节计闸 + 一次解码）经调用点显式给的 `http` 面拿
+//（`http.bodyReader`，本文件不再 import 主包）。流式落盘那两处是本模块的结构性豁免，
+// 见 `lib/http-body.js` 文件头与下面的"流式落盘"不变量。
 
 /** 注入契约（P2-7A / ADR-0013 D12）：本族从 `c` 消费的**必需**键 —— 门面/组件行调用点必须逐键给到（判据 test/verify-inject-contracts.mjs 双向对账）。 */
-export const DEPS = ['disposers', 'base', 'tokenFor', 'UPLOAD_EXT', 'UPLOAD_MAX_BYTES', 'CONTROL_JSON_MAX_BYTES', 'ensureUploadDir', 'readUploadMeta', 'metaEntry', 'setUploadMeta', 'removeUploadMeta', 'resolveUploadFile', 'setUploadDir', 'normalizeUserDir', 'armBodyIdleTimeout', 'lingerClose'];
+export const DEPS = ['disposers', 'base', 'tokenFor', 'UPLOAD_EXT', 'UPLOAD_MAX_BYTES', 'CONTROL_JSON_MAX_BYTES', 'ensureUploadDir', 'readUploadMeta', 'metaEntry', 'setUploadMeta', 'removeUploadMeta', 'resolveUploadFile', 'setUploadDir', 'normalizeUserDir', 'armBodyIdleTimeout', 'lingerClose', 'http'];
 
 export function registerUploadRoutes(webServer, c) {
   const {
     disposers, base: BASE, tokenFor, UPLOAD_EXT, UPLOAD_MAX_BYTES, CONTROL_JSON_MAX_BYTES,
     ensureUploadDir, readUploadMeta, metaEntry, setUploadMeta, removeUploadMeta,
     resolveUploadFile, setUploadDir, normalizeUserDir, armBodyIdleTimeout, lingerClose,
+    http,
   } = c;
   // 4. Custom upload (raw body; MIME whitelist; writes into the uploads dir).
   //    Returns the new wallpaper entry so the client can refresh the inventory.
@@ -237,7 +238,7 @@ export function registerUploadRoutes(webServer, c) {
         res.end(JSON.stringify({ error: 'request timeout' }));
       });
       // 上限 + 收完一次性解码 —— 这两件事的唯一实现在 `lib/http-body.js`。
-      const reader = bodyReader(req, {
+      const reader = http.bodyReader(req, {
         maxBytes: CONTROL_JSON_MAX_BYTES,
         shouldStop: () => timedOut,
         onOverflow: () => {
@@ -294,7 +295,7 @@ export function registerUploadRoutes(webServer, c) {
         res.end(JSON.stringify({ error: 'request timeout' }));
       });
       // 上限 + 收完一次性解码 —— 唯一实现见 `lib/http-body.js`。
-      const reader = bodyReader(req, {
+      const reader = http.bodyReader(req, {
         maxBytes: CONTROL_JSON_MAX_BYTES,
         shouldStop: () => timedOut,
         onOverflow: () => {

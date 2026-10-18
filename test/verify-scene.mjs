@@ -189,16 +189,16 @@ const host = hostMod.default || hostMod;
 // for route registration; uploads config writes are guarded by try/catch).
 const apply = host.apply || (host.inject && host.apply);
 const dispose = apply(mockCtx);
-const sceneRoute = routes.find((r) => r.path === '/wallpaper-engine/scene-frame');
-check('scene-frame route registered', Boolean(sceneRoute), sceneRoute ? 'kind=' + sceneRoute.kind : 'missing');
 
-// ── 组件行也要 boot（本分支的路由族归属：`/avatar` / `/mascot` 归 `mascot-avatar` 组件行）──
+// ── 组件行也要 boot（本分支的路由族归属：`/avatar` / `/mascot` 归 `mascot-avatar` 组件行；
+//    S5c 刀2 起 `/scene-frame` / `/scene-frame-cache` 与其余 8 族一起归 `wallpaper` 组件行）──
 // ⚠️ 这条**不是**"判据放宽"，而是夹具的 boot 段要跟上本分支的结构：本分支把实现搬进了组件目录
 // （ADR-0013 D14「实现入包、主包不留注册点」，由 test/verify-route-ownership.mjs 的 M10 钉住）。
 // 上游那条判据按"门面 apply 后 /avatar 就可用"写 —— 那是单包单行形态的假设。
 // 处置（Lead 裁决 (a)）：**连组件一起 boot**，保住组件边界；判据判什么一个字没改。
+// 同 verify-scene-live 的既有做法（`['wallpaper', 'mascot-avatar', 'about-notice']`）。
 if (typeof hostMod.applyComponent === 'function') {
-  for (const comp of ['mascot-avatar', 'about-notice']) {
+  for (const comp of ['wallpaper', 'mascot-avatar', 'about-notice']) {
     try { hostMod.applyComponent(mockCtx, {}, comp); } catch (err) {
       console.log('  · 组件行 boot 失败（' + comp + '）：' + String(err && err.message));
     }
@@ -207,6 +207,9 @@ if (typeof hostMod.applyComponent === 'function') {
 check('组件行 boot 后 /avatar 已注册（组件边界与判据口径一致）',
   routes.some((r) => r.path === '/wallpaper-engine/avatar'),
   'avatar routes=' + routes.filter((r) => r.path.includes('avatar')).length);
+// S5c 刀2：`/scene-frame` 由 `wallpaper` 组件行注册 ⇒ 这条判据必须挪到组件 boot 之后（判据判什么没变）。
+const sceneRoute = routes.find((r) => r.path === '/wallpaper-engine/scene-frame');
+check('scene-frame route registered', Boolean(sceneRoute), sceneRoute ? 'kind=' + sceneRoute.kind : 'missing');
 
 // Route requires a token that mediaMap knows; tokens are minted during
 // inventory. Emulate by calling the inventory route first with a req shim.
@@ -982,8 +985,8 @@ if (token) {
     slotBody !== null && /function sceneFrameSlot\(\s*abs\s*\)/.test(slotBody) && !slotBody.includes("'_v'"),
     slotBody === null ? '锚点缺失' : 'arity-ok=' + /function sceneFrameSlot\(\s*abs\s*\)/.test(slotBody));
   check('P4-16 档 4 豁免抓帧时**不解析槽位**（不留那次白做的 statSync + ensureFrameCacheDir）',
-    /const slot = variant === 4 \? null : sceneFrameSlot\(abs\);/.test(readFileSync(join(root, 'lib', 'routes', 'scene-frame.js'), 'utf8'))
-    && /const gpuFile = slot \? gpuFrameFileFor\(slot\) : null;/.test(readFileSync(join(root, 'lib', 'routes', 'scene-frame.js'), 'utf8')));
+    /const slot = variant === 4 \? null : sceneFrameSlot\(abs\);/.test(readFileSync(join(root, 'packages', 'wallpaper', 'lib', 'routes', 'scene-frame.js'), 'utf8'))
+    && /const gpuFile = slot \? gpuFrameFileFor\(slot\) : null;/.test(readFileSync(join(root, 'packages', 'wallpaper', 'lib', 'routes', 'scene-frame.js'), 'utf8')));
 }
 
 // ── Level F: sceneVideo 文件版探测（issue #136）──────────────────────────────
@@ -1124,15 +1127,16 @@ console.log('Level F — sceneVideo 文件版探测（issue #136）等价 / 读�
       usesUint8Probe('extractSceneVideo(new Uint8Array(await readFile(abs)))') === true);
   }
   // ③b 族文件归属：场景内嵌媒资族（`/scene-video` + `/scene-audio`）已搬进
-  //     `lib/routes/scene-media.js`（逐条理由见该文件头）。判据钉两件事：
-  //     ① 门面里零残留、两条注册都在族文件里；
-  //     ② 去重账本 `SCENE_VIDEO_INFLIGHT` **只以引用进 `c`**（声明仍在门面的 `apply()` 里）
+  //     `packages/wallpaper/lib/routes/scene-media.js`（S5c 刀2 随包出户；逐条理由见该文件头）。判据钉两件事：
+  //     ① 门面里零残留、两条注册都在包入口里；
+  //     ② 去重账本 `SCENE_VIDEO_INFLIGHT` **只以引用进 `c`**（声明在本 fiber 的会话段）
   //        ⇒ 搬文件不改变它"本 fiber 单例"的生命周期（这是纯搬移、不是行为改动）。
   {
     const hostSrc = stripComments(readFileSync(join(root, 'lib', 'index.js'), 'utf8'));
-    const famSrc = stripComments(readFileSync(join(root, 'lib', 'routes', 'scene-media.js'), 'utf8'));
+    const pkgEntrySrc = stripComments(readFileSync(join(root, 'packages', 'wallpaper', 'lib', 'index.js'), 'utf8'));
+    const famSrc = stripComments(readFileSync(join(root, 'packages', 'wallpaper', 'lib', 'routes', 'scene-media.js'), 'utf8'));
     const stale = /path:\s*`\$\{BASE\}\/(scene-video|scene-audio)`/;
-    check('G 场景内嵌媒资族已搬进 lib/routes/scene-media.js（门面里零残留）',
+    check('G 场景内嵌媒资族已搬进 packages/wallpaper/lib/routes/scene-media.js（门面里零残留）',
       !stale.test(hostSrc)
         && famSrc.includes('path: `${BASE}/scene-video`')
         && famSrc.includes('path: `${BASE}/scene-audio`'));
@@ -1143,22 +1147,23 @@ console.log('Level F — sceneVideo 文件版探测（issue #136）等价 / 读�
     check('G 去重账本只以引用进 c（声明在本 fiber 的会话段，生命周期未改）',
       /const SCENE_VIDEO_INFLIGHT = new Map\(\);/.test(sessionSrc)
         && /SCENE_VIDEO_INFLIGHT/.test(famSrc)
-        && /registerSceneMediaRoutes\(webServer, \{/.test(hostSrc));
+        && /registerSceneMediaRoutes\(webServer, \{/.test(pkgEntrySrc));
     check('G negative control: 门面里重新出现被搬走的路由字面量会被同一条判据拒掉',
       stale.test(hostSrc + '\n  path: `${BASE}/scene-audio`,'));
   }
-  // ③c 族文件归属：属性族（`/props`）、首帧缓存族（`/live-frame`）、设置族（`/settings`）已分别
-  //     搬进 `lib/routes/props.js` / `lib/routes/live-frame.js` / `lib/routes/settings.js`。
+  // ③c 族文件归属：属性族（`/props`）、首帧缓存族（`/live-frame`）随 S5c 刀2 搬进
+  //     `packages/wallpaper/lib/routes/`；设置族（`/settings`）留在主包 `lib/routes/settings.js`。
   //     判据钉两件事（与 ③b 同形）：
-  //     ① 门面里三条路由字面量零残留，且改成"一次调用"的调用点形态；
+  //     ① 门面里三条路由字面量零残留，且改成"一次调用"的调用点形态（props/live-frame 在包入口）；
   //     ② 各族的**关键不变量**随文件一起落地（不是只剩空壳路由）——
   //        · props：覆盖值只认 project.json 仍声明着的属性（`filterKnownOverrides`）；
   //        · live-frame：只收 JPEG（`FF D8` 头校验）＋ 4MB 上限；
   //        · settings：写路径只认 PUT，落盘前必过 `sanitizeSettings` 与迁移护栏 `withLegacyFontValues`。
   {
     const hostSrc = stripComments(readFileSync(join(root, 'lib', 'index.js'), 'utf8'));
-    const propsSrc = stripComments(readFileSync(join(root, 'lib', 'routes', 'props.js'), 'utf8'));
-    const frameSrc = stripComments(readFileSync(join(root, 'lib', 'routes', 'live-frame.js'), 'utf8'));
+    const pkgEntrySrc = stripComments(readFileSync(join(root, 'packages', 'wallpaper', 'lib', 'index.js'), 'utf8'));
+    const propsSrc = stripComments(readFileSync(join(root, 'packages', 'wallpaper', 'lib', 'routes', 'props.js'), 'utf8'));
+    const frameSrc = stripComments(readFileSync(join(root, 'packages', 'wallpaper', 'lib', 'routes', 'live-frame.js'), 'utf8'));
     const settingsSrc = stripComments(readFileSync(join(root, 'lib', 'routes', 'settings.js'), 'utf8'));
     const stale = /path:\s*`\$\{BASE\}\/(props|live-frame|settings)`/;
     check('H 三条路由族已搬出 apply()（门面里零残留，族文件各持一条注册）',
@@ -1166,9 +1171,9 @@ console.log('Level F — sceneVideo 文件版探测（issue #136）等价 / 读�
         && propsSrc.includes('path: `${BASE}/props`')
         && frameSrc.includes('path: `${BASE}/live-frame`')
         && settingsSrc.includes('path: `${BASE}/settings`'));
-    check('H 门面里改为一次调用（三条调用点形态正确）',
-      /registerPropsRoutes\(webServer, \{/.test(hostSrc)
-        && /registerLiveFrameRoutes\(webServer, \{/.test(hostSrc)
+    check('H 调用点各归其位（props/live-frame 在包入口，settings 在门面）',
+      /registerPropsRoutes\(webServer, \{/.test(pkgEntrySrc)
+        && /registerLiveFrameRoutes\(webServer, \{/.test(pkgEntrySrc)
         && /registerSettingsRoutes\(webServer, \{/.test(hostSrc));
     check('H 各族的关键不变量随文件落地（不是空壳路由）',
       /filterKnownOverrides\(pj, userPropsFor\(token\)\)/.test(propsSrc)
@@ -1180,16 +1185,18 @@ console.log('Level F — sceneVideo 文件版探测（issue #136）等价 / 读�
     check('H negative control: 门面里重新出现被搬走的路由字面量会被同一条判据拒掉',
       stale.test(hostSrc + '\n  path: `${BASE}/settings`,'));
   }
-  // ③d 媒体字节族：`/media` + `/preview`（原始字节直出）已搬进 `lib/routes/media-bytes.js`。
+  // ③d 媒体字节族：`/media` + `/preview`（原始字节直出）随 S5c 刀2 搬进
+  //     `packages/wallpaper/lib/routes/media-bytes.js`。
   //     判据与 ③c 同形，钉三件事：
   //     ① 门面里两条路由字面量与那个循环零残留（`for (const seg of ['media','preview'])` 也搬走了）；
-  //     ② 改成"一次调用"，且**调用点必须排在 media-derived 之后** —— `/media-info` 与 `/media`
-  //        同前缀，晚注册会被 prefix 匹配吞掉（本族唯一会静默出错的地方）；
+  //     ② 改成"一次调用"（在包入口），且**调用点必须排在 media-derived 之后** —— `/media-info` 与
+  //        `/media` 同前缀，晚注册会被 prefix 匹配吞掉（本族唯一会静默出错的地方）；
   //     ③ 关键不变量落地：`/media` 经 `pinnedFaststartVariant` 定音（同一次播放一份字节布局）、
   //        `/preview` 不定音、非 GET/HEAD 出 405。
   {
     const hostSrc = stripComments(readFileSync(join(root, 'lib', 'index.js'), 'utf8'));
-    const bytesSrc = stripComments(readFileSync(join(root, 'lib', 'routes', 'media-bytes.js'), 'utf8'));
+    const pkgEntrySrc = stripComments(readFileSync(join(root, 'packages', 'wallpaper', 'lib', 'index.js'), 'utf8'));
+    const bytesSrc = stripComments(readFileSync(join(root, 'packages', 'wallpaper', 'lib', 'routes', 'media-bytes.js'), 'utf8'));
     const stale = /path:\s*`\$\{BASE\}\/\$\{seg\}`/;
     check('I 媒体字节族已搬出 apply()（门面里零残留，族文件持循环注册）',
       !stale.test(hostSrc)
@@ -1197,8 +1204,8 @@ console.log('Level F — sceneVideo 文件版探测（issue #136）等价 / 读�
         && /for \(const seg of \['media', 'preview'\]\)/.test(bytesSrc)
         && bytesSrc.includes('path: `${BASE}/${seg}`'));
     check('I 调用点形态正确，且排在 media-derived 之后（前缀吞噬防线）',
-      /registerMediaBytesRoutes\(webServer, \{/.test(hostSrc)
-        && hostSrc.indexOf('registerMediaDerivedRoutes(webServer, {') < hostSrc.indexOf('registerMediaBytesRoutes(webServer, {'));
+      /registerMediaBytesRoutes\(webServer, \{/.test(pkgEntrySrc)
+        && pkgEntrySrc.indexOf('registerMediaDerivedRoutes(webServer, {') < pkgEntrySrc.indexOf('registerMediaBytesRoutes(webServer, {'));
     check('I 关键不变量随文件落地：/media 定音、/preview 不定音、非 GET/HEAD 出 405',
       /seg === 'media' \? pinnedFaststartVariant\(abs, token, log\) : null/.test(bytesSrc)
         && /serveLayout\(pick\.layout, pick\.abs, req, res, method === 'HEAD'\)/.test(bytesSrc)

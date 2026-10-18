@@ -363,7 +363,12 @@ async function main() {
     // 单例声明 / id 赋值点 / body 挂载白名单 / fiber cleanup 拆卸零残留 / iframe 父链。硬档依据 =
     // 层所有权一旦裂成两份，用户侧后果是"壁纸停在上一张、关掉插件层不撤、双倍暗化"—— 同 ⑧ 的
     // 发布面口径：它坏的时候没有别的判据会红）。
-    const CHAIN_FLOOR = { verify: 86, docs: 6, smoke: 6, all: 99 };
+    //  再：verify 86→87 / all 99→100 —— 新增 `test/verify-token-domain.mjs`（P-D S5c 刀2 / R1：
+    // token 域单主权。9 族整簇同侧 + 只经 `...keys` 的 apply 面取实例 + 键表实例与服务面 `apply`
+    // 同一引用 + 门面 applyView 键集恰好 15 键。硬档依据 = 铸造面与消费面分居两包时，`/media`、
+    // `/props`、`/scene-*` 对 `/inventory` 签发的 token 全部静默 404 —— 用户侧只看到"壁纸黑屏"，
+    // 没有别的判据会红。见 run-guards.mjs 的 VERIFY_STEPS）。
+    const CHAIN_FLOOR = { verify: 87, docs: 6, smoke: 6, all: 100 };
     /** 地板表与 GROUPS 的对齐体检：键名必须与**组名**逐一对齐（纯函数 ⇒ 负对照可直接喂）。 */
     const floorGaps = (groups, floors) => groups.map(([, g]) => g).filter((g) => !Number.isInteger(floors[g]));
     const problems = floorGaps(GROUPS, CHAIN_FLOOR).map((g) => '地板表缺组 ' + g
