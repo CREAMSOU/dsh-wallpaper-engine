@@ -330,15 +330,6 @@ const INLINE_MODULES = [
       'function weRegisterLayerHooks(', 'function weDiscoveredGroupsOf('],
   },
   {
-    // ── 刀4：panel-tabs 按域拆出的 5 个兄弟模块（必须在组装点 src/panel-tabs.js **之前**：
-    //    组装点里的 render*Tab 按名字直接调它们的 render*Section / renderMascotFormCards 等，
-    //    内联后同作用域；函数声明本身有提升，但排在调用方前面才读得出依赖方向）。
-    file: 'src/panel-tabs-wallpaper.js',
-    why: '「壁纸库」页签第一节「当前壁纸」的渲染器（原 src/panel-tabs.js 的 38–104 行原样搬移；其余三节 P-D S3a/S3b 起住在 packages/wallpaper 的浏览器半边，见该包 client.build.json）',
-    markers: ['function renderWallpaperCurrentSection(ctx) {',
-      '    const { current, isLiveScene, onClear, onOpenPicker, onRefresh, onToggleAudio, onTogglePlay, onTogglePropsPanel, playbackLive, propsPanelOpen, renderUserPropsPanel, sel, setPickerOpener } = ctx;'],
-  },
-  {
     file: 'src/panel-tabs-appearance.js',
     why: '「外观」页签的节渲染器与字体一族（原 src/panel-tabs.js 的 520–1125 行原样搬移）',
     markers: ['function renderAppearanceThemeSection(ctx) {', '    const { onResetModule, onToggleThemeFollow, sel } = ctx;'],

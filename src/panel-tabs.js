@@ -62,19 +62,16 @@ function weComponentVisibleOf(components, name) {
   // 本页签只把 ctx **转交**给各节、自己不读字段 —— 所以那不是无操作声明，是"要什么写在签名处"。
   function renderWallpaperTab(ctx) {
     const { } = ctx;
-    // 第二/三/四节（切换过场 / 自动轮播 / 自定义壁纸）在 P-D S3b 起全部搬进
-    // packages/wallpaper 的浏览器半边 ⇒ 这里只画第一节，余下按面板节注册表续接。
-    // 屏上顺序仍由描述符的 order 决定（transition=20 / rotation=30 / uploads=40；顺序判据
-    // 见 verify-scene-live 的节顺序一节），**不**靠求值顺序。
-    // ⚠️ 注册表为空 = 该子包没装 / 被关：第一节照画，**不**整页签消失
-    //    （D3①/D3③ 在这条通道上的形态：缺的是那几节，不是这一页）。
+    // 四节（current / 切换过场 / 自动轮播 / 自定义壁纸）在 P-D S3a–S3c 起全部搬进
+    // packages/wallpaper 的浏览器半边 ⇒ 本页签**只画注册节**，屏上顺序全由描述符的
+    // order 决定（current=10 / transition=20 / rotation=30 / uploads=40；顺序判据见
+    // verify-scene-live 的节顺序一节），**不**靠求值顺序。
+    // ⚠️ 注册表为空 = 该子包没装 / 被关：本页签为空，**不**崩、不整页消失
+    //    （D3①/D3③ 在这条通道上的形态：缺的是这几节，不是这一页）。
     const registered = wePanelSectionsOf("library").map((section) => (
       React.createElement(React.Fragment, { key: section.id }, section.render(ctx))
     ));
-    return React.createElement(React.Fragment, null,
-      renderWallpaperCurrentSection(ctx),
-      registered,
-    );
+    return React.createElement(React.Fragment, null, registered);
   }
 
 

@@ -6067,6 +6067,13 @@ const HOST_BRIDGE_BINDINGS = {
   importPlaylistIntoDraft: () => importPlaylistIntoDraft,
   Toggle: () => Toggle,
   rotationIntervalDefault: () => ROTATION_INTERVAL_DEFAULT,
+  // ── 壁纸子包浏览器半边（packages/wallpaper，P-D S3c：当前壁纸节）的显式键集 ─────────────
+  // 来源 = packages/wallpaper/src/wallpaper-current-section.js 的**自由标识符**逐个点名：
+  //   VinylRecord / vinylSpinVisible（src/client.js 工厂作用域）· liveFailReasonOf（src/live-layer.js，
+  //   同一内联工厂作用域）。播放态 / 失败原因计算 / 动作体全留主包（ADR-0013 D20）⇒ 活绑定 getter。
+  VinylRecord: () => VinylRecord,
+  vinylSpinVisible: () => vinylSpinVisible,
+  liveFailReasonOf: () => liveFailReasonOf,
 };
 const HOST_BRIDGE_KEYS = Object.keys(HOST_BRIDGE_BINDINGS);
 for (const bridgeKey of HOST_BRIDGE_KEYS) {

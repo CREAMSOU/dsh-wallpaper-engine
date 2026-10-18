@@ -442,6 +442,26 @@ const requireMock = (spec) => {
 };
 const exportsObj = factory(requireMock);
 
+// P-D S3c：「壁纸库」页签四节（含「当前壁纸」）已全部搬进 packages/wallpaper 的浏览器
+// 半边 ⇒ 抽屉里的「选择壁纸」按钮只在该产物登记 library 节之后才出现。与真实 loader 同形，
+// 在 apply() **之前**求值该产物（它的 factory 用主 bundle 的显式键集把四节登记进注册表）。
+// 不装这份产物 ⇒ 下面「picker open button found」必然红 —— 那是判据在正确报警，不是回归。
+{
+  const wallpaperArtifact = readFileSync(
+    new URL('../packages/wallpaper/lib/client.wallpaper.js', import.meta.url), 'utf8');
+  const subHandoffs = [];
+  sandbox.window.__ModuleLoader__ = { load: (h) => { subHandoffs.push(h); } };
+  new vm.Script(wallpaperArtifact, { filename: 'client.wallpaper.js' }).runInContext(sandbox);
+  sandbox.window.__ModuleLoader__ = { load: (h) => { cap.handoff = h; } };
+  if (subHandoffs.length !== 1) {
+    throw new Error('wallpaper 浏览器半边必须恰好注册一份 bundle（实际 ' + subHandoffs.length + ' 份）');
+  }
+  const wallpaperExports = subHandoffs[0].factory((spec) => (
+    spec === 'dsh-plugin-wallpaper-engine' ? exportsObj : requireMock(spec)
+  ));
+  if (typeof wallpaperExports.apply !== 'function') throw new Error('wallpaper 浏览器半边必须导出 apply');
+}
+
 const registrations = [];
 const pickerRenders = [];
 const slots = {

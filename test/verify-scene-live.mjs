@@ -139,9 +139,17 @@ async function loadExtensionRegistry() {
   // 搬出 ⇒ 按标准包内源文件 import 真渲染器，描述符与 packages/wallpaper/src/client.js 逐字同形
   // （title 是 accessor + order 20/30/40）。**故意乱序登记**：注册表按 (order, seq) 排序，下面
   // 的顺序快照就在验证这一点（否则"登记顺序恰好等于期望顺序"会让这条判据空转）。
+  const wallpaperCurrentSectionMod = await import(pathToFileURL(join(root, 'packages', 'wallpaper', 'src', 'wallpaper-current-section.js')).href);
   const wallpaperRotationSectionMod = await import(pathToFileURL(join(root, 'packages', 'wallpaper', 'src', 'wallpaper-rotation-section.js')).href);
   const wallpaperUploadsSectionMod = await import(pathToFileURL(join(root, 'packages', 'wallpaper', 'src', 'wallpaper-uploads-section.js')).href);
   const wallpaperTransitionSectionMod = await import(pathToFileURL(join(root, 'packages', 'wallpaper', 'src', 'wallpaper-transition-section.js')).href);
+  // P-D S3c：第四节「当前壁纸」搬走后，四节全部由注册表提供；order = 10/20/30/40。
+  reg.weRegisterPanelSection('library', 'wallpaper-current', {
+    id: 'wallpaper-current',
+    get title() { return globalThis.weT('当前壁纸'); },
+    order: 10,
+    render: wallpaperCurrentSectionMod.renderWallpaperCurrentSection,
+  });
   reg.weRegisterPanelSection('library', 'wallpaper-rotation', {
     id: 'wallpaper-rotation',
     get title() { return globalThis.weT('自动轮播'); },
@@ -160,11 +168,12 @@ async function loadExtensionRegistry() {
     order: 20,
     render: wallpaperTransitionSectionMod.renderWallpaperTransitionSection,
   });
-  // 顺序快照（判据①）：三节齐全 + 乱序登记下仍按 order 20/30/40 排序。
+  // 顺序快照（判据①）：四节齐全 + 乱序登记下仍按 order 10/20/30/40 排序（登记顺序故意打乱：
+  // 先 rotation(30)，再 uploads(40)，再 current(10)，最后 transition(20)）。
   const libSections = reg.wePanelSectionsOf('library');
-  check('P-D S3b：壁纸库注册表三节齐全 · 乱序登记 ⇒ 按 order 20/30/40 排序（顺序快照）',
-    libSections.map((s) => s.id).join(',') === 'wallpaper-transition,wallpaper-rotation,wallpaper-uploads'
-    && libSections.map((s) => s.order).join(',') === '20,30,40',
+  check('P-D S3c：壁纸库注册表四节齐全 · 乱序登记 ⇒ 按 order 10/20/30/40 排序（顺序快照）',
+    libSections.map((s) => s.id).join(',') === 'wallpaper-current,wallpaper-transition,wallpaper-rotation,wallpaper-uploads'
+    && libSections.map((s) => s.order).join(',') === '10,20,30,40',
     'got=' + libSections.map((s) => s.id + ':' + s.order).join(', '));
   return reg;
 }
@@ -1035,16 +1044,22 @@ const tabsSrc = panelText();
 const fontSectionSrc = readFileSync(join(root, 'packages', 'fonts', 'src', 'appearance-font-section.js'), 'utf8')
   .replace(/\r\n/g, '\n');
 const tabsSrcWithFontSection = tabsSrc + '\n;\n' + fontSectionSrc;
-// P-D S3a/S3b：「壁纸库」页签第二/三/四节（切换过场 / 自动轮播 / 自定义壁纸）的渲染器也随
-// 壁纸子包搬出（packages/wallpaper/src/wallpaper-*-section.js）⇒ 同一条口径：判"该节画什么 /
-// 解构了哪些 ctx 字段"的判据读 **页签族 + 包内各节** 的并集。
+// P-D S3a/S3b/S3c：「壁纸库」页签四节（当前壁纸 / 切换过场 / 自动轮播 / 自定义壁纸）的渲染器
+// 全部随壁纸子包搬出（packages/wallpaper/src/wallpaper-*-section.js）⇒ 同一条口径：判"该节
+// 画什么 / 解构了哪些 ctx 字段"的判据读 **页签族 + 包内四节** 的并集（运行时本来就在同一
+// 作用域；文件住处变了，判据的取文来源跟着变，强度不变）。
+const wallpaperCurrentSrc = readFileSync(join(root, 'packages', 'wallpaper', 'src', 'wallpaper-current-section.js'), 'utf8')
+  .replace(/\r\n/g, '\n');
 const wallpaperTransitionSrc = readFileSync(join(root, 'packages', 'wallpaper', 'src', 'wallpaper-transition-section.js'), 'utf8')
   .replace(/\r\n/g, '\n');
 const wallpaperRotationSrc = readFileSync(join(root, 'packages', 'wallpaper', 'src', 'wallpaper-rotation-section.js'), 'utf8')
   .replace(/\r\n/g, '\n');
 const wallpaperUploadsSrc = readFileSync(join(root, 'packages', 'wallpaper', 'src', 'wallpaper-uploads-section.js'), 'utf8')
   .replace(/\r\n/g, '\n');
-const wallpaperSectionsSrc = wallpaperTransitionSrc + '\n;\n' + wallpaperRotationSrc + '\n;\n' + wallpaperUploadsSrc;
+const wallpaperSectionsSrc = wallpaperCurrentSrc + '\n;\n' + wallpaperTransitionSrc + '\n;\n' + wallpaperRotationSrc + '\n;\n' + wallpaperUploadsSrc;
+// 判「壁纸库页签里的节」的内容判据一律读这个并集（页签族 + 包内四节）：移动文件不该让
+// 判据看不到被搬走的节（S3a 起同一条纪律）。
+const tabsSrcAll = tabsSrc + '\n;\n' + wallpaperSectionsSrc;
 // 组装点自身：只喂给"8 个 render*Tab 声明在 src/panel-tabs.js"那条不变量（族并集会让它变弱）。
 const tabsHubSrc = readFileSync(join(root, 'src', 'panel-tabs.js'), 'utf8');
 // `fnBody` 的实现在 `test/tools/assert-harness.mjs`（`fnNameBody`，取首个 `\n}`；
@@ -2781,11 +2796,15 @@ check('settings 白名单保留 userProps（按 token 存标量）',
     === '{"tok":{"c":"x","n":1}}');
 // i18n 之后按钮文案走 `weT("…")`（中文原文即键）—— 判据改认带包装的形态，
 // 顺序判据仍锚在"属性入口在播放/暂停按钮之前"这个**位置关系**上。
+const propsEntryOk = (text) =>
+  text.includes('(current.type === "scene" || current.type === "web") && sel.propsUrl')
+  && !text.includes('we-picker__btn--props')
+  && text.indexOf('weT("壁纸属性")') !== -1
+  && text.indexOf('weT("壁纸属性")') < text.indexOf('weT("暂停")');
 check('「壁纸属性」按钮：仅场景/网页壁纸 + 常规按钮样式（并入播放控制行、排在「暂停」之前）',
-  tabsSrc.includes('(current.type === "scene" || current.type === "web") && sel.propsUrl')
-    && !tabsSrc.includes('we-picker__btn--props')
-    && tabsSrc.indexOf('weT("壁纸属性")') !== -1
-    && tabsSrc.indexOf('weT("壁纸属性")') < tabsSrc.indexOf('weT("暂停")'));
+  propsEntryOk(tabsSrcAll), '取文 = 页签族 + 包内四节并集（S3c 起当前壁纸节住在包里）');
+// 负对照：只给页签族（不并包内节）⇒ 同一条判据必须判红（否则"搬到包里"会让这条判据静默失效）。
+check('negative control: 取文漏掉包内「当前壁纸」节 ⇒ 「壁纸属性」判据判红', !propsEntryOk(tabsSrc));
 // 「侧栏播放控制行」这一节钉两件事：全局主按钮款式不被二次覆盖、窄容器下控制行不溢出。
 // 两件都只看**当前形态**，不涉及某枚具体按钮。
 {
@@ -6494,6 +6513,114 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
     check('P-D S3b：switchTransitionOf 替身的方向集合与 src/client.js 的 SWITCH_DIRECTIONAL 同源',
       realDirectional.join(',') === stubDirectional.slice().sort().join(','),
       '真=[' + realDirectional.join(',') + '] 替身=[' + stubDirectional.join(',') + ']');
+  }
+
+  // ── P-D S3c：搬出去的「当前壁纸」节：可见状态快照 + 属性面板入口纪律 ─────────────
+  // 搬走的是**消费者**：包内源码里"那几行还在"只是必要条件，真正要钉的是"按 sel 的真值
+  // 画对的那一行 / 画对的那个 playing"。做法：真渲染整页签（四节都经注册表），按节点类名 +
+  // 文本取快照；每条再加负对照（合成输入喂回同一条判据必须判红）。
+  {
+    const renderCurrent = (sel, ctxOver) => panelMod.renderWallpaperTab(
+      Object.assign({}, CASES[0].ctx(sel), ctxOver));
+    const walkNodes = (root, visit) => {
+      if (Array.isArray(root)) { root.forEach((x) => walkNodes(x, visit)); return; }
+      if (!root || typeof root !== 'object') return;
+      visit(root);
+      if (Array.isArray(root.children)) root.children.forEach((x) => walkNodes(x, visit));
+    };
+    const nodesOfClass = (root, cls) => {
+      const out = [];
+      walkNodes(root, (n) => { if (n.props && n.props.className === cls) out.push(n); });
+      return out;
+    };
+    const errorLinesOf = (tree) => nodesOfClass(tree, 'we-picker__current-error')
+      .flatMap((n) => (n.children || []).filter((c) => typeof c === 'string'));
+    const withLiveFail = (reason, fn) => {
+      const prev = globalThis.liveFailReasonOf;
+      globalThis.liveFailReasonOf = () => reason;
+      try { return fn(); } finally { globalThis.liveFailReasonOf = prev; }
+    };
+
+    // ① 失败原因三行：videoError / blockedNote / liveFailReasonOf 三个来源**各自**成行，
+    //    互不吞并；空值时一行都不画（条件是分支，不是常驻行）。
+    const selVideo = Object.assign({}, st, { videoError: '解码失败' });
+    const selBlocked = Object.assign({}, st, { blockedNote: '分级拦截' });
+    const gotVideo = withLiveFail('', () => errorLinesOf(renderCurrent(selVideo)));
+    const gotBlocked = withLiveFail('', () => errorLinesOf(renderCurrent(selBlocked)));
+    const gotLive = withLiveFail('no-frame', () => errorLinesOf(renderCurrent(st)));
+    const gotNone = withLiveFail('', () => errorLinesOf(renderCurrent(st)));
+    const threeReasonOk = (video, blocked, live, none) =>
+      video.length === 1 && video[0] === '解码失败'
+      && blocked.length === 1 && blocked[0] === '分级拦截'
+      && live.length === 1 && live[0].includes('实时渲染失败') && live[0].includes('no-frame')
+      && none.length === 0;
+    check('P-D S3c：「当前壁纸」节三条失败原因各自成行（videoError / blockedNote / liveFailReasonOf），空值全不画',
+      threeReasonOk(gotVideo, gotBlocked, gotLive, gotNone),
+      'video=' + JSON.stringify(gotVideo) + ' blocked=' + JSON.stringify(gotBlocked)
+      + ' live=' + JSON.stringify(gotLive) + ' none=' + JSON.stringify(gotNone));
+    // 负对照：喂"三行同时出现 / 恒空也画一行"的合成快照，同一条判据必须判红。
+    check('negative control：失败原因合成快照被判红（漏行 / 恒画行都看得见）',
+      !threeReasonOk([], gotBlocked, gotLive, gotNone)
+      && !threeReasonOk(gotVideo, gotBlocked, ['实时渲染失败（x）'], gotNone)
+      && !threeReasonOk(gotVideo, gotBlocked, gotLive, ['恒画的一行']));
+
+    // ② VinylRecord 的播放态：`playing = playbackLive && Boolean(sel.url) && vinylSpinVisible()`。
+    //    四组输入钉住三个与操作数（任一项不成立 ⇒ 不转）；第三组就是 vinylSpinVisible 的
+    //    **反比**语义（开关说"不转"⇒ playing 必须 false，不许被别的真值短路）。
+    const vinylPlayingStates = (entries) => {
+      const prevVinyl = globalThis.VinylRecord;
+      const out = [];
+      globalThis.VinylRecord = (props) => { out.push(props && props.playing); return null; };
+      try {
+        for (const e of entries) {
+          const prevSpin = globalThis.vinylSpinVisible;
+          globalThis.vinylSpinVisible = () => e.spin;
+          try { renderCurrent(e.sel, e.ctxOver); } finally { globalThis.vinylSpinVisible = prevSpin; }
+        }
+      } finally { globalThis.VinylRecord = prevVinyl; }
+      return out;
+    };
+    const vinylPlayingOk = (states) => states.length === 4
+      && states[0] === true && states[1] === false && states[2] === false && states[3] === false;
+    const vStates = vinylPlayingStates([
+      { sel: st, ctxOver: { playbackLive: true }, spin: true },
+      { sel: st, ctxOver: { playbackLive: true }, spin: false },
+      { sel: st, ctxOver: { playbackLive: false }, spin: true },
+      { sel: Object.assign({}, st, { url: '' }), ctxOver: { playbackLive: true }, spin: true },
+    ]);
+    check('P-D S3c：VinylRecord.playing 三与一（playbackLive · sel.url · vinylSpinVisible 反比）四组快照',
+      vinylPlayingOk(vStates), 'playing=' + JSON.stringify(vStates));
+    // 负对照：四组里任一门被拆掉，对应的那格会翻成 true ⇒ 同一条判据判红。
+    check('negative control：拆掉任一与操作数（或让 vinylSpinVisible 失效）⇒ 播放态快照判红',
+      !vinylPlayingOk([true, true, false, false])
+      && !vinylPlayingOk([true, false, true, false])
+      && !vinylPlayingOk([true, false, false, true]));
+
+    // ③ 属性面板入口：只认 `ctx.renderUserPropsPanel()`（渲染器自己不画面板，也不许在包内定义它）。
+    //    ⚠️ 实测语义：节**无条件调用**它（不是 `propsPanelOpen && …`）—— 可见性由面板渲染器自己
+    //    决定（关着时返回 null）。所以判据钉「树里画不画 = ctx 那个函数的返回值」，不把门写进节里
+    //    （否则就是判据替实现另立一套契约）。
+    const propsStubNode = () => REACT.createElement('div', { className: 'we-picker__props-stub' });
+    const propsTree = renderCurrent(st, {
+      propsPanelOpen: false,
+      renderUserPropsPanel: propsStubNode,
+    });
+    const propsOffTree = renderCurrent(st, {
+      propsPanelOpen: true,
+      renderUserPropsPanel: () => null,
+    });
+    const propsPanelViaCtxOnly = (text) => text.includes('renderUserPropsPanel()')
+      && !/function\s+renderUserPropsPanel\s*\(/.test(text)
+      && !/const\s+renderUserPropsPanel\s*=/.test(text);
+    check('P-D S3c：属性面板画不画由 ctx.renderUserPropsPanel() 的返回值决定（节原样调用、不另立可见性契约）',
+      nodesOfClass(propsTree, 'we-picker__props-stub').length === 1
+      && nodesOfClass(propsOffTree, 'we-picker__props-stub').length === 0,
+      'returns-node=' + nodesOfClass(propsTree, 'we-picker__props-stub').length
+      + ' returns-null=' + nodesOfClass(propsOffTree, 'we-picker__props-stub').length);
+    check('P-D S3c：包内四节对 renderUserPropsPanel **只调用不定义**（跨包通道只有 ctx 显式键）',
+      propsPanelViaCtxOnly(wallpaperSectionsSrc), '包内出现定义即假');
+    check('negative control：包内自带定义 ⇒ 同一条判据判红',
+      !propsPanelViaCtxOnly('function renderUserPropsPanel() {\n    return null;\n  }'));
   }
 
   // ── appearance / effects：同一套挂载台（ctx 由**渲染器自己的解构行**驱动）────────

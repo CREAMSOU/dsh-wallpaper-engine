@@ -1,5 +1,5 @@
 /**
- * client.js — 壁纸子包的**浏览器半边**入口（P-D 阶段1：S3a 打样 + S3b 两节续搬）。
+ * client.js — 壁纸子包的**浏览器半边**入口（P-D 阶段1：S3a 打样，S3b / S3c 依次续搬）。
  *
  * ⚠️ 归属（务必先读）：用户口径 **§6.1 = A「代码归属，不是状态归属」**（正本 = ADR-0013 **D20**）。
  *    随包走的是**渲染器与描述符**；上传目录 / 官方资源目录 / 上传列表 / 确认令牌 / 过场与轮播的
@@ -20,7 +20,8 @@
  * 下面的 WALLPAPER_SECTIONS_HOST_REQUIRED 与主包 `src/client.js` 的 HOST_BRIDGE_BINDINGS
  * 壁纸段**逐键一致**（缺键大声抛，不许静默 undefined）。键集依据 = 被搬渲染器的**自由标识符**
  * 逐个点名：
- *   · 三节共享：React / weT / renderConfirmRow；切换过场另要 ctlText / switchTransitionOf /
+ *   · 四节共享：React / weT；当前壁纸另要 VinylRecord / vinylSpinVisible / liveFailReasonOf；
+ *     自定义壁纸另要 renderConfirmRow；切换过场另要 ctlText / switchTransitionOf /
  *     SWITCH_TRANSITIONS / SWITCH_DIRS / SWITCH_DIR_LABELS / SWITCH_SPEEDS；
  *     自动轮播另要 Toggle / groupWallpapers / startCreateGroup / startEditGroup /
  *     saveEditingGroup / cancelEditGroup / importPlaylistIntoDraft / rotationIntervalDefault；
@@ -38,6 +39,8 @@
 const WALLPAPER_SECTIONS_HOST_REQUIRED = [
   // 渲染内核（主 bundle 的共享零件表）
   'React', 'weT', 'ctlText',
+  // 当前壁纸（第一节）：转盘组件 / 转盘自旋开关 / 实时渲染失败原因（getter 直给函数引用）
+  'VinylRecord', 'vinylSpinVisible', 'liveFailReasonOf',
   // 切换过场（第二节）：类型表 / 方向表 / 速度档 / 当前生效值的活绑定
   'switchTransitionOf', 'SWITCH_TRANSITIONS', 'SWITCH_DIRS', 'SWITCH_DIR_LABELS', 'SWITCH_SPEEDS',
   // 自动轮播（第三节）：列表 / 编辑草稿 / 选片下钻 / 开关 / 确认行 / 默认间隔窄键
@@ -56,6 +59,7 @@ for (const key of WALLPAPER_SECTIONS_HOST_REQUIRED) {
 }
 const {
   React, weT, ctlText,
+  VinylRecord, vinylSpinVisible, liveFailReasonOf,
   switchTransitionOf, SWITCH_TRANSITIONS, SWITCH_DIRS, SWITCH_DIR_LABELS, SWITCH_SPEEDS,
   groupWallpapers, startCreateGroup, startEditGroup, saveEditingGroup, cancelEditGroup,
   importPlaylistIntoDraft, Toggle, rotationIntervalDefault,
@@ -63,15 +67,22 @@ const {
   registerPanelSection,
 } = host;
 
-/* ===== 跨包登记：「壁纸库」页签第二/三/四节（全部走面板节注册表）===== */
+/* ===== 跨包登记：「壁纸库」页签第一/二/三/四节（全部走面板节注册表）===== */
 
-// 主包 src/panel-tabs.js 的 `renderWallpaperTab(ctx)` 画完第一节之后，按注册表续接本包登记的节
-// （`wePanelSectionsOf('library')`，见 src/extension-registry.js）。三个硬口径：
+// 主包 src/panel-tabs.js 的 `renderWallpaperTab(ctx)` 本身不再内置任何一节，只按注册表续接本包
+// 登记的节（`wePanelSectionsOf('library')`，见 src/extension-registry.js）。三个硬口径：
 //   ① `title` 必须是 **getter**：注册发生在 bundle 求值期，那时 i18n 表 / `weT` 都还没到位，
 //      注册期读词会把 `weT` 拉到求值期（字体包 / fx / parallax 的 title getter 同款理由）。
-//   ② order：transition=20 / rotation=30 / uploads=40 —— 与搬前组装点里的调用序逐位相同
-//      （current 仍是主包组装点里的第一节，不经过注册表）。顺序由 order 决定、不靠求值顺序。
+//   ② order：current=10 / transition=20 / rotation=30 / uploads=40 —— 与搬前组装点里的调用序逐位
+//      相同（S3c 起 current 也走注册表；主包组装点本身只画注册节，不再内置任何一节）。
+//      顺序由 order 决定、不靠求值顺序。
 //   ③ 注册表只登记、不持有状态：ctx 由主包在渲染处构造（一个键都不删），本包不缓存、不自订阅。
+registerPanelSection('library', 'wallpaper-current', {
+  id: 'wallpaper-current',
+  get title() { return weT("当前壁纸"); },
+  order: 10,
+  render: renderWallpaperCurrentSection,
+});
 registerPanelSection('library', 'wallpaper-transition', {
   id: 'wallpaper-transition',
   get title() { return weT("切换过场"); },

@@ -431,7 +431,7 @@ assert.equal(thrown, null, 'apply(ctx) 不得抛（夹具已给 slots/effect/doc
 console.log('apply threw: (none)');
 console.log('slot registrations:', JSON.stringify(registrations));
 
-// P-D S3b：浏览器半边新增的 host 键必须在**主 bundle 的公开键面**里。两种失败形状都钉住：
+// P-D S3b/S3c：浏览器半边新增的 host 键必须在**主 bundle 的公开键面**里。两种失败形状都钉住：
 // ①键没登记 ⇒ `undefined`（子包自检会大声抛，但这条要在产物层面先红，不等运行期）；
 // ②`rotationIntervalDefault` 允许"抄成同一个数字"——那是两份真源，改默认值就静默分叉，
 //   所以必须钉**同源**（=== 设置 schema 的 DEFAULTS.rotationInterval）；负对照证明判据不恒真。
@@ -439,7 +439,17 @@ const NEW_WALLPAPER_HOST_KEYS = [
   'switchTransitionOf', 'SWITCH_TRANSITIONS', 'SWITCH_SPEEDS', 'SWITCH_DIR_LABELS', 'SWITCH_DIRS',
   'groupWallpapers', 'startCreateGroup', 'startEditGroup', 'saveEditingGroup', 'cancelEditGroup',
   'importPlaylistIntoDraft', 'Toggle', 'rotationIntervalDefault',
+  // P-D S3c：第一节「当前壁纸」用到的三个。
+  'VinylRecord', 'vinylSpinVisible', 'liveFailReasonOf',
 ];
+// P-D S3c：属性面板入口**只能**经 ctx 传（渲染器拿到的是现成函数，不是 host 键）。
+// 一旦有人把它登记成 host 键，跨包通道就从「ctx 注入」变成「主 bundle 键面」，
+// 等于给渲染器开了第二个入口 —— 用负对照证明这条判据会红。
+const propsPanelNotHostKey = (keys) => !keys.includes('renderUserPropsPanel');
+assert.ok(propsPanelNotHostKey(exportsObj.hostBridgeKeys),
+  'renderUserPropsPanel 不得登记为 host 键（属性面板入口只走 ctx）');
+assert.ok(!propsPanelNotHostKey(['renderUserPropsPanel', 'weT']),
+  'negative control：把 renderUserPropsPanel 放进键表 ⇒ 同一条判据必须判红');
 for (const key of NEW_WALLPAPER_HOST_KEYS) {
   assert.ok(exportsObj.hostBridgeKeys.includes(key), '主 bundle 键面必须包含 P-D S3b 键：' + key);
   assert.notEqual(exportsObj[key], undefined, 'P-D S3b 键不得落到 undefined：' + key);
@@ -4221,6 +4231,9 @@ setTimeout(async () => {
       anchor: ['function renderWallpaperTransitionSection(ctx) {', 'we-picker__seg'] },
     { file: '../packages/wallpaper/src/wallpaper-rotation-section.js', user: '壁纸库自动轮播节',
       anchor: ['function renderWallpaperRotationSection(ctx) {', 'we-picker__rotation-interval'] },
+    // P-D S3c：第一节「当前壁纸」也搬进包内（四节全出户）⇒ 同一条接缝纪律必须对包内文件成立。
+    { file: '../packages/wallpaper/src/wallpaper-current-section.js', user: '壁纸库当前壁纸节',
+      anchor: ['function renderWallpaperCurrentSection(ctx) {', 'we-picker__current-actions'] },
   ];
   for (const r of RENDERERS) {
     // 刀4：`family` 条目按构建序扫**族并集**（节渲染器搬出去了，单文件读法会漏掉它们）。

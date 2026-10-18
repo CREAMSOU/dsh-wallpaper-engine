@@ -1,12 +1,14 @@
 /**
- * 「壁纸库」页签第一节「当前壁纸」的渲染器（原 src/panel-tabs.js）。
- * 本节渲染器从 src/panel-tabs.js 按域搬出，函数体逐字未改；父渲染器 renderWallpaperTab 仍在组装点
- * （src/panel-tabs.js）调用本节，并在其后按面板节注册表续接余下三节：
- *   · 「切换过场」→ packages/wallpaper/src/wallpaper-transition-section.js（P-D S3b，order 20）
- *   · 「自动轮播」→ packages/wallpaper/src/wallpaper-rotation-section.js（P-D S3b，order 30）
- *   · 「自定义壁纸」→ packages/wallpaper/src/wallpaper-uploads-section.js（P-D S3a，order 40）
- * 内联顺序见 scripts/build-client.mjs：本模块排在组装点之前。
- * 与同族模块共享同一契约：只读 ctx、不写 selection、不调 emit（判据扫全族并集）。
+ * 「壁纸库」页签第一节「当前壁纸」的渲染器（P-D S3c 由 src/panel-tabs-wallpaper.js 逐字搬来）。
+ *
+ * 归属（ADR-0013 D20 / P-D S0 口径）：随包走的是**渲染器**；当前壁纸的 selection、播放动作体、
+ * 失败原因计算仍在主包（src/client.js / src/live-layer.js）⇒ 本文件**不持键、不写 selection、
+ * 不调 emit**，只读 ctx；跨包通道只有主 bundle 的显式 host 键集：
+ *   · VinylRecord / vinylSpinVisible（src/client.js 工厂作用域）· liveFailReasonOf（src/live-layer.js）
+ *   · 四节共享的 React / weT
+ * 内联形状见 packages/wallpaper/client.build.json；入口的 registerPanelSection 把 render 登记进
+ * 面板节注册表（library，order 10）。与同族三节共享同一契约：只读 ctx、不写 selection、不调 emit
+ * （判据扫全族并集，见 test/verify-scene-live.mjs / test/verify-client.mjs）。
  */
   function renderWallpaperCurrentSection(ctx) {
     const { current, isLiveScene, onClear, onOpenPicker, onRefresh, onToggleAudio, onTogglePlay, onTogglePropsPanel, playbackLive, propsPanelOpen, renderUserPropsPanel, sel, setPickerOpener } = ctx;

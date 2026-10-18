@@ -3,6 +3,14 @@
   "artifact": "lib/client.wallpaper.js",
   "inline": [
     {
+      "file": "src/wallpaper-current-section.js",
+      "why": "「壁纸库」页签第一节「当前壁纸」的渲染器（原 src/panel-tabs-wallpaper.js:11-108，逐字搬来）；入口的 registerPanelSection 把它的 render 登记进面板节注册表（library，order 10）",
+      "markers": [
+        "function renderWallpaperCurrentSection(ctx) {",
+        "we-picker__current-actions"
+      ]
+    },
+    {
       "file": "src/wallpaper-transition-section.js",
       "why": "「壁纸库」页签第二节「切换过场」的渲染器（原 src/panel-tabs-wallpaper.js:108-167，逐字搬来）；入口的 registerPanelSection 把它的 render 登记进面板节注册表（library，order 20）",
       "markers": [
