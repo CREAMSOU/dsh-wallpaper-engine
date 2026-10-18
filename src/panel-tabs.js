@@ -207,6 +207,12 @@ function weComponentVisibleOf(components, name) {
         }, sidebarSurface ? weT("去挑一张 ›") : weT("选择壁纸")),
       );
     }
+    // P-D S3d：播放配置两节（倍速/帧率上限 order 60、适配/翻转 order 70）已搬进壁纸子包的
+    // 浏览器半边 ⇒ 组装点只按注册表续接（`wePanelSectionsOf('playback')`，与 library 页签同款）。
+    // 注册表为空 ⇒ 只是少这两节，整页签照旧渲染（与 library 的降级口径一致）。
+    const registered = wePanelSectionsOf("playback").map((section) => (
+      React.createElement(React.Fragment, { key: section.id }, section.render(ctx))
+    ));
     return React.createElement(React.Fragment, null,
       React.createElement("div", { className: "we-picker__section" },
         React.createElement("div", { className: "we-picker__section-head" },
@@ -215,8 +221,7 @@ function weComponentVisibleOf(components, name) {
         renderEffectsSlidersSection(ctx),
         renderEffectsLiveSection(ctx),
         renderEffectsSourceSection(ctx),
-        renderEffectsPlaybackSection(ctx),
-        renderEffectsFitSection(ctx),
+        registered,
       ),
     );
   }

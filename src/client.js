@@ -6074,6 +6074,12 @@ const HOST_BRIDGE_BINDINGS = {
   VinylRecord: () => VinylRecord,
   vinylSpinVisible: () => vinylSpinVisible,
   liveFailReasonOf: () => liveFailReasonOf,
+  // ── 壁纸子包浏览器半边（packages/wallpaper，P-D S3d：播放配置两节）的显式键集 ─────────
+  // 来源 = packages/wallpaper/src/playback-rate-section.js / wallpaper-fit-section.js 的自由标识符：
+  //   FPS_CAP_VALUES（lib/settings-schema.js）· codecLabel（src/client-audio-playback.js）—— 两者都在
+  //   主 bundle 的内联工厂作用域里。倍速 / 帧率 / 适配 / 翻转的动作体全留主包（ADR-0013 D20）⇒ 活绑定。
+  FPS_CAP_VALUES: () => FPS_CAP_VALUES,
+  codecLabel: () => codecLabel,
 };
 const HOST_BRIDGE_KEYS = Object.keys(HOST_BRIDGE_BINDINGS);
 for (const bridgeKey of HOST_BRIDGE_KEYS) {

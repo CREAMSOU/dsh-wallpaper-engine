@@ -12,7 +12,7 @@ import { stripComments, stripExportBlocks } from './tools/js-text.mjs';
 // 刀3：样式族取文（8 个域模块 + 组装点，构建序拼接）——别再自己 readFileSync 单文件。
 import { styleText, panelText, scopeText } from './tools/src-scope.mjs';
 // P-D S3b：窄键 `rotationIntervalDefault` 必须与设置 schema 的默认值**同源**（下面有判据）。
-import { DEFAULTS as SCHEMA_DEFAULTS } from '../lib/settings-schema.js';
+import { DEFAULTS as SCHEMA_DEFAULTS, FPS_CAP_VALUES as SCHEMA_FPS_CAP_VALUES } from '../lib/settings-schema.js';
 // 分支级"改了 store 却没通知"的分析与审计工具**同源**（避免两份判据分叉）；
 // `DEF`/`defName` 也从工具导入 —— 定义形态只有一份，形态补齐时两处一起动。
 import { pathNotifications, definitionsOf, DEF, defName } from './tools/branch-notify.mjs';
@@ -441,6 +441,8 @@ const NEW_WALLPAPER_HOST_KEYS = [
   'importPlaylistIntoDraft', 'Toggle', 'rotationIntervalDefault',
   // P-D S3c：第一节「当前壁纸」用到的三个。
   'VinylRecord', 'vinylSpinVisible', 'liveFailReasonOf',
+  // P-D S3d：播放配置两节（倍速/帧率上限、适配/翻转）用到的两个。
+  'FPS_CAP_VALUES', 'codecLabel',
 ];
 // P-D S3c：属性面板入口**只能**经 ctx 传（渲染器拿到的是现成函数，不是 host 键）。
 // 一旦有人把它登记成 host 键，跨包通道就从「ctx 注入」变成「主 bundle 键面」，
@@ -461,6 +463,37 @@ assert.ok(rotationIntervalDefaultSameSource(exportsObj.rotationIntervalDefault, 
   + exportsObj.rotationIntervalDefault + ' vs schema ' + SCHEMA_DEFAULTS.rotationInterval + '）');
 assert.ok(!rotationIntervalDefaultSameSource(SCHEMA_DEFAULTS.rotationInterval + 1, SCHEMA_DEFAULTS),
   'negative control：把错值喂进同源判据必须判红（否则判据恒真）');
+
+// ── P-D S3d：播放配置两节的两个新键必须是**同一引用 / 活绑定**，不是内容拷贝 ──────────
+// FPS_CAP_VALUES 的裁判是设置 schema 导出的同一个数组对象；拷贝一份内容相同的数组必须判红。
+// 内联模块是主 bundle 里的一份**同源副本**（构建期文本注入，不是同一个 JS 模块实例），所以判据分两层：
+//   ① 稳定引用：getter 每次必须取回同一个数组（不许每次新建拷贝）；
+//   ② 内容同源：档位表必须与 settings-schema 导出逐项一致（不许分叉）。
+const stableArrayRef = (read) => {
+  const first = read();
+  const second = read();
+  return first === second;
+};
+const sameFpsTable = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]);
+assert.ok(stableArrayRef(() => exportsObj.FPS_CAP_VALUES),
+  'FPS_CAP_VALUES 必须是稳定引用（每次取回同一个数组，不是每次新建拷贝）');
+assert.ok(!stableArrayRef(() => [0, 60, 30]),
+  'negative control：每次新建内容相同的数组 ⇒ 稳定引用判据必须判红');
+assert.ok(sameFpsTable(exportsObj.FPS_CAP_VALUES, SCHEMA_FPS_CAP_VALUES),
+  'FPS_CAP_VALUES 内容必须与 settings-schema 档位表一致（不许分叉）');
+assert.ok(!sameFpsTable([...SCHEMA_FPS_CAP_VALUES, 24], SCHEMA_FPS_CAP_VALUES),
+  'negative control：档位表分叉（多一档已退役的 24）必须判红');
+// codecLabel 的裁判是「稳定 getter（每次取回同一个函数）+ 映射逐项一致」；外包一层就会红。
+const CODEC_LABELS = { avc1: 'H.264', hvc1: 'H.265', hev1: 'H.265', av01: 'AV1', vp09: 'VP9', mp4v: 'MPEG-4' };
+const codecLabelFirst = exportsObj.codecLabel;
+const codecLabelSecond = exportsObj.codecLabel;
+assert.ok(codecLabelFirst === codecLabelSecond,
+  'codecLabel 必须是稳定 getter（每次取回同一个函数，不是临时包装）');
+assert.ok(Object.entries(CODEC_LABELS).every(([codec, label]) => codecLabelFirst(codec) === label)
+  && codecLabelFirst('xyz') === 'xyz',
+  'codecLabel 必须与主包映射逐项一致（未知编码原样返回）');
+assert.ok(exportsObj.codecLabel('avc1') !== 'H.265',
+  'negative control：编码映射错位必须判红');
 
 const sectionReg = registrations.find((r) => r.key === 'settings.section');
 console.log('registered as first-level settings.section:', !!sectionReg);
@@ -4234,6 +4267,11 @@ setTimeout(async () => {
     // P-D S3c：第一节「当前壁纸」也搬进包内（四节全出户）⇒ 同一条接缝纪律必须对包内文件成立。
     { file: '../packages/wallpaper/src/wallpaper-current-section.js', user: '壁纸库当前壁纸节',
       anchor: ['function renderWallpaperCurrentSection(ctx) {', 'we-picker__current-actions'] },
+    // P-D S3d：播放配置两节（倍速/帧率上限、适配/翻转）搬进包内 ⇒ 同一条接缝纪律必须对包内文件成立。
+    { file: '../packages/wallpaper/src/playback-rate-section.js', user: '播放页倍速/帧率上限节',
+      anchor: ['function renderEffectsPlaybackSection(ctx) {', 'we-picker__prog-track'] },
+    { file: '../packages/wallpaper/src/wallpaper-fit-section.js', user: '播放页适配/翻转节',
+      anchor: ['function renderEffectsFitSection(ctx) {', 'weT("水平翻转")'] },
   ];
   for (const r of RENDERERS) {
     // 刀4：`family` 条目按构建序扫**族并集**（节渲染器搬出去了，单文件读法会漏掉它们）。
@@ -4381,7 +4419,12 @@ setTimeout(async () => {
   // 声明序），只是取文来源跟着实现走 —— 不并上它，HELPERS 那五条会以"找不到"的形式假红。
   const fontsSectionSrc = readFileSync(
     new URL('../packages/fonts/src/appearance-font-section.js', import.meta.url), 'utf8');
-  const src = panelText() + '\n;\n' + fontsSectionSrc;   // 刀4：页签族并集（helper 声明顺序判据按构建序）。
+  // P-D S3d：播放配置两节（倍速/帧率上限、适配/翻转）也随子包出产物 ⇒ 同一条并集口径再补上壁纸包
+  // 的播放节源码（renderTranscodeProgress 与 renderEffectsPlaybackSection 仍同工厂作用域，判据强度不变；
+  // 不并 = HELPERS 与「派生+装配」判据会以「找不到」的形式假红）。
+  const playbackSectionSrc = readFileSync(
+    new URL('../packages/wallpaper/src/playback-rate-section.js', import.meta.url), 'utf8');
+  const src = panelText() + '\n;\n' + fontsSectionSrc + '\n;\n' + playbackSectionSrc;   // 刀4：页签族并集（helper 声明顺序判据按构建序）。
   const bodyOf = (name) => {
     const i = src.indexOf('function ' + name + '(');
     assert.ok(i >= 0, '找不到 ' + name + '（判据不得空转）');

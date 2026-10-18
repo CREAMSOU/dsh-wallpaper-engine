@@ -33,6 +33,22 @@
         "function renderWallpaperUploadsSection(ctx) {",
         "we-picker__uploads-list"
       ]
+    },
+    {
+      "file": "src/playback-rate-section.js",
+      "why": "「播放」页签「倍速 / 帧率上限」节渲染器（含私有 renderTranscodeProgress；原 src/panel-tabs-effects.js:182-272，逐字搬来）；入口的 registerPanelSection 把它登记进面板节注册表（playback，order 60）",
+      "markers": [
+        "function renderEffectsPlaybackSection(ctx) {",
+        "we-picker__prog-track"
+      ]
+    },
+    {
+      "file": "src/wallpaper-fit-section.js",
+      "why": "「播放」页签「适配 / 水平翻转」节渲染器（原 src/panel-tabs-effects.js:274-299，逐字搬来）；入口的 registerPanelSection 把它登记进面板节注册表（playback，order 70）",
+      "markers": [
+        "function renderEffectsFitSection(ctx) {",
+        "weT(\"水平翻转\")"
+      ]
     }
   ]
 }

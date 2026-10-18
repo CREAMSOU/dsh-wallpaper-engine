@@ -341,7 +341,7 @@ const INLINE_MODULES = [
   },
   {
     file: 'src/panel-tabs-effects.js',
-    why: '「播放」页签的六个节渲染器（原 src/panel-tabs.js 的 1618–1913 行原样搬移）',
+    why: '「播放」页签的三个节渲染器：滑块 / 实时帧 / 出图来源（原 src/panel-tabs.js 的 1618–1913 行原样搬移；倍速·帧率上限与适配·翻转两节 P-D S3d 起住在 packages/wallpaper 的浏览器半边）',
     markers: ['function renderEffectsSlidersSection(ctx) {',
       '    const { onBackgroundBrightness, onBackgroundContrast, onBackgroundSaturate, onLayerPositionX, onLayerPositionY, onLayerReset, onLayerScale, onScrim, onWallpaperBlur, onWallpaperOpacity, sel } = ctx;'],
   },

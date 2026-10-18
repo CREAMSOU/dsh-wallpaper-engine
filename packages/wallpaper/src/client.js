@@ -1,5 +1,6 @@
 /**
- * client.js — 壁纸子包的**浏览器半边**入口（P-D 阶段1：S3a 打样，S3b / S3c 依次续搬）。
+ * client.js — 壁纸子包的**浏览器半边**入口（P-D 阶段1：S3a–S3d 六节全部搬完 ——
+ * 壁纸库四节（当前/过场/轮播/上传）+ 播放配置两节（倍速·帧率上限 / 适配·翻转））。
  *
  * ⚠️ 归属（务必先读）：用户口径 **§6.1 = A「代码归属，不是状态归属」**（正本 = ADR-0013 **D20**）。
  *    随包走的是**渲染器与描述符**；上传目录 / 官方资源目录 / 上传列表 / 确认令牌 / 过场与轮播的
@@ -39,6 +40,8 @@
 const WALLPAPER_SECTIONS_HOST_REQUIRED = [
   // 渲染内核（主 bundle 的共享零件表）
   'React', 'weT', 'ctlText',
+  // 播放配置两节（S3d）：帧率上限档位表 / 编码显示名 / 开关行（倍速与适配的档位是节内字面量）
+  'FPS_CAP_VALUES', 'codecLabel', 'switchRow',
   // 当前壁纸（第一节）：转盘组件 / 转盘自旋开关 / 实时渲染失败原因（getter 直给函数引用）
   'VinylRecord', 'vinylSpinVisible', 'liveFailReasonOf',
   // 切换过场（第二节）：类型表 / 方向表 / 速度档 / 当前生效值的活绑定
@@ -58,7 +61,7 @@ for (const key of WALLPAPER_SECTIONS_HOST_REQUIRED) {
   }
 }
 const {
-  React, weT, ctlText,
+  React, weT, ctlText, FPS_CAP_VALUES, codecLabel, switchRow,
   VinylRecord, vinylSpinVisible, liveFailReasonOf,
   switchTransitionOf, SWITCH_TRANSITIONS, SWITCH_DIRS, SWITCH_DIR_LABELS, SWITCH_SPEEDS,
   groupWallpapers, startCreateGroup, startEditGroup, saveEditingGroup, cancelEditGroup,
@@ -100,4 +103,22 @@ registerPanelSection('library', 'wallpaper-uploads', {
   get title() { return weT("自定义壁纸"); },
   order: 40,
   render: renderWallpaperUploadsSection,
+});
+
+/* ===== 跨包登记：「播放」页签的倍速/帧率上限、适配/翻转两节（P-D S3d）===== */
+
+// 主包 src/panel-tabs.js 的 `renderEffectsTab(ctx)` 在三个内置节之后 append
+// `wePanelSectionsOf('playback')` ⇒ 顺序仍由 order 决定（60 / 70），与搬前调用序逐位相同；
+// 两节仍画在同一个「画面」节容器里（组装点把注册节放在内置节之后），视觉分组不变。
+registerPanelSection('playback', 'wallpaper-playback-rate', {
+  id: 'wallpaper-playback-rate',
+  get title() { return weT("倍速"); },
+  order: 60,
+  render: renderEffectsPlaybackSection,
+});
+registerPanelSection('playback', 'wallpaper-fit', {
+  id: 'wallpaper-fit',
+  get title() { return weT("适配"); },
+  order: 70,
+  render: renderEffectsFitSection,
 });

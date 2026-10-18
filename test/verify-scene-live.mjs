@@ -175,6 +175,28 @@ async function loadExtensionRegistry() {
     libSections.map((s) => s.id).join(',') === 'wallpaper-current,wallpaper-transition,wallpaper-rotation,wallpaper-uploads'
     && libSections.map((s) => s.order).join(',') === '10,20,30,40',
     'got=' + libSections.map((s) => s.id + ':' + s.order).join(', '));
+  // P-D S3d：「播放」页签的倍速/帧率上限与适配/翻转两节同样随包搬出 ⇒ 按标准包内源文件 import
+  // 真渲染器，描述符与 packages/wallpaper/src/client.js 逐字同形（title 是 accessor + order 60/70）。
+  // **故意乱序登记**（先 fit(70) 后 rate(60)）⇒ 下面的顺序快照验证「屏上顺序由 order 决定」。
+  const wallpaperPlaybackRateMod = await import(pathToFileURL(join(root, 'packages', 'wallpaper', 'src', 'playback-rate-section.js')).href);
+  const wallpaperFitSectionMod = await import(pathToFileURL(join(root, 'packages', 'wallpaper', 'src', 'wallpaper-fit-section.js')).href);
+  reg.weRegisterPanelSection('playback', 'wallpaper-fit', {
+    id: 'wallpaper-fit',
+    get title() { return globalThis.weT('适配'); },
+    order: 70,
+    render: wallpaperFitSectionMod.renderEffectsFitSection,
+  });
+  reg.weRegisterPanelSection('playback', 'wallpaper-playback-rate', {
+    id: 'wallpaper-playback-rate',
+    get title() { return globalThis.weT('倍速'); },
+    order: 60,
+    render: wallpaperPlaybackRateMod.renderEffectsPlaybackSection,
+  });
+  const playbackSections = reg.wePanelSectionsOf('playback');
+  check('P-D S3d：播放页注册表两节齐全 · 乱序登记 ⇒ 按 order 60/70 排序（顺序快照）',
+    playbackSections.map((s) => s.id).join(',') === 'wallpaper-playback-rate,wallpaper-fit'
+    && playbackSections.map((s) => s.order).join(',') === '60,70',
+    'got=' + playbackSections.map((s) => s.id + ':' + s.order).join(', '));
   return reg;
 }
 // Keep every cache/config write inside the workspace (same stance as
@@ -1060,6 +1082,14 @@ const wallpaperSectionsSrc = wallpaperCurrentSrc + '\n;\n' + wallpaperTransition
 // 判「壁纸库页签里的节」的内容判据一律读这个并集（页签族 + 包内四节）：移动文件不该让
 // 判据看不到被搬走的节（S3a 起同一条纪律）。
 const tabsSrcAll = tabsSrc + '\n;\n' + wallpaperSectionsSrc;
+// P-D S3d：「播放」页签的倍速/帧率上限与适配/翻转两节也随壁纸子包搬出（playback-rate-section.js /
+// wallpaper-fit-section.js）⇒ 表面门 / 文本锚的取文来源同样扩成「页签族 + 包内两节」（强度不变）。
+const playbackRateSectionSrc = readFileSync(join(root, 'packages', 'wallpaper', 'src', 'playback-rate-section.js'), 'utf8')
+  .replace(/\r\n/g, '\n');
+const wallpaperFitSectionSrc = readFileSync(join(root, 'packages', 'wallpaper', 'src', 'wallpaper-fit-section.js'), 'utf8')
+  .replace(/\r\n/g, '\n');
+const playbackSectionsSrc = playbackRateSectionSrc + '\n;\n' + wallpaperFitSectionSrc;
+const effectsSrcAll = tabsSrc + '\n;\n' + playbackSectionsSrc;
 // 组装点自身：只喂给"8 个 render*Tab 声明在 src/panel-tabs.js"那条不变量（族并集会让它变弱）。
 const tabsHubSrc = readFileSync(join(root, 'src', 'panel-tabs.js'), 'utf8');
 // `fnBody` 的实现在 `test/tools/assert-harness.mjs`（`fnNameBody`，取首个 `\n}`；
@@ -2933,9 +2963,9 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
       && tabsSrcWithFontSection.includes('open && switchRow(weT("字体自定义"')
       && !gated(tabsSrcWithFontSection, '输入光标'));
   check('播放页的准备与诊断行（出图来源 / 实时帧 / 自定义画面 / 帧率上限 / 源信息 / 转码进度）只在设置页档渲染',
-    ['出图来源', '实时帧', '自定义画面', '帧率上限'].every((label) => gated(tabsSrc, label))
-      && tabsSrc.includes('!sidebarSurface && sel.type === "video" && sel.mediaInfo')
-      && tabsSrc.includes('!sidebarSurface && sel.type === "video" && sel.transcodeState === "working"'));
+    ['出图来源', '实时帧', '自定义画面', '帧率上限'].every((label) => gated(effectsSrcAll, label))
+      && effectsSrcAll.includes('!sidebarSurface && sel.type === "video" && sel.mediaInfo')
+      && effectsSrcAll.includes('!sidebarSurface && sel.type === "video" && sel.transcodeState === "working"'));
   // 负对照只测**判据本身的牙**（喂合成文本），不断产品状态 —— 产品的"两档都画"由上面那条
   // 正面判据负责；把两者混在一条里，会让负对照因产品的红而红，掩盖"判据是否恒真"这个问题。
   check('negative control: 任一方向的 surface 门加回「全局字体」都会被判出（判据不是恒真）',
@@ -3779,7 +3809,8 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
   const tabsSrcNow = panelText()
     .replace(/\r\n/g, '\n')
     + '\n;\n' + fontSectionSrc
-    + '\n;\n' + wallpaperSectionsSrc;
+    + '\n;\n' + wallpaperSectionsSrc
+    + '\n;\n' + playbackSectionsSrc;
   // 这些名字在产物里是**内联同一作用域**的常量 / 纯组件 / 纯函数；单独 import 时按内联规则
   // 补 globalThis 替身（`weT` 由 tools/weT-shim.mjs 装、React 等由上面那块装）。
   Object.assign(globalThis, {
@@ -4124,7 +4155,7 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
     // ⚠️ 刀4 之后节的渲染器搬到了 src/panel-tabs-*.js 域模块 ⇒ 扫**页签族全文**（组装点在末尾），
     //    而不是组装点单文件（否则六处调用全在域模块里 ⇒ 假红 missing=theme,detail,…）。
     const appearanceModules = ['theme', 'detail', 'corners', 'uiColor', 'font'];
-    const panelAllSrc = panelText() + '\n;\n' + fontSectionSrc + '\n;\n' + wallpaperSectionsSrc;
+    const panelAllSrc = panelText() + '\n;\n' + fontSectionSrc + '\n;\n' + wallpaperSectionsSrc + '\n;\n' + playbackSectionsSrc;
     const missingModules = appearanceModules.filter((m) => !panelAllSrc.includes('moduleResetButton("' + m + '"'));
     check('#192 外观六模块各挂 ↺ + 玻璃 UI 也挂 + 共用构件阻止冒泡',
       missingModules.length === 0
@@ -6621,6 +6652,75 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
       propsPanelViaCtxOnly(wallpaperSectionsSrc), '包内出现定义即假');
     check('negative control：包内自带定义 ⇒ 同一条判据判红',
       !propsPanelViaCtxOnly('function renderUserPropsPanel() {\n    return null;\n  }'));
+  }
+
+  // ── P-D S3d：播放配置两节（倍速/帧率上限 · 适配/翻转）搬进包内 ─────────────────
+  {
+    // ① 组装点只经注册表续接（静态取文：组装点正文）；负对照把直调加回去必须红。
+    const effectsBodyAt = tabsSrcNow.indexOf('function renderEffectsTab(ctx) {');
+    if (effectsBodyAt < 0) throw new Error('找不到 renderEffectsTab（判据不得空转）');
+    const effectsTabBody = tabsSrcNow.slice(effectsBodyAt, tabsSrcNow.indexOf('\n  }\n', effectsBodyAt));
+    const assembledViaRegistry = (body) => body.includes('wePanelSectionsOf("playback")')
+      && !body.includes('renderEffectsPlaybackSection(') && !body.includes('renderEffectsFitSection(');
+    check('P-D S3d：播放页组装点只经注册表续接（不再直调倍速/适配两节）',
+      assembledViaRegistry(effectsTabBody), 'body=' + effectsTabBody.length + ' 字符');
+    check('negative control：把任一直调加回组装点 ⇒ 同一条判据判红',
+      !assembledViaRegistry(effectsTabBody + '\n        renderEffectsFitSection(ctx),'));
+
+    // ② 侧栏档只少「准备与诊断」三行（帧率上限档位 / 源信息 / 转码进度），倍速 / 适配 / 翻转照旧。
+    //    判据钉**行为面**（树里画了什么），对重构不敏感、对回归敏感。
+    const videoSel = Object.assign({}, st, {
+      type: 'video',
+      mediaInfo: { width: 1920, height: 1080, fps: 60, codec: 'avc1' },
+      transcodeState: 'working',
+      transcodeProgress: { percent: 42, phase: 'download', eta: 3 },
+    });
+    const fxTab = (surface, progress) => panelMod.renderEffectsTab({
+      sel: progress === undefined ? videoSel : Object.assign({}, videoSel, { transcodeProgress: progress }),
+      surface,
+      setPickerOpener: noop, onOpenPicker: noop, onPickWallpaper: noop,
+      onFpsCap: noop, onPlaybackRate: noop, onObjectFit: noop, onFlip: noop,
+    });
+    const fxSettings = fxTab('settings');
+    const fxSidebar = fxTab('sidebar');
+    const textAll = (t) => treeStrings(t).join('\n');
+    const twoSurfacesGap = (settingsT, sidebarT) =>
+      labelSeq(settingsT).includes('帧率上限') && !labelSeq(sidebarT).includes('帧率上限')
+      && classKinds(settingsT).some((c) => c.split(/\s+/).includes('we-picker__prog'))
+      && !classKinds(sidebarT).some((c) => c.split(/\s+/).includes('we-picker__prog'))
+      && textAll(settingsT).includes('源 ') && !textAll(sidebarT).includes('源 ')
+      && ['倍速', '适配', '水平翻转'].every((l) => labelSeq(settingsT).includes(l) && labelSeq(sidebarT).includes(l));
+    check('P-D S3d：侧栏档只少「准备与诊断」三行（帧率上限 / 源信息 / 转码进度），倍速 / 适配 / 翻转照旧',
+      twoSurfacesGap(fxSettings, fxSidebar),
+      'settings=' + labelSeq(fxSettings).join('/') + ' sidebar=' + labelSeq(fxSidebar).join('/'));
+    check('negative control：把两档对调喂进同一条判据 ⇒ 判红（不是恒真）',
+      !twoSurfacesGap(fxSidebar, fxSettings));
+
+    // ③ 转码进度 percent 夹取：aria-valuenow ∈ [0,100]、条宽 ∈ [2%,100%] —— 越界值必须被夹住。
+    const nodesWithClass = (root, cls, acc = []) => {
+      if (Array.isArray(root)) { root.forEach((x) => nodesWithClass(x, cls, acc)); return acc; }
+      if (!root || typeof root !== 'object') return acc;
+      const cn = root.props && root.props.className;
+      if (typeof cn === 'string' && cn.split(/\s+/).includes(cls)) acc.push(root);
+      if (Array.isArray(root.children)) root.children.forEach((x) => nodesWithClass(x, cls, acc));
+      return acc;
+    };
+    const clampOne = (percent) => {
+      const t = fxTab('settings', { percent, phase: 'download', eta: 3 });
+      const bar = nodesWithClass(t, 'we-picker__prog-bar')[0];
+      const track = nodesWithClass(t, 'we-picker__prog-track')[0];
+      return {
+        width: bar && bar.props && bar.props.style && bar.props.style.width,
+        now: track && track.props && track.props['aria-valuenow'],
+      };
+    };
+    const clampJudge = (g, percent) => g.width === Math.max(2, Math.min(100, percent)) + '%'
+      && g.now === Math.max(0, Math.min(100, percent));
+    check('P-D S3d：转码进度 percent 夹取（150 → 100% / -8 → 2% / 42.7 原样）',
+      clampJudge(clampOne(150), 150) && clampJudge(clampOne(-8), -8) && clampJudge(clampOne(42.7), 42.7),
+      '150=' + JSON.stringify(clampOne(150)) + ' -8=' + JSON.stringify(clampOne(-8)));
+    check('negative control：未夹取的形态（150% / 150）会被同一条判据判红',
+      !clampJudge({ width: '150%', now: 150 }, 150));
   }
 
   // ── appearance / effects：同一套挂载台（ctx 由**渲染器自己的解构行**驱动）────────
