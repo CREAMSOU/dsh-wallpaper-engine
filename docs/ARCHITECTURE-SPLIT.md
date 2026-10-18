@@ -134,7 +134,7 @@ graph row 加载）；两种路径下可见面都由宿主行状态派生、双�
 | 门面内的随包资源段 | `lib/we-assets.js` | 叶子 |
 | 门面内的 shim/seed 注入段 | `lib/shim-seed.js` | 叶子 |
 | 门面内的缓存根迁移段 | `lib/cache-dir.js` + `lib/routes/cache-dir.js` | 叶子 + 路由族 |
-| 门面内的 `/inventory` 注册段 | `lib/routes/inventory.js` | 路由族（本分支新增的落点） |
+| 门面内的 `/inventory` 注册段 | `packages/wallpaper/lib/routes/inventory.js`（P-D S5c 2026-10-18 出户；出户前落点 `lib/routes/inventory.js`） | 路由族 |
 
 
 **搬迁的纪律**（[`adr/0013`](./adr/0013-bundle-multi-component-rows.md) D7 与 `CODE-STRUCTURE` §4.2）：

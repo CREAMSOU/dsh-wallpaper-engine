@@ -105,7 +105,7 @@ req.on('end', () => {
 ```
 
 上限常量**从 context 取**（`c.CONTROL_JSON_MAX_BYTES`，小控制面 JSON 统一 64KB；**定义**在
-`lib/http-body.js`（收体器旁边，单一真源），不变量写在 `lib/routes/upload.js` 文件头）。大载荷（上传 / 抓帧 / 自定义画面）走
+`lib/http-body.js`（收体器旁边，单一真源），不变量写在 `packages/wallpaper/lib/routes/upload.js` 文件头（P-D S5c 2026-10-18 从 `lib/routes/` 出户）。大载荷（上传 / 抓帧 / 自定义画面）走
 **流式落盘**那条腿，别整个缓冲在内存里。**判据**：`test/verify-body-caps.mjs` —— 新增一条
 `req.on('data')` 会自动进扫描面，缺上限即红（"同族都有闸"不再是靠人记得抄的事）。
 

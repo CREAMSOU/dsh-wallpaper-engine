@@ -27,7 +27,7 @@ node test/tools/guard-targets.mjs --write                 # 重算 docs/GUARD-MA
 ```mermaid
 graph TD
   MAIN["主包 · 行 id=wallpaper-engine<br/>name='dsh-plugin-wallpaper-engine'"]
-  MAIN -->|"真名行 —— 独立子包行（P-F 批 1c；P-D 阶段1 改名并补浏览器半边，2026-10-18）"| C3["id=wallpaper-engine-wallpaper<br/>name='dsh-plugin-wallpaper-engine-wallpaper'<br/>住 packages/wallpaper/，独立清单 + 自出浏览器半边产物"]
+  MAIN -->|"真名行 —— 独立子包行（P-F 批 1c；P-D 阶段1 改名并补浏览器半边、P-D S5 补宿主半边，2026-10-18）"| C3["id=wallpaper-engine-wallpaper<br/>name='dsh-plugin-wallpaper-engine-wallpaper'<br/>住 packages/wallpaper/，独立清单 + 宿主半边 12 族 + 自出浏览器半边产物"]
   MAIN -->|"真名行 —— 已出户的组件行（P-F，2026-10-16）"| C1["id=wallpaper-engine-about-notice<br/>name='dsh-plugin-wallpaper-engine-about-notice'<br/>住 packages/about-notice/，独立清单"]
   MAIN -->|"同上（P-F 批 2a，2026-10-16）"| C2["id=wallpaper-engine-mascot-avatar<br/>name='dsh-plugin-wallpaper-engine-mascot-avatar'<br/>住 packages/mascot-avatar/，独立清单"]
   MAIN -->|"真名行 —— 独立子包行（本规范）"| S1["id=wallpaper-engine-fx<br/>name='dsh-plugin-wallpaper-engine-fx'<br/>住 packages/fx/，独立清单 + 独立发布"]
@@ -56,14 +56,14 @@ graph TD
 ```mermaid
 graph LR
   APPLY["主包 apply() 第一步<br/>provideSubpackageHost(ctx)"]
-  SVC(["服务面 · wallpaperEngineHost<br/>六键冻结：ids / keyNames / keys / handOff / schema / http<br/>（P-F 起 http 为 3 键，键表取值分派七型）"])
+  SVC(["服务面 · wallpaperEngineHost<br/>七键冻结：ids / keyNames / keys / handOff / schema / http / apply<br/>（P-F 起 http 为 3 键；P-D S5c 起 apply 为惰性 per-apply 实例面，键表取值分派八型 + 每次现建的 log）"])
   APPLY --> SVC
   SVC -->|"只读：keys(id, ctx) / keyNames / handOff"| FX["packages/fx 宿主半边<br/>inject ['wallpaperEngineHost']"]
   SVC -->|"同上"| PX["packages/parallax 宿主半边<br/>inject ['wallpaperEngineHost']"]
   SVC -->|"只读 + 自带 webServer 面"| FT["packages/fonts 宿主半边<br/>inject ['webServer','wallpaperEngineHost']<br/>packages/fonts/lib/routes/fontsets.js · packages/fonts/lib/routes/system-fonts.js"]
   SVC -->|"只读 + 自带 webServer 面（P-F）"| AN["packages/about-notice 宿主半边<br/>inject ['webServer','wallpaperEngineHost']<br/>packages/about-notice/lib/routes/about-qr.js · github-stars.js"]
   SVC -->|"同上（P-F 批 2a）"| MA["packages/mascot-avatar 宿主半边<br/>inject ['webServer','wallpaperEngineHost']<br/>packages/mascot-avatar/lib/routes/avatar.js · mascot.js"]
-  SVC -->|"同上（P-F 批 1c）"| MB["packages/wallpaper 宿主半边<br/>inject ['webServer','wallpaperEngineHost']<br/>packages/wallpaper/lib/routes/now-playing.js"]
+  SVC -->|"同上（P-F 批 1c；P-D S5 补 11 族）"| MB["packages/wallpaper 宿主半边<br/>inject ['webServer','wallpaperEngineHost']<br/>packages/wallpaper/lib/routes/ 12 族：now-playing · we-assets · inventory · upload · props · media-bytes · media-derived · scene-frame · scene-serve · scene-media · live-frame · occlusion"]
   SVC -->|"同上（PR #5）"| PL["packages/pet-link 宿主半边<br/>inject ['webServer','wallpaperEngineHost']<br/>packages/pet-link/lib/routes/pet-link.js（仅 /pet-link/capability）"]
   FX --- N1["零主包说明符"]
   PX --- N2["零主包说明符"]
@@ -79,6 +79,7 @@ graph LR
 - 行的**位置与顺序**是主包 `cordis.patch.yml` 的事；子包自己那份 `cordis.patch.yml` 只在"把它当独立 bundle"
   时生效，两处的 `(id, name)` 必须逐字相等（S4.2）。
 - 主包行被关掉 ⇒ 服务面消失 ⇒ 子包 fiber **级联 park**（不是"半挂"，S7.2）。
+- **第七键 `apply` 是惰性 per-apply 实例视图**（`APPLY_VIEW` 15 键，S5.4）：`provide` 排在 `apply()` 第一步（早于会话构造），读取发生在子包 apply / 组件行装载时；**实例必须同源** —— `mediaMap` / `tokenFor` / `serveFile` / `serveLayout` / `handleSceneFiles` 取主包本会话那份，不得用组件会话自建的第二张 `mediaMap`（否则 token 全 404，判据 `test/verify-token-domain.mjs`）。纯符号走 `schema` / `http` 视图，不混进实例面。
 
 ## 三、浏览器平面（构建产物、客户端加载器）
 
@@ -138,7 +139,7 @@ graph LR
 | # | 从 → 到 | 允许？ | 依据 |
 |---|---|---|---|
 | 1 | 主包 `apply()` → 服务面（`provide`） | ✅ | S5.4 |
-| 2 | 子包宿主半边 → 服务面（只读 `keys` / `keyNames` / `handOff` / `schema` / `http`） | ✅ 只读取用 | S5.4 |
+| 2 | 子包宿主半边 → 服务面（只读 `keys` / `keyNames` / `handOff` / `schema` / `http` / `apply`） | ✅ 只读取用（`apply` = 惰性 per-apply 实例面，必须与主包会话**同实例**） | S5.4 |
 | 3 | 子包宿主半边 → 主包（任何 value import，含旧叶子写法） | ❌ | S5.1 / S5.3 |
 | 4 | 子包宿主半边 → 另一个子包 | ❌ | S5.3 |
 | 5 | 主包实现 → 子包实现文件（绕过行名直接 import） | ❌（主包只按**行名**挂载） | S5.3 / S4.4（例外见 S5.3） |
@@ -148,8 +149,10 @@ graph LR
 | 9 | 子包 `peerDependencies` → 主包 `peerDependencies` | ✅ 且 `@deepseek-ai/*` 范围**逐字**取根 | S3.5 |
 | 10 | 行 ⇄ 清单（主包 patch 行 ↔ `packages/*/package.json` 的 `name`） | ✅ **双向**（无死行、无未登记的包） | S4.1 |
 
-判据名（谁钉住这些边）：`verify-subpackage-purity`（3/4/5）、`verify-subpackage-client-half`（6/7）、
-`verify-subpackage-manifests`（8/9 与清单面）、`verify-bundle-rows` + `test/tools/host-route-index.mjs`（10）。
+判据名（谁钉住这些边）：`verify-subpackage-boot`（1/2 的七键冻结与 `apply` 惰性）、`verify-subpackage-purity`（3/4/5）、
+`verify-subpackage-client-half`（6/7）、`verify-subpackage-manifests`（8/9 与清单面）、
+`verify-bundle-rows` + `test/tools/host-route-index.mjs`（10）、`verify-token-domain`（2 的"同实例"）、
+`verify-occlusion-hub`（壁纸包宿主半边的 hub 构造唯一性）。
 
 ## 五、登记点矩阵（新增一个独立子包的逐格清单）
 
@@ -162,7 +165,8 @@ graph LR
 | 自带 `cordis.patch.yml`（`(id,name)` 与主包行逐字） | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | S4.2（有判据） |
 | `icon.png` + `locale/{en,zh}.json` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | S2.1（有判据） |
 | `lib/index.js`（= `main`，宿主半边入口） | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | S2.2 / S6.1（有判据） |
-| 宿主半边路由族 `packages/<pkg>/lib/routes/<族>.js` | —（空壳：行为全在浏览器半边） | —（同上） | ✓ `fontsets` / `system-fonts` | ✓ `about-qr` / `github-stars` | ✓ `avatar` / `mascot` | ✓ `now-playing` | ✓ `pet-link`（仅 `/pet-link/capability` 一条能力路由） | S2.3（人工） |
+| 宿主半边路由族 `packages/<pkg>/lib/routes/<族>.js` | —（空壳：行为全在浏览器半边） | —（同上） | ✓ `fontsets` / `system-fonts` | ✓ `about-qr` / `github-stars` | ✓ `avatar` / `mascot` | ✓ 12 族 29 条（P-D S5b–S5d 2026-10-18：`now-playing` + `we-assets` + token 整簇 `inventory` / `upload` / `props` / `media-bytes` / `media-derived` / `scene-frame` / `scene-serve` / `scene-media` / `live-frame` + `occlusion`） | ✓ `pet-link`（仅 `/pet-link/capability` 一条能力路由） | S2.3（人工） |
+| 服务面第七键 `apply`（`APPLY_VIEW`，15 键；惰性、同实例） | — | — | — | — | — | ✓（P-D S5c 2026-10-18 起） | — | S5.4（有判据：`verify-subpackage-boot` / `verify-token-domain`） |
 | 浏览器半边源码 `packages/<pkg>/src/**` | ✓ | ✓ | ✓（P-C 第一刀：入口 `src/client.js` + 外观页签字体节 + 字体集编辑器） | 无（浏览器半边仍在主包 `src/**` 内联） | 无（同上） | ✓（P-D S3a–S3d 2026-10-18：入口 `src/client.js` + 六节源文件） | ✓（入口 `src/client.js` + 两份内联 `pet-link-tuner.js` · `pet-link.js`；2026-10-17 起自出产物） | S1.2 / S3.4 |
 | 构建产物 `lib/client.<pkg>.js`（构建产出；被 `.gitignore` 排除，**不进 git**） | ✓ | ✓ | ✓ `lib/client.fonts.js` | 无（浏览器半边仍在主包 `src/**` 内联） | 无（同上） | ✓ `lib/client.wallpaper.js`（2026-10-18 P-D S3a 起自出产物） | ✓ `lib/client.pet-link.js`（2026-10-17 收口成一般形态；收口前由主包内联） | S10.2（有判据） |
 | `exports['./client']` + `dsh.client` | ✓ | ✓ | ✓ | 无（浏览器半边仍在主包 `src/**` 内联） | 无（同上） | ✓（2026-10-18 P-D S3a） | ✓（2026-10-17 收口成一般形态） | S3.4（有判据） |
@@ -192,7 +196,14 @@ graph LR
    现状行已同步为"已收口"；两条软档红随之消失，`FLOORS.clientArtifacts` 4→5。
    ✅ **又来一次半边搬迁（2026-10-18，P-D 阶段1 S3a–S3d）**：`packages/wallpaper` 的六节面板渲染器搬进包并自出
    `lib/client.wallpaper.js`（`FLOORS.clientArtifacts` 5→6），§一/§三 的图与 §五 矩阵的 `wallpaper` 四格已同步；
-   渲染内核 / 层单例仍留主包，宿主半边（路由 / 后端 / supervisor / provision / legacy）S5 才大改。
+   渲染内核 / 层单例仍留主包（S2 定案）。
+   ✅ **再来一次半边搬迁 —— 这次是宿主半边（2026-10-18，P-D S5a–S5e）**：`packages/wallpaper` 新增 11 个宿主路由族
+   （`we-assets` / token 整簇 9 族 / `occlusion`，连同既有的 `now-playing` 共 **12 族 29 条路由**），主包 `lib/routes/`
+   只剩 **4 族**（`settings` / `presets` / `diag` / `cache-dir`）；路由总数 **44 条不变**（只换归属）。服务面随之从
+   **六键**扩到**七键**（+`apply` 惰性 per-apply 实例视图），壁纸行键表 8 → **79** 键；判据侧新增
+   `test/verify-token-domain.mjs`（守卫链 99 → 100 步），`verify-host-teardown` 的 `ROUTE_FLOOR` 9 → 8。
+   本文 §一/§二/§四/§五 已同步；ADR-0014 `S5.4` 与 §现状偏差同批改；`lib/occlusion/x11.js` 外迁 + 包自己声明依赖
+   仍属 S8 / P-E 残留。**代码归属 = A**（§14 `D-6`）：声音 / 省电的**设置键**仍留主包 `lib/settings-schema.js`。
 4. **真发布一次**（S8.2 的形态从开发期切到发布期）—— 矩阵里"未执行"七格转为"已发布"，同时要回来改 ADR-0014 的 §现状偏差（S8.2 行）与 S8.2 的口径。
 
 改本文时**不必**改 ADR-0014（那是决策记录）；除非触发 ADR-0014 §复核触发线四条之一。

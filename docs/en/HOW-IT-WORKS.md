@@ -43,7 +43,7 @@ with the document.
   memory every window reads), with an automatic retry after a cooldown and a bounded number of attempts
   (both are constants in `src/live-layer.js`: `LIVE_TRANSFER_RETRY_DELAY_MS` / `LIVE_TRANSFER_RETRY_LIMIT`); only a
   renderer that genuinely never produces a frame, or loses its heartbeat, is persisted.
-- **Out-figure sources (the one authoritative order; code in `lib/routes/scene-frame.js`)**:
+- **Out-figure sources (the one authoritative order; code in `packages/wallpaper/lib/routes/scene-frame.js` — moved out of the main package's `lib/routes/` in P-D S5c, 2026-10-18)**:
   ① live-render iframe → ② the author-embedded MP4 (`sceneVideo`) → ③ **live-captured frame**
   (`<key>_gpu.png`, PUT back by the live page once the first frame lands) → ④ **custom frame** (a
   screenshot the user imported) → ⑤ **empty state** (404 with a machine-readable reason).

@@ -181,10 +181,21 @@
     `ctx.wallpaperEngineHost`（S5.1 / S5.2）。该边规格两态承接：开发期 = 根 `devDependencies` 的
     `file:packages/<pkg>`（S8.1），发布期 = 主包 `dependencies` 的**同号精确版**（S8.2）。
     依赖图 `docs/SUBPACKAGE-GRAPH.md` 的登记点"边 5"据此标为**已落例外**（不是禁止边）。
-- **S5.4 [机器判：verify-subpackage-boot.mjs / verify-inject-contracts.mjs]** 服务面形状固定：
-  服务名 `wallpaperEngineHost`，值 = `createSubpackageHost()` 的**冻结六键**
-  `ids / keyNames / keys / handOff / schema / http`；键集与该包在
+- **S5.4 [机器判：verify-subpackage-boot.mjs / verify-inject-contracts.mjs / verify-token-domain.mjs]** 服务面形状固定：
+  服务名 `wallpaperEngineHost`，值 = `createSubpackageHost()` 的**冻结七键**
+  `ids / keyNames / keys / handOff / schema / http / apply`；`keys` 的键集与该包在
   `lib/subpackage-boot.js` 的 `SUBPACKAGE_KEY_TABLE` 里登记的键名**双向对账**（多给、少给都红）。
+  - **第七键 `apply`（2026-10-18 P-D S5c 起）**：`createSubpackageHost({ applyView })` 收一个**惰性访问器**，
+    服务值上的 `apply` = "**每次 apply** 的实例 / 引用视图"（主包门面 `APPLY_VIEW`，15 键：`mediaMap` /
+    `tokenFor` / `serveFile` / `serveLayout` / `faststartVariant` / `pinnedFaststartVariant` / `trackStream` /
+    `handleSceneFiles` / `mediaOriginInfo` / `payloadProgress` / `transcodeCached` / `SCENE_VIDEO_INFLIGHT` /
+    `buildInventory` / `componentsProbe` / `mediaOriginApi`）。**为什么必须惰性**：`provide` 是本仓 `apply()` 的
+    第一步（早于 `createHostSession()`），实例视图在会话建好之后才有值 —— 传值会永远拿到 `null`。
+    **为什么必须同实例**：`mediaMap`（token → 绝对路径）是每个 apply 会话各一张 `new Map()`，铸造面
+    （清单构建 / `upload`）与消费面（bytes / frame / props 等族）必须是**同一个对象**，否则 token 全部查不到
+    （判据 = `test/verify-token-domain.mjs`：③ 单一实例 + 包入口不得覆盖那 5 个共享实例键 + 门面 `applyView`
+    恰好 15 键且来自同一次会话，带四条负对照）。**纯符号不进这一面**：走 `schema` / `http` 视图
+    （`SCHEMA_VIEW` / `HTTP_VIEW`），两类契约不混。
 
 ### S6 生命周期
 
@@ -256,6 +267,7 @@
 | S3.4 | ✅ **已收口（2026-10-16，P-C 第一刀）**：字体包不再是 host-only —— 它现在有浏览器半边（`src/client.js` + 外观页签字体节 + 字体集编辑器，产物 `lib/client.fonts.js`）⇒ 声明 `dsh.client` 且 `exports['./client']` 两向齐。host-only **形态本身仍然合法**（本条只描述现状；"不许用空 `./client` 假装统一"的口径不变） | —— | —— |
 | S8.2 | 发布形态**尚未执行过**（三包都在开发期形态）；执行者 = 发布者的人工步骤（本仓不设发布脚本） | 人工执行 + 离线门只钉**形态自洽**（`verify-package-publish.mjs` ⑨：全有或全无，混态判红） | 已定（人工门） |
 | S3.4 / S10.2 | ✅ **已收口（2026-10-17，用户裁决"收口成一般形态"）**：第四个子包 `packages/pet-link` 补齐了浏览器半边的一般形态 —— 包内配方 `client.build.json`（`entry: src/client.js` → `artifact: lib/client.pet-link.js`）、包内产物 `packages/pet-link/lib/client.pet-link.js`（≈178 KB）、`exports['./client']` + `dsh.client`（与根逐键相同），并从主包 `INLINE_MODULES` 摘出（主包 `lib/client.js` 4,607,984 → 4,433,884 B）。收口前的"第三种形态"（源码在包内、构建归主包，2026-10-16 PR #5 引入）与 `test/verify-module-layout.mjs` 规则③ 的软档冲突随之消失；`FLOORS.clientArtifacts` 4→5。词条表按 fonts 惯例归位到主包 `src/i18n-copy-pet-link.js`（域表，与浏览器半边产物无关）。主包只留门面（`src/client.js` 的 `petLink` / `petLinkWiring` + `registerPetLink` 桥键）：跨包求值顺序不保证 ⇒ 门面缓冲 + 登记到达时补做；缺席语义 = `mascot.tap()` 抛错以保住回落。⚠️ 余一条**与本形态无关**的软档红（浏览器回归脚本引用运行时才创建的 `../.artifacts/**`，PR #5 既有）。详见 [`docs/SUBPACKAGE-GRAPH.md`](../SUBPACKAGE-GRAPH.md) §三/§五/§六 | 已裁决（走 ①）；② 的"扩规则③ 判据面"不再需要 | 已收口（硬档全绿） |
+| S5.4 | ✅ **已落（2026-10-18，P-D S5a–S5e）**：服务面 `ids` / `keyNames` / `keys` / `handOff` / `schema` / `http` / `apply` **七键**冻结；`apply` = 惰性 **per-apply 实例视图**（`APPLY_VIEW` 15 键）。键表 `wallpaper` 一格 8 → **79** 键（8 既有源 + 47 `kernel:` + 15 `apply:` + 8 `schema:` + 1 `log`），`SCHEMA_VIEW` 5 → **13**。宿主半边路由：主包路由族 **15 → 4**（`settings` / `presets` / `diag` / `cache-dir`），壁纸包 **1 → 12**（`now-playing` + `we-assets` + token 整簇 9 族 + `occlusion`）；路由总数 **44 条不变**（只换归属，`docs/ROUTE-INDEX.md` 重算）。提交链 `a0c5b758`（刀1 `we-assets`）→ `3af568f7`（刀2 token 整簇 9 族 21 路由 + 新判据）→ `4551d677`（刀3 `occlusion` + 省电语义，`ROUTE_FLOOR` 9→8）；判据 = `verify-subpackage-boot.mjs`（七键冻结）/ `verify-inject-contracts.mjs`（声明面双向对账）/ `verify-token-domain.mjs`（单实例）。**未执行面仍是 S8.2**（发布形态） | —— | —— |
 
 ## Consequences
 

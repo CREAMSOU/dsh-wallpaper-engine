@@ -17,7 +17,7 @@ import { DEFAULTS as SCHEMA_DEFAULTS, FPS_CAP_VALUES as SCHEMA_FPS_CAP_VALUES } 
 // `DEF`/`defName` 也从工具导入 —— 定义形态只有一份，形态补齐时两处一起动。
 import { pathNotifications, definitionsOf, DEF, defName } from './tools/branch-notify.mjs';
 // 判据工具（函数体取法）与本文件外的同类实现共用一份；**朴素**是契约的一部分（见该文件头）。
-import { naiveBlockBody, naiveFuncSlice } from './tools/assert-harness.mjs';
+import { naiveBlockBody, naiveFuncSlice, braceBody } from './tools/assert-harness.mjs';
 
 const React = {
   Fragment: 'Fragment',
@@ -879,9 +879,123 @@ setTimeout(async () => {
       const labels = tabButtons.map((b) => String((b.children || [])[0] || ''));
       assert.deepEqual(labels, ['壁纸库', '外观', '播放', '系统', '扩展', '关于'],
         'tab bar must render exactly 壁纸库/外观/播放/系统/扩展/关于');
-      // 指示胶囊的宽度按页签数现算 —— 加/减页签忘改这里会当场错位（且只在视觉上错）。
+      // 指示胶囊的宽度按**可见页签数**现算 —— 加/减页签忘改这里会当场错位（且只在视觉上错）。
+      // 本台子里子包浏览器半边在台上 ⇒ 六个页签全可见（`visibleTabs.length === 6`）；"半缺席 ⇒
+      // 5 个"那条见下面 D-6(b) 的 gate 判据（值由 `visibleTabs.length` 推，不写死）。
       assert.ok(JSON.stringify(tree).includes('calc((100% - 6px) / 6)'),
-        'tab pill width must be derived from PICKER_TABS.length (6)');
+        'tab pill width must be derived from visibleTabs.length (all 6 tabs visible here)');
+    }
+
+    // ── D-6(b)：整页归子包浏览器半边的页签 ⇒ 按面板节注册表现存性 gate ──────────────
+    //    这一组不重写判据逻辑：把 `src/client.js` 里的**真实源码切片**（三张表的字面量 + 三个
+    //    函数体）取出来，在受控的 `wePanelSectionsOf` / `localStorage` 桩下求值。判据与实现
+    //    同源 —— 实现若回到恒 `PICKER_TABS`，① 立刻红（负对照 ④ 在同一个求值器上跑）。
+    {
+      const srcRaw = readFileSync(new URL('../src/client.js', import.meta.url), 'utf8');
+      const src = srcRaw.replace(/\r\n/g, '\n');
+      const litOf = (needle, re) => {
+        const m = src.match(re);
+        assert.ok(m, 'D-6(b) 装置自检：src 里切得出 ' + needle);
+        return m[1];
+      };
+      const tabsLit = litOf('PICKER_TABS', /const PICKER_TABS = (\[[\s\S]*?\n\];)/);
+      const legacyLit = litOf('PICKER_TAB_LEGACY', /const PICKER_TAB_LEGACY = (\{[\s\S]*?\n?\};)/);
+      const ownerLit = litOf('TAB_SECTION_OWNER', /const TAB_SECTION_OWNER = (\{[^}]*\};)/);
+      const bodyOf = (name) => {
+        const b = braceBody(src, name);
+        assert.ok(typeof b === 'string' && b.length > 0, 'D-6(b) 装置自检：' + name + ' 的函数体切出来了');
+        return b;
+      };
+      const makeGate = (visibleBody) => new Function('wePanelSectionsOf', 'localStorage',
+        'const weT = (s) => s;\n'
+        + 'const PICKER_TAB_KEY = "dsh-wallpaper-engine:picker-tab";\n'
+        + 'const PICKER_TABS = ' + tabsLit + '\n'
+        + 'const PICKER_TAB_LEGACY = ' + legacyLit + '\n'
+        + 'const TAB_SECTION_OWNER = ' + ownerLit + '\n'
+        + 'function visiblePickerTabs() {' + visibleBody + '}\n'
+        + 'function resolvePickerTab(id) {' + bodyOf('resolvePickerTab') + '}\n'
+        + 'function readSavedPickerTab() {' + bodyOf('readSavedPickerTab') + '}\n'
+        + 'return { visiblePickerTabs, resolvePickerTab, readSavedPickerTab };');
+      const registryStub = (sections) => (panelId) => (sections[panelId] || []).slice();
+      const storageStub = (saved) => ({
+        getItem: (k) => (k === 'dsh-wallpaper-engine:picker-tab' && saved ? saved : null),
+      });
+      const liveBody = bodyOf('visiblePickerTabs');
+      const gate = (visibleBody, sections, saved) => makeGate(visibleBody)(
+        registryStub(sections), storageStub(saved));
+      const idsOf = (g) => g.visiblePickerTabs().map((t) => t.id);
+      const ALL_IDS = ['library', 'appearance', 'playback', 'system', 'extensions', 'about'];
+      const WITHOUT_LIBRARY = ALL_IDS.filter((id) => id !== 'library');
+
+      // ⓪ 实现本身不许回退成恒表（切片里必须真读注册表 + 唯一映射常量）。
+      assert.ok(!/^\s*return PICKER_TABS;\s*$/.test(liveBody),
+        'D-6(b) visiblePickerTabs must not be a constant PICKER_TABS passthrough');
+      assert.ok(liveBody.includes('TAB_SECTION_OWNER[t.id]') && liveBody.includes('wePanelSectionsOf(owner).length > 0'),
+        'D-6(b) visiblePickerTabs must filter by the section-registry presence of the owner page');
+      assert.match(ownerLit.replace(/\s+/g, ' ').trim(), /^\{ library: "library" \};$/,
+        'D-6(b) TAB_SECTION_OWNER is the single-source tab→section map (library only, no component names)');
+
+      // ① 注册表空（子包浏览器半边缺席）⇒ 只剩其它五个页签；library 不可达、也不可能成为 activeTab。
+      const empty = gate(liveBody, {}, '');
+      assert.deepEqual(idsOf(empty), WITHOUT_LIBRARY,
+        'D-6(b) ① empty registry ⇒ library tab is gated out (exactly the other 5 remain)');
+      assert.equal(empty.resolvePickerTab('library'), 'appearance',
+        'D-6(b) ① gated library can never be the effective activeTab (falls back to first visible)');
+      assert.equal(empty.resolvePickerTab('extensions'), 'extensions',
+        'D-6(b) ① other tabs keep their ids');
+      assert.ok(empty.visiblePickerTabs().length > 0, 'D-6(b) ① tab bar is never empty (empty tab unreachable)');
+
+      // ② 正对照：注册表里 ≥1 个 library 节 ⇒ 六个页签全在，且顺序与 PICKER_TABS 一致。
+      const present = gate(liveBody, { library: [{ id: 'current' }] }, '');
+      assert.deepEqual(idsOf(present), ALL_IDS,
+        'D-6(b) ② ≥1 library section ⇒ library appears, PICKER_TABS order preserved');
+      assert.equal(present.resolvePickerTab('library'), 'library',
+        'D-6(b) ② 正对照：library 可见时停在 library');
+
+      // ③ localStorage 存着 library 但被 gate ⇒ 生效页签回落第一个可见（不是 library）。
+      const savedLibrary = gate(liveBody, {}, 'library');
+      assert.equal(savedLibrary.readSavedPickerTab(), 'library',
+        'D-6(b) ③ 装置自检：readSavedPickerTab 仍认 library（旧 id 校验/迁移照旧）');
+      assert.equal(savedLibrary.resolvePickerTab(savedLibrary.readSavedPickerTab()), 'appearance',
+        'D-6(b) ③ 负对照：存着 library 但被 gate ⇒ 回落第一个可见页签（回落成 library 即红）');
+      const savedOld = gate(liveBody, {}, 'wallpaper');
+      assert.equal(savedOld.resolvePickerTab(savedOld.readSavedPickerTab()), 'appearance',
+        'D-6(b) ③ 旧 id wallpaper→library 迁移后仍被 gate ⇒ 同样回落');
+      const savedSystem = gate(liveBody, {}, 'system');
+      assert.equal(savedSystem.resolvePickerTab(savedSystem.readSavedPickerTab()), 'system',
+        'D-6(b) ③ 可见页签的存档照旧生效');
+
+      // ④ 负对照：把 gate 改回恒 PICKER_TABS ⇒ ① 必须判红（证明 ① 不是恒真）。
+      const oldIds = idsOf(gate('return PICKER_TABS;', {}, ''));
+      assert.deepEqual(oldIds, ALL_IDS, 'D-6(b) ④ 装置自检：旧实现确实把 library 放回来');
+      assert.notDeepEqual(oldIds, WITHOUT_LIBRARY, 'D-6(b) ④ 负对照：残留恒 PICKER_TABS ⇒ ① 判红');
+
+      // ⑤ 其它页签在两种注册表形态下都在、顺序不变（gate 只对"整页归子包"的页签生效）。
+      for (const g of [empty, present]) {
+        assert.deepEqual(idsOf(g), (g === empty ? WITHOUT_LIBRARY : ALL_IDS),
+          'D-6(b) ⑤ only the gated tab changes; the rest keep membership + order');
+      }
+
+      // ⑥ 接线（读**构建产物**）：三处消费点必须都走现算的可见表，胶囊宽度/tabIdx 不写死。
+      //    先判"产物里没有恒表回退"——负对照（改回恒 PICKER_TABS 的变异体）就落在这一条上。
+      assert.ok(!/function visiblePickerTabs\(\) \{\s*return PICKER_TABS;\s*\}/.test(code),
+        'D-6(b) ⑥ emitted bundle must not contain the constant passthrough implementation');
+      assert.ok(code.includes('const visibleTabs = visiblePickerTabs();'),
+        'D-6(b) ⑥ picker recomputes visibleTabs once per render (no cached snapshot)');
+      assert.ok(code.includes('const owner = TAB_SECTION_OWNER[t.id];'),
+        'D-6(b) ⑥ emitted bundle keeps the single-source owner map');
+      assert.ok(code.includes('React.useState(() => resolvePickerTab(readSavedPickerTab()))'),
+        'D-6(b) ⑥ initial activeTab goes through resolvePickerTab (never a gated tab)');
+      assert.ok(/visibleTabs\.map\(\(t\) => React\.createElement\("button"/.test(code),
+        'D-6(b) ⑥ tab buttons render from the visible table (gated tab has no button)');
+      assert.ok(code.includes('"calc((100% - 6px) / " + visibleTabs.length'),
+        'D-6(b) ⑥ pill width is derived from visibleTabs.length');
+      assert.ok(!code.includes('"calc((100% - 6px) / " + PICKER_TABS.length'),
+        'D-6(b) ⑥ pill width must not go back to PICKER_TABS.length');
+      assert.ok(code.includes('visibleTabs.findIndex((t) => t.id === activeTab)'),
+        'D-6(b) ⑥ tabIdx is derived from visibleTabs');
+      console.log('D-6(b) tab gate: empty-registry tabs = ' + idsOf(empty).join('/')
+        + ' · with-library tabs = ' + idsOf(present).join('/'));
     }
 
     // ── 「扩展」页签（第六个）：一个**模块容器** —— 表里没模块时只画空态 ──

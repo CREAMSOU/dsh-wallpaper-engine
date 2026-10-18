@@ -1874,18 +1874,37 @@ const PICKER_TAB_LEGACY = {
   wallpaper: "library", font: "appearance", effects: "playback",
   audio: "playback", mascot: "system", advanced: "system",
 };
-// ── 可见页签表（ADR-0013 D3① 的"页签安全"）──────────────────────────────────
-// 「关掉一个组件行」不许留下**空页签**：一个页签若**整页**都归某个组件行，那一行不可用时它必须
-// 退出导航，当前页签也要回落（否则用户点进去看到一块空白面板）。
-// 今天**没有**这样的页签：两个组件行都只占页签里的一块 ——「系统」= 吉祥物块（`renderMascotTab`，
-// mascot-avatar）+ 高级节；「关于」= 静态段落 + star 行 / 两张二维码 / 更新公告（about-notice）。
-// 所以这张表恒等于 `PICKER_TABS`，`activeTab` 的校验与回落照常走它：纪律不依赖"页签表永远不变"。
+// ── 可见页签表（ADR-0013 D3① 的"页签安全" + P-D S5e 的 D-6(b) 收口）──────────
+// 口径：**整页**都归某个子包浏览器半边的页签，只有在那一半真的在台上时才进导航。为什么必须
+// gate：页签内容全部来自面板节注册表（`wePanelSectionsOf`）；子包浏览器半边缺席时注册表里
+// 没有那个 panelId 的节，页签会渲染成一块**空白面板** —— 没有报错、也没有空态提示，用户只
+// 看到"点进去什么都没有"。所以"可见"不能是静态表，必须是**注册表现存性**的现算。
+//
+// 为什么用注册表现存性当"dsh.client 存在性"的可观测代理：浏览器侧拿不到构建期的 dsh.client
+// 元数据（那是宿主/打包器的信息），但它能看见**注册表里有没有这个 panelId 的节** —— 节是
+// 子包浏览器半边在求值时登记的，缺席 ⇒ 零节。这个代理不需要第二套"谁在场"的探测通道，也不
+// 会像 DOM/全局探测那样被加载时序骗过去。
+//
 // ⚠️ **不要**在这里接一张"组件名 → 页签"的表：那是浏览器侧的第二份可见面映射，D3② 明文禁止
-// （判据见 test/verify-component-visibility.mjs 的双向对账）。将来真出现"某组件独占一整页"时，
-// 三件事必须一起做：① 把该页签的**字面量** gate 写进下面的派生；② 在宿主侧可见面声明表
-// （lib/component-visibility.js）加这条落点；③ 让对账守卫强制①②同时发生。
+// （判据见 test/verify-component-visibility.mjs 的双向对账）。`TAB_SECTION_OWNER` 只写
+// "页签 id → 面板节注册表 id"（同一套 id 空间），不写组件名。将来某页整页归新子包时**只改
+// TAB_SECTION_OWNER 一行**，其余页签没有 owner ⇒ 恒可见。
+const TAB_SECTION_OWNER = { library: "library" };
+// 每次渲染现算、**不缓存**注册表快照：注册表是子包浏览器半边求值时写入的，可能晚于首次渲染
+// （求值 → 注册 → 监听器触发重画），缓存会把"晚到"永久判成"缺席"。
 function visiblePickerTabs() {
-  return PICKER_TABS;
+  return PICKER_TABS.filter((t) => {
+    const owner = TAB_SECTION_OWNER[t.id];
+    if (!owner) return true;
+    return wePanelSectionsOf(owner).length > 0;
+  });
+}
+// 生效页签 = 存着的那个（旧 id 迁移 + `PICKER_TABS` 校验照旧）若不在可见表里 ⇒ 回落第一个可见。
+// 空表（一个可见页签都没有）理论上不可达；真出现也不把 activeTab 设成空值，退回存着的 id。
+function resolvePickerTab(id) {
+  const tabs = visiblePickerTabs();
+  if (tabs.some((t) => t.id === id)) return id;
+  return tabs.length ? tabs[0].id : id;
 }
 function readSavedPickerTab() {
   try {
@@ -4160,10 +4179,10 @@ function WallpaperPicker() {
   // ── 页签状态：调节面板分六个页签（壁纸库/外观/播放/系统/扩展/关于 —— 前四个由原六域
   //    合并，「扩展」「关于」后加），每份实例独立记忆（设置页与仓库抽屉互不影响）；只存
   //    localStorage，不进 config.json。useState 必须在下方早退分支之前调用（Rules of Hooks）。 ──
-  const [activeTab, setActiveTab] = React.useState(readSavedPickerTab);
+  const [activeTab, setActiveTab] = React.useState(() => resolvePickerTab(readSavedPickerTab()));
   const switchTab = (id) => {
-    // 校验走**可见页签表**（不是 PICKER_TABS）：组件行状态变化后被 gate 掉的页签不该再能被
-    // 切进去（那正是"点进一块空面板"的来源）。今天两者恒等，见 visiblePickerTabs 的注释。
+    // 校验走**可见页签表**（不是 PICKER_TABS）：子包浏览器半边缺席时被 gate 掉的页签不该再能被
+    // 切进去（那正是"点进一块空面板"的来源）。
     if (!visibleTabs.some((t) => t.id === id) || id === activeTab) return;
     // 切页签 ⇒ 清掉待确认（不变量 3）：问句行随页签一起离屏，不能留着它等回来。
     disarmConfirm();
@@ -4179,11 +4198,13 @@ function WallpaperPicker() {
   // 用一次订阅式 effect 补上；TTL 同日历口径，重复触发是空操作。
   React.useEffect(() => { if (activeTab === "about") loadStarCount(false); }, [activeTab]);
 
-  // 页签安全（ADR-0013 D3①）：可见页签表变了（组件行状态随 inventory 轮询回到本地）而当前
-  // 页签不在表里 ⇒ 回落到第一个可见页签，自愈、不用用户自己点走。表为空（今天不可能，空表
-  // 意味着一个页签都没有）时什么都不做 —— 绝不把 activeTab 设成空值。
+  // 页签安全（ADR-0013 D3① + D-6(b)）：可见页签表变了（面板节注册表变化 / 组件行状态随
+  // inventory 轮询回到本地）而当前页签不在表里 ⇒ 回落到第一个可见页签，自愈、不用用户自己点走。
+  // 表为空（空表意味着一个页签都没有，理论不可达）时什么都不做 —— 绝不把 activeTab 设成空值。
   // deps 用 `[activeTab, components]`：`visibleTabs` 每次渲染都是新数组，拿它当依赖会每帧触发；
   // 而 `components` 只在 inventory 重新落地时换引用（`setTransient("inventory", next)`）。
+  // 注册表变更是"只增"（子包浏览器半边求值时登记，没有反注册 API）⇒ 可见集只会变大，晚到的节
+  // 最多让某页签从"缺席"变"可见"，不会把已选中的页签挤出表 ⇒ 不需要把注册表版本写进依赖。
   React.useEffect(() => {
     if (!visibleTabs.length || visibleTabs.some((t) => t.id === activeTab)) return;
     switchTab(visibleTabs[0].id);
