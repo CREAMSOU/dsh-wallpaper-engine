@@ -377,7 +377,8 @@ async function main() {
     // 公告快通道守卫（verify-notice-routing）+ 预设弹窗浏览器实测各加一步：verify 90 → 91，all 103 → 104。
     // 事前认领审批门禁增加一条硬档；推广弹窗下线时其浏览器实测同步删除（净回到 91 / 104）。
     // 发布集**字节**守卫（`test/verify-release-set.mjs`）加一步：verify 91 → 92，all 104 → 105。
-    const CHAIN_FLOOR = { verify: 92, docs: 6, smoke: 6, all: 105 };
+    // #264 的 WE 文件夹读取（`test/verify-we-folders.mjs`）加一步：verify 92 → 93，all 105 → 106。
+    const CHAIN_FLOOR = { verify: 93, docs: 6, smoke: 6, all: 106 };
     /** 地板表与 GROUPS 的对齐体检：键名必须与**组名**逐一对齐（纯函数 ⇒ 负对照可直接喂）。 */
     const floorGaps = (groups, floors) => groups.map(([, g]) => g).filter((g) => !Number.isInteger(floors[g]));
     const problems = floorGaps(GROUPS, CHAIN_FLOOR).map((g) => '地板表缺组 ' + g

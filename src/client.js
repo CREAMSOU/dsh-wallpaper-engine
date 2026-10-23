@@ -841,6 +841,8 @@ async function loadInventory() {
       total: data.total || 0,
       portableCount: data.portableCount || 0,
       playlists: Array.isArray(data.playlists) ? data.playlists : [],
+      // WE「已安装」文件夹（只读镜像）：树形，空数组 = 用户没建过 ⇒ 选择器不画文件夹栏。
+      folders: Array.isArray(data.folders) ? data.folders : [],
       // 组件行状态面（ADR-0013 D3②）：原样透传，**不做归一化** —— 判据与失效口径都在
       // `weComponentVisible` 一处（字段缺席 / 形状不对 ⇒ 按可用渲染）。失败分支（下面的
       // catch）**有意不带这个键**：宿主不可达时可见面照常渲染，不许静默消失（D3③）。
@@ -859,6 +861,7 @@ async function loadInventory() {
       total: 0,
       portableCount: 0,
       playlists: [],
+      folders: [],
       error: String(err && err.message ? err.message : err),
     };
   }
@@ -958,6 +961,29 @@ function playableInventory() {
   return playableWallpapers(
     selection.inventory.wallpapers, selection.contentRatingFilter, selection.typeFilter, selection.hiddenIds,
   );
+}
+
+/**
+ * 把宿主的 WE 文件夹树摊平成选择器下拉的选项（层级用 `depth` 表达，渲染侧画缩进）。
+ *
+ * 为什么摊平：`<select><option>` 不认嵌套，而层级信息只在树的形状里 —— 摊平后每项自带
+ * `depth`，既保住"子夹缩进"的观感，也让"当前选中夹子的成员集"只有一个查法（`find`）。
+ * `wallpaperIds` 原样带上（宿主已把成员映射成清单 id，含映射失败的成员已被丢）。
+ */
+function flattenWallpaperFolders(folders, depth, out) {
+  for (const folder of folders || []) {
+    if (!folder || typeof folder !== "object" || !folder.id) continue;
+    out.push({
+      id: folder.id,
+      name: typeof folder.name === "string" ? folder.name : "",
+      depth,
+      wallpaperIds: Array.isArray(folder.wallpaperIds) ? folder.wallpaperIds : [],
+      // 下拉里显示的是「夹子里有多少张**能落到清单里**的壁纸」（宿主已丢掉映射失败的成员）。
+      count: Array.isArray(folder.wallpaperIds) ? folder.wallpaperIds.length : 0,
+    });
+    flattenWallpaperFolders(folder.subfolders, depth + 1, out);
+  }
+  return out;
 }
 
 // Re-validate the active selection against the current inventory + filters.
@@ -3889,6 +3915,12 @@ const onTypeFilterChange = (e) => {
   setSetting("typeFilter", e.target.value);
   revalidateSelection();
 };
+// 「文件夹」筛选：只写设置 + 重渲染（不 revalidate —— 它不参与播放闸门，见 picker-model 的
+// `matchesFolderFilter`；正在播的壁纸不该因为换了个文件夹看一眼就被踢掉）。
+const onFolderFilterChange = (e) => {
+  setSetting("folderFilter", e.target.value);
+  emit();
+};
 // Card style: classic (CD-rack) vs fixed (overlap-proof).
 const onLayoutChange = (value) => {
   setSetting("pickerLayout", value);
@@ -4428,6 +4460,13 @@ function WallpaperPicker() {
   }
 
   const list = sel.inventory.wallpapers;
+  // WE「已安装」文件夹：摊平成一维选项（层级用 depth 表达），并取当前选中夹子的成员集。
+  // 选中的夹子**已经不在**宿主清单里（用户在 WE 里删了/改名了）⇒ 按「全部」处理 ——
+  // 否则下拉会停在一个不存在的 id 上、网格永远空着，而用户看不出是为什么。
+  const folderOptions = flattenWallpaperFolders(sel.inventory.folders, 0, []);
+  const activeFolder = folderOptions.find((folder) => folder.id === sel.folderFilter) || null;
+  const folderFilter = activeFolder ? activeFolder.id : "all";
+  const folderWallpaperIds = activeFolder ? activeFolder.wallpaperIds : null;
   // 派生数据 + 分页全部由 **src/picker-model.js** 算（`pickerModel`）：可播放网格、两个
   // 过滤下拉的分档计数、隐藏列表，以及三个列表各自的当页切片。搜索是大小写不敏感的
   // 标题子串匹配（空查询 = 不过滤），每页 24 张，页号越界自动 clamp。这里只把状态喂
@@ -4441,6 +4480,8 @@ function WallpaperPicker() {
     search: sel.search,
     ratingFilter: sel.contentRatingFilter,
     typeFilter: sel.typeFilter,
+    folderFilter,
+    folderWallpaperIds,
     editorPage: sel.editorPage,
   });
   // CD-rack mode: compact one-page grid (no pagination, no virtualization —
@@ -4601,6 +4642,7 @@ function WallpaperPicker() {
       sel.pickerOpen ? renderPickerModal({
         sel, closePicker, current, playbackLive, playableList, hiddenList,
         cdMode, query, basePlayable, ratingCounts, typeCounts,
+        folderOptions, folderFilter, onFolderFilterChange,
         gridRef: pickerGridRef, vwin: pickerVwin,
         armedConfirm: sel.armedConfirm, onArmConfirm: armConfirm, onDisarmConfirm: disarmConfirm,
         onClear, onRatingFilterChange, onTypeFilterChange,

@@ -361,6 +361,14 @@
         {
           "kind": "guard",
           "npm": null,
+          "file": "test/verify-we-folders.mjs",
+          "args": [],
+          "tier": "hard",
+          "probe": false
+        },
+        {
+          "kind": "guard",
+          "npm": null,
           "file": "test/verify-inventory-index.mjs",
           "args": [],
           "tier": "hard",
@@ -1215,6 +1223,14 @@
           "kind": "guard",
           "npm": null,
           "file": "test/verify-wallpaper-scan.mjs",
+          "args": [],
+          "tier": "hard",
+          "probe": false
+        },
+        {
+          "kind": "guard",
+          "npm": null,
+          "file": "test/verify-we-folders.mjs",
           "args": [],
           "tier": "hard",
           "probe": false

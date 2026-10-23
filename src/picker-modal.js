@@ -363,7 +363,10 @@
   }
 
   function renderPickerFilterRow(ctx) {
-    const { sel, basePlayable, ratingCounts, typeCounts, onSearchInput, onRatingFilterChange, onTypeFilterChange } = ctx;
+    const {
+      sel, basePlayable, ratingCounts, typeCounts, folderOptions, folderFilter,
+      onSearchInput, onRatingFilterChange, onTypeFilterChange, onFolderFilterChange,
+    } = ctx;
     return React.createElement("div", { className: "we-picker__row we-picker__filter-row" },
       // 标题搜索：几百上千张壁纸时最快的定位方式。输入即过滤，与分级/类型过滤叠加。
       React.createElement("input", {
@@ -373,6 +376,24 @@
         "aria-label": weT("搜索壁纸标题"),
         onInput: onSearchInput,
       }),
+      // 文件夹：只在**用户真的在 WE 里建过文件夹**时才画这一栏（`folderOptions` 空 ⇒
+      // 整块不渲染）。没有文件夹时选择器与改动前逐字节相同，标记 golden 也不动。
+      folderOptions && folderOptions.length
+        ? [React.createElement("span", { key: "folder-label", className: "we-picker__hint we-picker__label" },
+            weT("文件夹")),
+          React.createElement("select", {
+            key: "folder-select",
+            className: "we-picker__playlist-select",
+            value: folderFilter,
+            onChange: onFolderFilterChange,
+            "aria-label": weT("文件夹"),
+            title: weT("对应 Wallpaper Engine「已安装」里的文件夹（只筛这一张列表，不改轮播）"),
+          },
+          React.createElement("option", { value: "all" }, weT("全部（{n}）", { n: basePlayable.length })),
+          folderOptions.map((o) => React.createElement("option", { key: o.id, value: o.id },
+            (o.depth ? "— ".repeat(o.depth) : "") + weT("{name}（{n}）", { name: o.name, n: o.count })))),
+        ]
+        : null,
       React.createElement("span", { className: "we-picker__hint we-picker__label" }, weT("内容分级")),
       React.createElement("select", {
         className: "we-picker__playlist-select",
