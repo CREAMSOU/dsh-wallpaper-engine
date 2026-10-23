@@ -92,7 +92,7 @@ export interface PlaylistDescriptor {
   unresolvedCount: number;
 }
 
-/** One folder from Wallpaper Engine's own "Installed" tree (`config.json` `general.folders`). */
+/** One folder from Wallpaper Engine's own "Installed" tree (`config.json` `general.browser.folders`). */
 export interface WallpaperFolderDescriptor {
   /** Stable identifier derived from the Steam profile and the folder's name trail. */
   id: string;
@@ -100,6 +100,10 @@ export interface WallpaperFolderDescriptor {
   name: string;
   /** Inventory ids that belong directly to this folder. */
   wallpaperIds: string[];
+  /** Number of resolved entries in the folder. */
+  total: number;
+  /** Number of entries WE still lists but the inventory could not resolve (uninstalled / unsubscribed). */
+  unresolvedCount: number;
   /** Nested folders (Wallpaper Engine allows subfolders). */
   subfolders: WallpaperFolderDescriptor[];
 }

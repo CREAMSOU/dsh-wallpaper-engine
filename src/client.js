@@ -869,6 +869,14 @@ async function loadInventory() {
   setTransient("inventory", next);
   setTransient("loading", false);
   setTransient("loaded", true);
+  // 文件夹筛选的僵尸值：宿主的夹子表里已经找不到这个 id（用户在欧洲 WE 里删了/改名了）
+  // ⇒ 回落「全部」并**把设置清掉**。只回落不清理的话，一个失效 id 会一直躺在设置里，
+  // 等用户以后又建出同名夹子（id 由 profile+名称路径生成）时会莫名其妙"复活"。
+  // 宿主不可达的分支（next.error）不清理：那时的空夹子表不代表 WE 里没有夹子。
+  if (!next.error && selection.folderFilter && selection.folderFilter !== "all"
+    && !flattenWallpaperFolders(next.folders, 0, []).some((f) => f.id === selection.folderFilter)) {
+    setSetting("folderFilter", "all");
+  }
   // Fresh inventory → reset pagination, but ONLY when the wallpaper id set
   // actually changed: an upload/remove/refresh that keeps the same list must
   // not kick the user back to page 1.

@@ -146,13 +146,20 @@ check('① config.json 不存在 ⇒ 空数组',
     kit.folderMemberId('E:/steam/steamapps/workshop/content/431960/3158822835/scene.pkg', byPath, byId) === '3158822835');
   check('② 负对照：映射不上的成员返回 null（调用点据此丢弃）',
     kit.folderMemberId('999999', byPath, byId) === null);
+  // 本地项目在 WE 分类里可能是**相对安装根**的目录（没有主文件那一段），
+  // playlistItemId 的三级匹配到不了 ⇒ 尾部目录名要能兜住。
+  const localById = new Map([['alpha', { id: 'alpha', title: 'Alpha' }]]);
+  check('② 相对安装根的本地项目目录（projects\\myprojects\\alpha）也能落回 id',
+    kit.folderMemberId('projects\\myprojects\\alpha', new Map(), localById) === 'alpha');
 
   const inventorySrc = await readFile(resolve(ROOT, 'lib', 'inventory.js'), 'utf8');
-  // 判据：清单用 readFoldersP 读、用 folderMemberId 映射、并把 folders 挂进载荷。
+  // 判据：清单用 readFoldersP 读、用 folderMemberId 映射、把 folders 挂进载荷，
+  // 并按播放列表同一口径带上 total / unresolvedCount（否则界面显示不出真实比例）。
   const wiresFolders = (src) => /await readFoldersP\(installDir\)/.test(src)
     && /const id = folderMemberId\(item, byPath, byId\);/.test(src)
+    && /unresolvedCount: Math\.max\(0, node\.items\.length - ids\.length\)/.test(src)
     && /^\s*folders,$/m.test(src);
-  check('② 清单：readFoldersP 读 → folderMemberId 映射 → folders 进载荷',
+  check('② 清单：readFoldersP 读 → folderMemberId 映射 → total/unresolvedCount → folders 进载荷',
     wiresFolders(inventorySrc));
   check('② 负对照：把 readFoldersP 换成 readPlaylistsP（同一处变异源码）⇒ 判据判红',
     !wiresFolders(inventorySrc.replace(/readFoldersP\(installDir\)/g, 'readPlaylistsP(installDir)')));

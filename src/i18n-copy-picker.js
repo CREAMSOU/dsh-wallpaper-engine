@@ -37,6 +37,8 @@ const WE_I18N_EN_PICKER = {
   "对应 Wallpaper Engine 的内容分级（project.json contentrating）": "Corresponds to the Wallpaper Engine content rating (project.json contentrating)",
   "文件夹": "Folder",
   "{name}（{n}）": "{name} ({n})",
+  "{name}（{n}/{m}）": "{name} ({n}/{m})",
+  "这个文件夹里没有通过当前分级 / 类型过滤的壁纸": "No wallpaper in this folder passes the current content-rating / type filter",
   "对应 Wallpaper Engine「已安装」里的文件夹（只筛这一张列表，不改轮播）": "Mirrors a Wallpaper Engine \"Installed\" folder (filters this list only; rotation is untouched)",
   "全年龄": "Everyone / G",
   "成人": "Mature / R",

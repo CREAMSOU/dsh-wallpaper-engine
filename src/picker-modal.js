@@ -246,7 +246,7 @@
   }
 
   function renderPickerNormalBody(ctx, draft, draftIdSet, normalWin) {
-    const { sel, playableList, onToggleBatchMode, armedConfirm, onBatchHide, onDisarmConfirm, cdMode, gridRef, query } = ctx;
+    const { sel, playableList, onToggleBatchMode, armedConfirm, onBatchHide, onDisarmConfirm, cdMode, gridRef, query, folderFilter } = ctx;
     return React.createElement("div", { className: "we-picker__modal-body" },
         draft
           ? React.createElement("div", { className: "we-picker__row" },
@@ -285,7 +285,11 @@
                 React.createElement("span", { className: "we-picker__hint" },
                   query
                     ? weT("没有匹配「{q}」的壁纸 · 试试缩短关键词或清除过滤", { q: sel.search })
-                    : weT("没有可播放的壁纸")),
+                    // 选了文件夹却一张都没有：多半是分级 / 类型把它们挡在门外（文件里的成员
+                    // 数 ≠ 当前过滤下的可用数）。单独说一句，否则用户会以为文件夹是空的。
+                    : folderFilter !== "all"
+                      ? weT("这个文件夹里没有通过当前分级 / 类型过滤的壁纸")
+                      : weT("没有可播放的壁纸")),
               )
             : React.createElement(React.Fragment, null,
                 normalWin.topH > 0 ? renderPickerVSpacer("we-picker-vtop", normalWin.topH) : null,
@@ -391,7 +395,13 @@
           },
           React.createElement("option", { value: "all" }, weT("全部（{n}）", { n: basePlayable.length })),
           folderOptions.map((o) => React.createElement("option", { key: o.id, value: o.id },
-            (o.depth ? "— ".repeat(o.depth) : "") + weT("{name}（{n}）", { name: o.name, n: o.count })))),
+            (o.depth ? "— ".repeat(o.depth) : "") + (
+              // WE 记着、但清单里没有的成员（卸载残留）也要算进"夹子里有几张"，
+              // 否则用户看到「6」会以为夹子少了内容。
+              o.unresolvedCount > 0
+                ? weT("{name}（{n}/{m}）", { name: o.name, n: o.count, m: o.count + o.unresolvedCount })
+                : weT("{name}（{n}）", { name: o.name, n: o.count })
+            )))),
         ]
         : null,
       React.createElement("span", { className: "we-picker__hint we-picker__label" }, weT("内容分级")),
