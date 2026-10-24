@@ -34,7 +34,6 @@
     "objectFit": "cover",
     "contentRatingFilter": "all",
     "typeFilter": "all",
-    "folderFilter": "all",
     "pickerLayout": "fixed",
     "edgeCompat": true,
     "accent": "#4f8cff",

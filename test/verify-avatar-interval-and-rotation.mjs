@@ -242,7 +242,7 @@ const videoSrc = read('src/video-layer.js');
       extOf, ensureUploadDir: store.ensureUploadDir, readUploadMeta: store.readUploadMeta,
       enumerateUploadsP: uploads.enumerateUploadsP, metaEntry: store.metaEntry,
       readPlaylistsP: async () => [], playlistItemId: () => null,
-      readFoldersP: async () => [], folderMemberId: () => null, weAssetsAvailable: () => false,
+      readFoldersP: async () => [], foldersWithIds: () => [], weAssetsAvailable: () => false,
       getUploadDir: uploads.getUploadDir, getWeAssetsDir: () => '', cacheBaseDir: () => join(dir, 'cache'),
       imageThumbPath: kit.imageThumbPath, // 仅为恢复旧行为的负对照提供原依赖。
     })();

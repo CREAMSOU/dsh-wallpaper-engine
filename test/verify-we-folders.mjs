@@ -25,7 +25,7 @@ import { tmpdir } from 'node:os';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createWallpaperScanKit } from '../lib/wallpaper-scan.js';
-import { DEFAULTS, KINDS } from '../lib/settings-schema.js';
+import { DEFAULTS, KINDS, PRESET_EXCLUDED_KEYS } from '../lib/settings-schema.js';
 import { pickerModel } from '../src/picker-model.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -131,7 +131,7 @@ check('① 坏 JSON 不得抛（返回空数组）',
 check('① config.json 不存在 ⇒ 空数组',
   await withInstallDir(null, (dir) => kit.readFoldersP(dir)).then((r) => r.length === 0));
 
-// ── ② 清单映射：成员 → 壁纸 id 仍走 playlistItemId 这一条 ──────────────────────
+// ── ② 清单映射：成员 → 壁纸 id（纯函数 foldersWithIds）───────────────────────
 {
   // ⚠️ `byId` 的值在**生产代码里是壁纸条目对象**（`playlistItemId` 取 `project.id`）。
   // 夹具照生产形状来 —— 喂字符串会让「成员被当成对象返回」这个真实缺陷溜过去（实测撞过）。
@@ -139,27 +139,38 @@ check('① config.json 不存在 ⇒ 空数组',
   const byId = new Map([
     ['1186645315', { id: '1186645315', title: 'A' }],
     ['3158822835', { id: '3158822835', title: 'B' }],
+    ['alpha', { id: 'alpha', title: 'Alpha' }],
   ]);
-  check('② 裸 workshop id 直接命中，且返回的是**字符串 id**（不是条目对象）',
-    kit.folderMemberId('1186645315', byPath, byId) === '1186645315');
-  check('② 本地项目按绝对路径记录也能落回 id（与播放列表共用一条解析）',
-    kit.folderMemberId('E:/steam/steamapps/workshop/content/431960/3158822835/scene.pkg', byPath, byId) === '3158822835');
-  check('② 负对照：映射不上的成员返回 null（调用点据此丢弃）',
-    kit.folderMemberId('999999', byPath, byId) === null);
-  // 本地项目在 WE 分类里可能是**相对安装根**的目录（没有主文件那一段），
-  // playlistItemId 的三级匹配到不了 ⇒ 尾部目录名要能兜住。
-  const localById = new Map([['alpha', { id: 'alpha', title: 'Alpha' }]]);
-  check('② 相对安装根的本地项目目录（projects\\myprojects\\alpha）也能落回 id',
-    kit.folderMemberId('projects\\myprojects\\alpha', new Map(), localById) === 'alpha');
+  const raw = [
+    {
+      id: 'f1', name: 'Mixed', subfolders: [
+        { id: 'f1a', name: 'Inner', items: ['3158822835'], subfolders: [] },
+      ],
+      // 三种成员形态：裸工坊 id / 相对安装根的本地项目 / 映射不上的残留 id
+      items: ['1186645315', 'projects\\myprojects\\alpha', '999999'],
+    },
+    { id: 'f2', name: 'AllMissing', items: ['888888', '777777'], subfolders: [] },
+  ];
+  const mapped = kit.foldersWithIds(raw, byPath, byId);
+  check('② 成员映射：裸 id + 相对路径 + 丢弃残留 ⇒ [1186645315, alpha]',
+    JSON.stringify(mapped.map((f) => f.wallpaperIds)) === JSON.stringify([[ '1186645315', 'alpha' ]]),
+    JSON.stringify(mapped.map((f) => f.wallpaperIds)));
+  check('② 计数与播放列表同口径：total=2 / unresolvedCount=1',
+    mapped[0].total === 2 && mapped[0].unresolvedCount === 1,
+    'total=' + mapped[0].total + ' unresolved=' + mapped[0].unresolvedCount);
+  check('② 嵌套子夹保留（父夹自身成员与子夹各自计数）',
+    mapped[0].subfolders.length === 1
+    && mapped[0].subfolders[0].wallpaperIds.join(',') === '3158822835');
+  check('② 空夹（成员全部映射失败）被丢弃',
+    mapped.length === 1 && mapped.every((f) => f.name !== 'AllMissing'));
+  check('② 负对照：映射表清空 ⇒ 整棵为空（与"空夹丢弃"共用同一判据）',
+    kit.foldersWithIds(raw, new Map(), new Map()).length === 0);
 
   const inventorySrc = await readFile(resolve(ROOT, 'lib', 'inventory.js'), 'utf8');
-  // 判据：清单用 readFoldersP 读、用 folderMemberId 映射、把 folders 挂进载荷，
-  // 并按播放列表同一口径带上 total / unresolvedCount（否则界面显示不出真实比例）。
-  const wiresFolders = (src) => /await readFoldersP\(installDir\)/.test(src)
-    && /const id = folderMemberId\(item, byPath, byId\);/.test(src)
-    && /unresolvedCount: Math\.max\(0, node\.items\.length - ids\.length\)/.test(src)
+  // 判据：清单把 readFoldersP 的结果交给 foldersWithIds（唯一一处映射），并挂进载荷。
+  const wiresFolders = (src) => /foldersWithIds\(await readFoldersP\(installDir\), byPath, byId\)/.test(src)
     && /^\s*folders,$/m.test(src);
-  check('② 清单：readFoldersP 读 → folderMemberId 映射 → total/unresolvedCount → folders 进载荷',
+  check('② 清单：readFoldersP → foldersWithIds → folders 进载荷',
     wiresFolders(inventorySrc));
   check('② 负对照：把 readFoldersP 换成 readPlaylistsP（同一处变异源码）⇒ 判据判红',
     !wiresFolders(inventorySrc.replace(/readFoldersP\(installDir\)/g, 'readPlaylistsP(installDir)')));
@@ -190,6 +201,11 @@ check('④ schema 里有 folderFilter，默认 "all"', DEFAULTS.folderFilter ===
 check('④ 校验种类是自由字符串（id 由宿主生成，不能是固定枚举）',
   Boolean(KINDS.folderFilter) && KINDS.folderFilter.kind === 'str');
 check('④ 负对照：不存在的键读不到（判据不是恒真）', KINDS.folderFilterThatDoesNotExist === undefined);
+// 文件夹 id 只在本机成立（profile + 名称路径的 base64url）⇒ 不许随「整机配置预设」跨机搬。
+check('④ folderFilter 不进预设（跨机导入只会得到指向别人家夹子的 id）',
+  PRESET_EXCLUDED_KEYS.includes('folderFilter'));
+check('④ 负对照：预设排除表读得到、且不是空的（上面那条不是空对空）',
+  Array.isArray(PRESET_EXCLUDED_KEYS) && PRESET_EXCLUDED_KEYS.includes('id'));
 
 if (failed) {
   console.log('\nWE FOLDERS CHECKS FAILED — ' + failed + ' failed');
