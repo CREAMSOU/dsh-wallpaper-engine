@@ -245,6 +245,10 @@ const fetch = (url, opts) => {
 
 // 变异测试钩子：默认读构建产物，DSH_MUT_LIB 指向变异副本时读它。
 const code = readFileSync(process.env.DSH_MUT_LIB || new URL('../lib/client.js', import.meta.url), 'utf8');
+// ADR-0016 第三刀：玻璃写入/摘除（glass.js / glass-layer.js）随玻璃包出产物 ⇒
+// 涉及"写入面"的判据读双产物拼接；CSS 门控选择器仍只住主包产物（第四刀才随包走）。
+const glassCode = readFileSync(new URL('../packages/glass/lib/client.glass.js', import.meta.url), 'utf8');
+const writeFace = code + glassCode;
 const independentSidebarSelector = 'body[data-we-glass-page][data-we-sidebar-glass] [data-we-surface-plate="right-sidebar"]';
 const wallpaperGatedSidebarSelector = 'body[data-we-sidebar-glass][data-we-wallpaper] [data-dsh-better-sidebar]';
 assert.ok(code.includes(independentSidebarSelector), 'sidebar glass must not require an active wallpaper');
@@ -270,10 +274,9 @@ assert.ok(!code.includes('body[data-we-glass-page] :where([data-chat-flow])'),
 assert.ok(wallpaperBlock && wallpaperBlock.includes('--dsw-alias-bg-base: transparent')
   && !wallpaperBlock.includes('--dsw-alias-bg-layer-1'),
   'the page-let-the-wallpaper-through block stays wallpaper-only (no glass mapping inside)');
-assert.ok(/setAttribute\("data-we-glass-page", "on"\)/.test(code)
-  && /removeAttribute\("data-we-glass-page"\)/.test(code),
-  'the page-glass anchor must be mounted by glass.js and removed by clearEffects (paired)');
-assert.ok(code.includes('body[data-we-sidebar-glass] :where([data-we-surface-runtime="content"])'),
+assert.ok(/setAttribute\("data-we-glass-page", "on"\)/.test(writeFace)
+  && /removeAttribute\("data-we-glass-page"\)/.test(writeFace),
+  'the page-glass anchor must be mounted by glass.js and removed on dispose (paired; both halves in the glass bundle since ADR-0016 cut 3)');assert.ok(code.includes('body[data-we-sidebar-glass] :where([data-we-surface-runtime="content"])'),
   'sidebar content surfaces must follow both the sidebar switch and runtime ownership',
 );
 assert.ok(code.includes('body[data-we-wallpaper] {') && code.includes('body[data-we-wallpaper]:not([data-ds-dark-theme])'),
@@ -1495,7 +1498,7 @@ setTimeout(async () => {
     assert.equal((JSON.stringify(tree).match(/"aria-label":"侧栏玻璃颜色 /g) || []).length, 6, '侧栏玻璃颜色预设应有 6 个色板');
     assert.ok(JSON.stringify(tree).includes('自定义侧栏玻璃颜色'), 'sidebar glass color custom input present:');
     // ── §11 A2-F2：侧栏档那个**单**色板固定写浅色那一半 ────────────────────────────
-    //    侧栏的玻璃色变量只消费浅色半（src/glass.js / src/effects.js 的 sidebar 分支都取
+    //    侧栏的玻璃色变量只消费浅色半（glass.js（现 packages/glass）/ effects.js 的 sidebar 分支都取
     //    `glassColorOf(sel,"light")` —— 侧栏没有 `data-ds-dark-theme` 孪生，有意不分深浅）。
     //    所以侧栏面板①只画一行、②显示与写入都是**浅色半**，不是"当前配色那一侧"：否则深色
     //    主题下用户点一下改的是他在这块面板上看不到的那个值（面板还不许自己采样主题）。
@@ -5100,7 +5103,8 @@ setTimeout(async () => {
 // ④ 复位按记忆且不抢用户新选择。
 {
   const clientSrc = readFileSync(new URL('../src/client.js', import.meta.url), 'utf8');
-  const glassSrc = readFileSync(new URL('../src/glass.js', import.meta.url), 'utf8');
+  // ADR-0016 第三刀：glass.js 随玻璃子包出户。
+  const glassSrc = readFileSync(new URL('../packages/glass/src/glass.js', import.meta.url), 'utf8');
   const effectsSrc = readFileSync(new URL('../src/effects.js', import.meta.url), 'utf8');
   const mediaSrc = readFileSync(new URL('../src/media-prep.js', import.meta.url), 'utf8');
   // ① 单腿：只观察对方的公开标记。轮询（GET /api/skin-center/v2/active）在对方的显式动作
@@ -5153,17 +5157,19 @@ setTimeout(async () => {
   assert.ok(!/setAttribute\(\s*["']data-dsh-skin["']/.test(clientSrc)
     && !/delete\s+document\.body\.dataset\.dshSkinCenter/.test(clientSrc),
     '互操作只读：不许写对方的 data-dsh-skin / data-dsh-skin-center');
-  // ③ 退场在三处门控点都生效：glass 的整族摘除、effects 的两处（思考玻璃 / 侧栏跟随）。
+  // ③ 退场在三处门控点都生效：glass 的整族摘除、玻璃层的两处（思考玻璃 / 侧栏跟随）。
+  //    ADR-0016 第三刀：effects 的玻璃段随玻璃层出户 ⇒ 门控守卫判据改读 glass-layer 源码。
+  const glassLayerSrc = readFileSync(new URL('../packages/glass/src/glass-layer.js', import.meta.url), 'utf8');
   assert.ok(glassSrc.includes('data-we-sidebar-fullclear') && glassSrc.includes('skinYieldActive()'),
     '退场：glass 整族门控要有摘除路径');
   const yieldIdx = glassSrc.indexOf('skinYieldActive()');
   const pageGateIdx = glassSrc.indexOf('setAttribute("data-we-glass-page"');
   assert.ok(yieldIdx >= 0 && pageGateIdx > yieldIdx, '退场必须先于本函数挂任何玻璃面');
-  assert.ok(/selection\.thinkingGlass && !selection\.thinkingNative && !skinYield/.test(effectsSrc),
+  assert.ok(/selection\.thinkingGlass && !selection\.thinkingNative && !skinYield/.test(glassLayerSrc),
     '退场：思考玻璃门控点要带让路守卫');
-  assert.ok(/selection\.thinkingNative && !skinYield/.test(effectsSrc),
+  assert.ok(/selection\.thinkingNative && !skinYield/.test(glassLayerSrc),
     '退场：原生挡门控点要带让路守卫（三挡的第二半，2026-10-06）');
-  assert.ok(/selection\.sidebarGlass && selection\.sidebarFollowGlobal && !skinYield/.test(effectsSrc),
+  assert.ok(/selection\.sidebarGlass && selection\.sidebarFollowGlobal && !skinYield/.test(glassLayerSrc),
     '退场：侧栏跟随门控点要带让路守卫');
   // ③b 复位滞回：对方 refresh 会先摘标记再补回，瞬时摘不许直接复位（现场踩过 0.7s 抢回壁纸）。
   assert.ok(/function scheduleSkinYieldExit\(/.test(clientSrc)

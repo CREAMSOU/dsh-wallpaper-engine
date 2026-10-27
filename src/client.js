@@ -5743,74 +5743,6 @@ function useLegacySaturateCoupling() {
   return legacySaturateCoupling;
 }
 
-// ── 软件光栅化探测 ─────────────────────────────────────────────────────────
-// 某些第三方桌面外壳（增强 / 扩展窗口模式，通常是软件合成）里 `backdrop-filter`
-// 被静默忽略：属性语法仍然被接受，所以 `@supports not (backdrop-filter: …)`
-// 永远为真 —— 那条回退根本不会启用，玻璃面板就变成「过透」（全透）。因此这里做
-// 运行时探测：真的去建一个 WebGL 上下文并读渲染器字符串，如果它是软件光栅器
-// （或连上下文都建不出来），就把 body[data-we-glass-fallback] 挂上，让 CSS 用
-// 既有的近不透明配方接管（见 CSS 里那一段）。
-// 手动覆盖（用户排障 / 维护者无 GPU 环境复现）：
-//   ?we-glassfallback=on|1  → 强制回退 · off|0 → 强制关闭 · 其他值 = 自动探测
-// 只探测一次并缓存 —— applyEffects 每次设置变动都会读它。
-// 全程 typeof 守卫 + try/catch：非浏览器 / 验证沙箱里绝不抛出，也绝不改变行为。
-const SOFT_RENDER_RE = /swiftshader|software|llvmpipe|softpipe|microsoft basic render|angle \(software|stack-gl/i;
-let softRenderFallback; // undefined = 未探测 · true = 软件/无 WebGL · false = 硬件
-function detectSoftwareRender() {
-  if (softRenderFallback !== undefined) return softRenderFallback;
-  softRenderFallback = false;
-  try {
-    // 手动覆盖优先于一切探测（缓存最终决定）。
-    if (typeof location !== "undefined" && location && typeof location.search === "string") {
-      let raw = "";
-      if (typeof URLSearchParams === "function") {
-        raw = new URLSearchParams(location.search).get("we-glassfallback") || "";
-      } else {
-        const m = /[?&]we-glassfallback=([^&]*)/.exec(location.search);
-        raw = m ? decodeURIComponent(m[1]) : "";
-      }
-      const flag = String(raw).toLowerCase();
-      if (flag === "on" || flag === "1") return (softRenderFallback = true);
-      if (flag === "off" || flag === "0") return (softRenderFallback = false);
-    }
-    if (typeof document === "undefined" || !document
-        || typeof document.createElement !== "function") return softRenderFallback;
-    const canvas = document.createElement("canvas");
-    if (!canvas || typeof canvas.getContext !== "function") return (softRenderFallback = true);
-    let gl = null;
-    try { gl = canvas.getContext("webgl"); } catch { /* ignore */ }
-    if (!gl) { try { gl = canvas.getContext("experimental-webgl"); } catch { /* ignore */ } }
-    // 连 WebGL 上下文都拿不到 → 没有硬件合成，backdrop-filter 必定不生效。
-    if (!gl) return (softRenderFallback = true);
-    let renderer = "";
-    let vendor = "";
-    try {
-      const dbg = typeof gl.getExtension === "function" && gl.getExtension("WEBGL_debug_renderer_info");
-      if (dbg && typeof gl.getParameter === "function") {
-        renderer = gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) || "";
-        vendor = gl.getParameter(dbg.UNMASKED_VENDOR_WEBGL) || "";
-      }
-      // 没有调试扩展（或被隐私设置屏蔽）时退回公开的 RENDERER / VENDOR。
-      if (!renderer && typeof gl.getParameter === "function" && gl.RENDERER !== undefined) {
-        renderer = gl.getParameter(gl.RENDERER) || "";
-      }
-      // VENDOR 只是同一判定的第二个可读串（实测：本仓库自带的 supreium-headless-gl
-      // 是软件光栅器，但 RENDERER 只报裸 "ANGLE"，软件线索只出现在 VENDOR="stack-gl"，
-      // 且它不暴露 WEBGL_debug_renderer_info）—— 浏览器硬件链路不会因此误判。
-      if (!vendor && typeof gl.getParameter === "function" && gl.VENDOR !== undefined) {
-        vendor = gl.getParameter(gl.VENDOR) || "";
-      }
-    } catch { /* 读不到渲染器字符串：不判定为软件渲染 */ }
-    softRenderFallback = SOFT_RENDER_RE.test(String(renderer) + " " + String(vendor));
-    // 礼貌释放：只探测一次，但也不给页面永久占一个 WebGL 槽位。
-    try {
-      const lose = typeof gl.getExtension === "function" && gl.getExtension("WEBGL_lose_context");
-      if (lose && typeof lose.loseContext === "function") lose.loseContext();
-    } catch { /* ignore */ }
-  } catch { /* 探测异常：保持 false（不改变既有行为） */ }
-  return softRenderFallback;
-}
-
 // ── 跨包扩展注册（P-A）：三项「扩展」里有两项（点击拖尾 packages/fx、3D packages/parallax）
 //    从 P-A 起各自住在自己的包里 —— 它们的描述符与行为层**不再出现在本 bundle 的作用域里**，
 //    唯一通道是 src/extension-registry.js 这张共享注册表。本文件是**组装根**：
@@ -6317,6 +6249,23 @@ const petLink = {
 // 与 .integration-notes/p-c-contract.md §5 的两方向清单。
 // 一律用 **getter**：这些是活的模块级绑定（React / selection / 文案表在求值期才落地），
 // 值拷贝既会在求值期撞 TDZ，也会让子包拿到过期的引用。
+// ── 玻璃运行时状态门面（ADR-0016 第三刀）────────────────────────────────────
+// weGlassSurfaceStatus（表面策略诊断投影）的真实现住 packages/glass 的 glass-surfaces.js ——
+// 本 bundle 的作用域里没有那个函数名。但外观 ctx 的组装点（renderActiveTab 一带）要它 ⇒
+// 与 petLink 同款「门面 + 缓冲登记」：真实现经桥键 registerGlassStatus 由玻璃包在求值期
+// 送进来；缺席（玻璃行没装 / 被关）时返回 []，面板的状态列表空着 —— 缺的是那一节的状态，
+// 不是页面。迟到登记（玻璃 bundle 在首画之后才求值）由玻璃包同一次求值里的
+// registerLayerHooks 触发注册表 listener ⇒ emit() 重画，状态自然补上。
+let glassStatusApi = null;
+function weGlassSurfaceStatus() {
+  return glassStatusApi ? glassStatusApi.status() : [];
+}
+/** 子包登记入口（桥键 registerGlassStatus）：入槽即可 —— 状态是纯投影，无补做动作。 */
+function glassStatusRegister(api) {
+  glassStatusApi = api;
+  return api;
+}
+
 const HOST_BRIDGE_BINDINGS = {
   selection: () => selection,
   weNow: () => weNow,
@@ -6389,6 +6338,21 @@ const HOST_BRIDGE_BINDINGS = {
   ROPE_FORMS: () => ROPE_FORMS,
   ROPE_FORM_VALUES: () => ROPE_FORM_VALUES,
   panelGlassPair: () => panelGlassPair,
+  // 第三刀（运行时随包走）新增六键 + 两个登记入口：
+  //   · skinYieldActive —— 让路态判定（applyGlass 门控与思考块/侧栏跟随共用）；
+  //   · weClampSurfaceColor / glassColorOf —— 染色地板钳制与分主题取色（effects.js 顶层，
+  //     verify-readability 从主包产物抽它们复算 ⇒ 家留主包、子包经这里取同一份）；
+  //   · sanitizeExtraGlassSelectors —— #200 选择器消毒（settings-schema 具名导出）；
+  //   · GLASS_SATURATE / useLegacySaturateCoupling —— 饱和耦合常量与 A/B 旧斜坡；
+  //   · registerLayerHooks —— 玻璃层钩子登记（fx/parallax 同款，已有键）；
+  //   · registerGlassStatus —— 表面状态投影登记（本文件 glassStatusRegister，petLink 门面同款）。
+  skinYieldActive: () => skinYieldActive,
+  weClampSurfaceColor: () => weClampSurfaceColor,
+  glassColorOf: () => glassColorOf,
+  sanitizeExtraGlassSelectors: () => sanitizeExtraGlassSelectors,
+  GLASS_SATURATE: () => GLASS_SATURATE,
+  useLegacySaturateCoupling: () => useLegacySaturateCoupling,
+  registerGlassStatus: () => glassStatusRegister,
 };
 const HOST_BRIDGE_KEYS = Object.keys(HOST_BRIDGE_BINDINGS);
 for (const bridgeKey of HOST_BRIDGE_KEYS) {

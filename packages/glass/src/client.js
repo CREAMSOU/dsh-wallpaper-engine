@@ -16,17 +16,19 @@
  *
  * ## 消费侧契约（唯一跨包通道 = 主 bundle 的显式键集，ADR-0014 S5.1 / S5.4）
  * GLASS_HOST_REQUIRED 与主包 `src/client.js` 的 HOST_BRIDGE_BINDINGS 玻璃段**逐键一致**（缺键大声抛，
- * 不许静默 undefined）。键集依据 = 被搬文件（packages/glass/src/glass-panel.js，整文件逐字搬来）
- * 的**自由标识符**逐个点名（fonts 同款 acorn 取证）：
- *   React×65 · weT×176 · SliderRow×14 · switchRow×15 · swatchRow×6 · ctlText×5 · sectionHead×2
- *   · moduleResetButtonNode×1 · renderConfirmRow×1 · GLASS_CHILDREN×2 · childGlassKey×1
- *   · GLASS_COLOR_PRESETS×6 · ROPE_FORMS×2 · ROPE_FORM_VALUES×1 · panelGlassPair×1
- *   （panelGlassPair 原是 glass-panel 的本地副本；第二刀发现主包写路径也要它 ⇒ 归位
- *   lib/settings-schema.js 的显示口径，与 readGlassColors 同族，经桥接取同一份防漂移。）
- *   ⇒ 其中 React / weT / switchRow / SliderRow / swatchRow / ctlText / sectionHead / registerPanelSection
- *   是 fx / fonts 那半已要过的键，**复用、不重复登记**；本包新增 8 键（moduleResetButtonNode /
- *   renderConfirmRow / GLASS_CHILDREN / childGlassKey / GLASS_COLOR_PRESETS / ROPE_FORMS /
- *   ROPE_FORM_VALUES / panelGlassPair）。
+ * 不许静默 undefined）。键集依据 = 被搬文件（第二刀 glass-panel.js + 第三刀 glass.js /
+ * glass-surfaces.js / glass-extra.js / glass-layer.js）的**自由标识符**逐个点名（fonts 同款 acorn 取证）：
+ *   · 面板半边（第二刀）：React×65 · weT×176 · SliderRow×14 · switchRow×15 · swatchRow×6 · ctlText×5
+ *     · sectionHead×2 · moduleResetButtonNode×1 · renderConfirmRow×1 · GLASS_CHILDREN×2
+ *     · childGlassKey×1 · GLASS_COLOR_PRESETS×6 · ROPE_FORMS×2 · ROPE_FORM_VALUES×1 · panelGlassPair×1
+ *     （panelGlassPair 原是 glass-panel 的本地副本；第二刀发现主包写路径也要它 ⇒ 归位
+ *     lib/settings-schema.js 的显示口径，与 readGlassColors 同族，经桥接取同一份防漂移。）
+ *   · 运行时半边（第三刀）：selection · skinYieldActive · weClampSurfaceColor · glassColorOf
+ *     · sanitizeExtraGlassSelectors · GLASS_SATURATE · useLegacySaturateCoupling
+ *     （weClampSurfaceColor / glassColorOf 的家留主包 effects.js —— verify-readability 从主包
+ *     产物抽它们复算 ⇒ 主包同作用域直取、本包经这里取同一份防漂移。）
+ *   ⇒ 其中 React / weT / switchRow / SliderRow / swatchRow / ctlText / sectionHead /
+ *   registerLayerHooks 是 fx / fonts 那半已要过的键，**复用、不重复登记**。
  *   ⚠️ 每多一个键就是多一条没人维护的隐式契约（ADR-0014 S5.2）⇒ 清单之外一个都**不**解构。
  *
  * ## 每渲染才存在的值走 ctx，不走键集（契约 §2.1）
@@ -46,8 +48,11 @@ const GLASS_HOST_REQUIRED = [
   'moduleResetButtonNode', 'renderConfirmRow',
   'GLASS_CHILDREN', 'childGlassKey', 'GLASS_COLOR_PRESETS', 'panelGlassPair',
   'ROPE_FORMS', 'ROPE_FORM_VALUES',
-  // 贡献面（主 bundle 的收件箱）
-  'registerPanelSection',
+  // 运行时半边（第三刀）：store 活绑定 + 主包侧的纯函数内核与常量
+  'selection', 'skinYieldActive', 'weClampSurfaceColor', 'glassColorOf',
+  'sanitizeExtraGlassSelectors', 'GLASS_SATURATE', 'useLegacySaturateCoupling',
+  // 贡献面（主 bundle 的收件箱）：面板节 + 行为层 + 状态投影回传
+  'registerPanelSection', 'registerLayerHooks', 'registerGlassStatus',
 ];
 for (const key of GLASS_HOST_REQUIRED) {
   if (!(key in host)) {
@@ -60,7 +65,9 @@ const {
   moduleResetButtonNode, renderConfirmRow,
   GLASS_CHILDREN, childGlassKey, GLASS_COLOR_PRESETS, panelGlassPair,
   ROPE_FORMS, ROPE_FORM_VALUES,
-  registerPanelSection,
+  selection, skinYieldActive, weClampSurfaceColor, glassColorOf,
+  sanitizeExtraGlassSelectors, GLASS_SATURATE, useLegacySaturateCoupling,
+  registerPanelSection, registerLayerHooks, registerGlassStatus,
 } = host;
 
 /* ===== 唯一的跨包登记：外观页签第三节「玻璃 UI」＋ 首节「主题预设」 ===== */
@@ -79,3 +86,20 @@ registerPanelSection('appearance', 'glass', {
   get title() { return weT("玻璃 UI"); },
   render: (ctx) => renderAppearanceGlassSection(ctx),
 });
+
+/* ===== 跨包登记 #2：玻璃行为层（ADR-0016 第三刀）===== */
+
+// 与 fx / parallax 同形（packages/fx/src/client.js 的 registerLayerHooks 那行）：sync 挂进
+// 主包的 emit 订阅链（每次设置变动重跑，现读 selection 活绑定）、dispose 交主包拆卸期。
+// applyGlassLayer / disposeGlassLayer 在本包 client.build.json 的 inline[] glass-layer.js 里
+// （同工厂作用域，裸名可达）。sync 幂等：全量按当前 selection 重写，迟到注册由主包
+// attacher 立刻补接 + emit 一次（见 src/client.js 的 weSetLayerAttacher）。
+registerLayerHooks('glass', { sync: applyGlassLayer, dispose: disposeGlassLayer });
+
+/* ===== 跨包登记 #3：表面策略状态投影（回传主包）===== */
+
+// 外观 ctx 的 surfaceStatus 组装点在主包（renderActiveTab），而 weGlassSurfaceStatus 的真实现
+// 在本包 glass-surfaces.js ⇒ 与 petLink 的 registerPetLink 同款反向通道：求值期把只读投影
+// 送回主包槽位（缺席 = 空列表，缺的是状态不是页面）。迟到登记的兜底：本包同一次求值里的
+// registerLayerHooks 已触发注册表 listener ⇒ 主包 emit() 重画，状态自然补上。
+registerGlassStatus({ status: weGlassSurfaceStatus });

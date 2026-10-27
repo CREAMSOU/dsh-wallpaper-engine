@@ -439,7 +439,9 @@ function main() {
   // 跟随的实现**不是把数值抄过去**，而是把侧栏那一套变量**指向**全局三件套（var() 惰性替换）
   // ⇒ 判据也只能这么判：把跟随映射代进两侧栏的声明里，归一化之后必须**逐字相等**
   //（同一层下限 + 同一个染色源 + 同一个色染权重）。
-  const followBranch = SRC.match(/if \(selection\.sidebarFollowGlobal\) \{([\s\S]*?)\} else \{/);
+  // ADR-0016 第三刀：跟随分支随玻璃层出户 ⇒ 从双工件拼接面提取（CSS 仍只住主包产物）。
+  const JS_FACE = SRC + readFileSync(new URL('../packages/glass/lib/client.glass.js', import.meta.url), 'utf8');
+  const followBranch = JS_FACE.match(/if \(selection\.sidebarFollowGlobal\) \{([\s\S]*?)(?:\} else \{|else document\.body\.removeAttribute\("data-we-sidebar-follow"\))/);
   const followBody = followBranch ? followBranch[1] : '';
   const FOLLOW_MAP = [
     ['--we-sidebar-blur', 'var(--we-blur)'],
@@ -449,7 +451,7 @@ function main() {
   ];
   const declaredFollow = FOLLOW_MAP.every(([k, v]) => followBody.includes('setProperty("' + k + '", "' + v + '")'));
   check('S1a 跟随全局那一支把侧栏变量指向全局三件套（模糊 / 饱和 / 色染权重 / 底色四处，引用而非拷贝）',
-    declaredFollow && /data-we-sidebar-follow/.test(SRC),
+    declaredFollow && /data-we-sidebar-follow/.test(JS_FACE),
     declaredFollow ? FOLLOW_MAP.map((x) => x[0]).join(' ') + ' · 另有 body 属性' : '跟随分支缺失或不完整');
 
   /** 把「跟随态」的映射代进声明，再去掉 fallback 与空白 —— 便于逐字比较。 */
@@ -784,7 +786,9 @@ function main() {
       + ' · 变异体=' + String(declValue(primaryBtnMutated, 'color')));
 
   // ── D1: Task-1 contract — saturation is decoupled from the blur slider ───
-  const satTernary = SRC.match(
+  // ADR-0016 第三刀：--we-saturate 写入随玻璃层出户 ⇒ 三元表达式从双工件面提取；
+  // GLASS_SATURATE 常量与 useLegacySaturateCoupling 的家仍在主包 client.js。
+  const satTernary = JS_FACE.match(
     /setProperty\("--we-saturate",\s*useLegacySaturateCoupling\(\)\s*\?\s*String\(1\.15 \+ selection\.blur \* 0\.028\)\s*:\s*String\(GLASS_SATURATE\)\)/);
   const satConst = Number((SRC.match(/const GLASS_SATURATE = ([\d.]+);/) || [])[1]);
   const satFallback = Number((CSS.match(/saturate\(var\(--we-saturate,\s*([\d.]+)\)\)/) || [])[1]);

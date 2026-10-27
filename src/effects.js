@@ -2,20 +2,20 @@
  * effects.js — 把设置**应用到 DOM**（CSS 变量、内联样式、光标、scrim）。
  *
  * 为什么单独一个文件：这是"设置 → 界面"的落地层，同一层里同时有 scrim 即时性优化、
- * 玻璃/雾化合成、光标注入、壁纸淡出底色选择四件事（**字体自定义不在这里**，见
- * src/font/apply.js）；抽成单元就不必在 client.js 那一大片正文里定位。
+ * 光标注入、壁纸淡出底色选择三件事（**字体自定义不在这里**，见 src/font/apply.js）；
+ * 玻璃段已随 ADR-0016 第三刀出户到 packages/glass 的玻璃层钩子（glass-layer.js），
+ * 但玻璃的**纯函数内核**仍住这里（`weClampSurfaceColor` / `glassColorOf`：染色地板
+ * 钳制与分主题取色，玻璃子包经主 bundle 键集取同一份，防两份漂移）；抽成单元就不必在
+ * client.js 那一大片正文里定位。
  *
  * 契约（本文件是客户端程序的一部分，构建期由 scripts/build-client.mjs 内联进 bundle 的
  * 工厂作用域，因此"外部作用域"= 同一 prelude / src/client.js 的顶层。依赖是**机械清点**
  * 出来的，不是印象）：
  *   selection                    ← 设置/选中项的唯一 store（顶层 const，定义于 client.js 前部）
  *   SCRIM_ID                     ← scrim 元素的固定 id（顶层 const）
- *   GLASS_SATURATE               ← 玻璃饱和度耦合常量（顶层 const）
  *   syncSceneAudio(selLike)      ← 场景音轨同步（顶层 function）
  *   detectMicaSupport()          ← 惰性探针：Mica 支持
- *   detectSoftwareRender()       ← 惰性探针：软件渲染回退
  *   adapterCaps()                ← src/adapter.js（适配目标能力矩阵 → body 属性）
- *   useLegacySaturateCoupling()  ← 惰性探针：`?we-saturate=legacy` 那条旧耦合斜坡是否生效
  *   applyComponentFonts()        ← src/font/apply.js（字体：组件作用域）
  *   removeComponentFonts()       ← 同上
  *   snapshotHostFontDefaults()   ← 同上（宿主角色色快照）
@@ -359,29 +359,6 @@ function applyEffects(opts) {
   // Border emphasis: the border tokens are low-alpha hairlines; raise their
   // alpha via a neutral gray so both light and dark themes stay legible.
   s.setProperty("--we-border-alpha", String(selection.border));
-  // Glass blur strength in px (0 disables the frosted-glass effect).
-  s.setProperty("--we-blur", selection.blur + "px");
-  // iOS liquid glass: the backdrop "colour melt" (saturation) is a CONSTANT
-  // material property, DECOUPLED from the blur radius — the 玻璃 slider now
-  // drives ONE thing (frost depth, --we-blur). Rationale: --we-saturate amplifies
-  // whatever chroma the backdrop still carries, and blur is what smears the
-  // residual wallpaper text into that chroma; the coupled ramp therefore
-  // magnified exactly the signal the owner reads as 荧光/彩色鬼影, worst at the
-  // top of the slider where the amplification met the most smearing. A flat value
-  // kills the runaway at high radii while keeping the "wet glass" chroma lift at
-  // every radius. GLASS_SATURATE is deliberately BELOW the stylesheet's own 1.8
-  // fallback (what applies before this variable is first written), so the
-  // steady-state glass is milder than the pre-write default rather than stronger.
-  //   blur px:     0      15     30     45     60
-  //   old:       1.15   1.57   1.99   2.41   2.83   (1.15 + blur*0.028)
-  //   new:       1.30   1.30   1.30   1.30   1.30   (constant; 6.1x less chroma
-  //                                                  amplification at 60px)
-  // ?we-saturate=legacy restores the old coupled ramp byte-for-byte (A/B
-  // escape hatch, see useLegacySaturateCoupling).
-  s.setProperty("--we-saturate", useLegacySaturateCoupling()
-    ? String(1.15 + selection.blur * 0.028)
-    : String(GLASS_SATURATE));
-  s.setProperty("--we-glass-brightness", "1.04");
   // ── ⚠️ 这三个变量**不许写**：`--we-wallpaper-blur` / `--we-wallpaper-scale` /
   //   `--we-wallpaper-flip` 整份样式表**没有任何 var() 消费者**（模糊真的落在下面的
   //   `--we-media-filter` 上，scale+flip 真的落在 `--we-wallpaper-transform` 上）。
@@ -481,38 +458,6 @@ function applyEffects(opts) {
   s.setProperty("--we-ui-file-icon", uiColor("uiColorFileIcon"));
   s.setProperty("--we-ui-tab", uiColor("uiColorTab"));
   s.setProperty("--we-ui-deep-diving", uiColor("uiColorDeepDiving"));
-  // - --we-glass-alpha: white-overlay alpha of the glass surfaces. The 玻璃透明
-  //   度 slider semantics: higher = MORE transparent (clearer wallpaper shows
-  //   through), lower = closer to solid. 0% → ~0.25 (frosted, solid-ish),
-  //   60% → ~0.10 (轻霜 —— 染色地板下限不再让颜色在拉满端消失，旧值 0.03 会让
-  //   玻璃色份额塌到 ~1%、只剩主题底色 = 用户报的"拉满变黑/变白")。
-  const glassAlpha = Math.max(0.10, 0.25 - (selection.glassAlpha / 100) * 0.15);
-  s.setProperty("--we-glass-alpha", String(glassAlpha));
-  // ── ⚠️ 这个变量**不许删**：它没有 CSS 消费者（配方早改读下面钳制出来的
-  // `--we-surface-tint-light/dark`），但 `test/compat-harness-pages.mjs` 把它当**页面观察量**
-  // 断言（`getComputedStyle(body)` 读它、要求非空 + DSH 的设置窗口 token 与之同源）。那个
-  // harness 不在任何 npm 脚本里（要浏览器页面）⇒ 无法在此验证改动它的结局 —— 先删写入 = 静默
-  // 破坏一个未经验证的观察者。正确顺序：先把 harness 的观察点改成 `--we-surface-tint-light`，
-  // 再删这里的写入；在那之前它由守卫第 ⑭ 组的 `OBSERVED_ONLY` 登记表**显式豁免**。
-  //   那行注释说明了它为何暂时不能删。这里写**浅色那一侧**：它是这个色板的"基准色"，
-  //   而观察者只要求非空。（改分主题取色后它仍是标量 —— 观察量的形状没变。）
-  s.setProperty("--we-glass-color", glassColorOf(selection, "light"));
-  // - 玻璃保真度（0–100，默认 100 = 完整红线）：同一标量喂两处消费 —— styles.js
-  //   的 --we-readability-floor（地板覆盖度）与 weClampSurfaceColor（釉色向原色
-  //   的回退幅度）。两处必须同源，滑杆才是一个旋钮。
-  const fidNum = Number(selection.glassFidelity);
-  const glassFidelity = Number.isFinite(fidNum) ? Math.min(1, Math.max(0, fidNum / 100)) : 1;
-  s.setProperty("--we-glass-fidelity", String(glassFidelity));
-  // - 染色地板：按主题把玻璃色钳制进可读亮度带，供样式表的
-  //   --we-readability-base（地板层）与全部 frost 槽位消费 —— 对话框/侧栏等
-  //   宿主表面由此拿到**用户的色相**而非主题白/黑，正文对比度判据不变。
-  //   保真度 < 100 时釉色向原色线性回退（见 weClampSurfaceColor 第三参）。
-  //   #159②：两侧各取自己那一半（glassColorOf），于是「深色单独设置」一开，
-  //   同一份 settings 在浅/深两套配色下给出两个不同的釉色 —— 这正是本项的交付。
-  const glassTintLight = glassColorOf(selection, "light");
-  const glassTintDark = glassColorOf(selection, "dark");
-  s.setProperty("--we-surface-tint-light", weClampSurfaceColor(glassTintLight, "light", glassFidelity));
-  s.setProperty("--we-surface-tint-dark", weClampSurfaceColor(glassTintDark, "dark", glassFidelity));
   // - #164：原生 <select> 弹层的行配对。**只在用户自定义了「正文」墨色时写**：
   //   没自定义时样式表的缺省就是主题默认配对（逐位还原现状），不写比写更不容易漂。
   //   两档同时写、由样式表按主题挑 —— 与上面的 --we-surface-tint-* 同法，省掉一个
@@ -542,64 +487,12 @@ function applyEffects(opts) {
   const checkedInk = weCheckedRowInk(selection.accent);
   if (checkedInk) s.setProperty("--we-popup-row-checked-ink", checkedInk);
   else s.removeProperty("--we-popup-row-checked-ink");
-  // RGB 三元组形式：给 rgba() 槽位用（消息气泡 / 输入框的白釉染色）。
-  s.setProperty("--we-surface-tint-rgb-light", toRgbTriple(weClampSurfaceColor(glassTintLight, "light", glassFidelity)));
-  s.setProperty("--we-surface-tint-rgb-dark", toRgbTriple(weClampSurfaceColor(glassTintDark, "dark", glassFidelity)));
 
-  // ── 玻璃管线在 src/glass.js：取值解析 / 各面釉层变量 / 门控属性；这里只留
-  //    **一行调用**。本文件继续负责全局玻璃量（--we-glass-* / --we-surface-tint-*）与其余
-  //    非玻璃效果（accent / 可读性 / 光标 / 壁纸 / 字体）。
-  applyGlass(selection, s);
-  // 额外补雾化的选择器（上游 #200）：玻璃面算完之后同步这条**运行期**样式通道。
-  // 静态样式表是构建期常量（styles.js），而这份规则由设置拼出来 ⇒ 单独一个 <style>
-  // 标签（见 src/glass-extra.js；空清单时它一条规则都不生成、标签也撤掉）。
-  syncExtraGlassCss(selection);
-  // 思考块液态玻璃：默认关，保持宿主黑底方便阅读。打开后 CSS 清掉思考条
-  // 与推理面的实心底，切到会话同一套雾化。本门控仍在 applyEffects 就地写 ——
-  // 它不是玻璃量，不进 applyGlass 的取值管线。
-  // 让路态（皮肤中心互操作，见 src/client.js）：玻璃整族退场 —— 这里与下面 sidebar-follow
-  // 是 applyGlass 之外仅剩的两处玻璃门控点，一并摘。
-  const skinYield = typeof skinYieldActive === "function" && skinYieldActive();
-  // 三挡的第二半：正文原生挡（thinkingNative）。它**赢过**玻璃挡 —— 开着时不挂
-  // data-we-thinking-glass（互斥在门控层保证，UI 的三挡分段只是维持两键一致）。
-  // 原生挡的 CSS 语义见 styles.js「正文原生挡」块：正文子树（气泡 / markdown 家族）
-  // 令牌退回宿主原生值，画布与输入框不碰。
-  if (selection.thinkingNative && !skinYield) document.body.setAttribute("data-we-thinking-native", "on");
-  else document.body.removeAttribute("data-we-thinking-native");
-  if (selection.thinkingGlass && !selection.thinkingNative && !skinYield) document.body.setAttribute("data-we-thinking-glass", "on");
-  else document.body.removeAttribute("data-we-thinking-glass");
-  // 文字胶囊一族的雾化（行内代码 / 新会话 / 「加载更早历史」「回到底部」）：
-  // #134 落地时是写死的 8px CSS 兜底（--we-inline-code-blur 无生产者 ⇒ 用户实测"调不了"），
-  // 现在接成旋钮（capsuleBlur，默认 8 = 原观感）。与上面的门控属性同处声明 ——
-  // 这族变量只被 data-we-thinking-glass 门下的规则消费（styles.js ⑥ 条）。
-  const capBlurNum = Number(selection.capsuleBlur);
-  s.setProperty("--we-inline-code-blur", String(Number.isFinite(capBlurNum) ? capBlurNum : 8) + "px");
-  // 胶囊釉色：三元组形式给 rgba() 槽位（fill 令牌 + 滚动条拇指）。刻意不过
-  // weClampSurfaceColor —— 10% 雾底不是正文面，不进可读性下限（理由见 schema）。
-  s.setProperty("--we-capsule-tint-rgb", toRgbTriple(
-    /^#[0-9a-f]{6}$/i.test(String(selection.capsuleColor)) ? selection.capsuleColor : "#ffffff"));
-
-  // dsh-better-sidebar 液态玻璃：一套独立于会话玻璃的细粒度控制（侧栏模糊 /
-  // 侧栏透明度 / 侧栏玻璃颜色 + 总开关）。变量只作用于 [data-dsh-better-sidebar]
-  // 子树（CSS 见下），关闭总开关时侧栏恢复原生外观。
-  // 跟随全局（sidebarFollowGlobal，默认开）：把侧栏那一套变量**指向**全局玻璃三件套。
-  // var() 是惰性替换 ⇒ 这里写进去的是引用而不是拷贝：改「玻璃 / 玻璃透明度」两侧栏一起变。
-  // 色相那一份走样式表里的 --we-follow-tint（按主题取钳制后的玻璃色）—— 不能在这里写死，
-  // 内联值会盖掉"按主题"这件事。
-  // ⚠️ 合并 #132 口径：跟随关着时**不覆盖** —— 按面值由 applyGlass 的 glassValue 单一
-  //    取值路径供给（inherit→全局键 / custom→「独立配置」自己的键）；/200 刻度这类旧曲线
-  //    早已随规范刻度退役，不许再回来。UI 上跟随开着时「独立配置」收起，
-  //    两套机制不会同时生效。
-  if (selection.sidebarFollowGlobal) {
-    s.setProperty("--we-sidebar-blur", "var(--we-blur)");
-    s.setProperty("--we-sidebar-saturate", "var(--we-saturate)");
-    s.setProperty("--we-sidebar-tint", "calc(var(--we-glass-alpha) * 100%)");
-    s.setProperty("--we-sidebar-color", "var(--we-follow-tint)");
-    s.setProperty("--we-sidebar-sheen", "1");
-  }
-  // 跟随态另挂一个属性：样式表用它决定"侧栏的釉"取共享那一份还是侧栏专用那一份。
-  if (selection.sidebarGlass && selection.sidebarFollowGlobal && !skinYield) document.body.setAttribute("data-we-sidebar-follow", "on");
-  else document.body.removeAttribute("data-we-sidebar-follow");
+  // ── 玻璃管线已随 ADR-0016 第三刀出户：全局玻璃量 / 染色地板 / applyGlass 逐面釉层 /
+  //    额外补雾化 / 思考块门控 / 胶囊 / 侧栏跟随 / 软渲染钩子，现住 packages/glass 的
+  //    玻璃层钩子（registerLayerHooks('glass')，主包挂载期 subscribe —— 每次 emit 与本函数
+  //    同一条链先后各跑一次）。本文件只剩**非玻璃**效果（accent / 可读性弹层墨 /
+  //    壁纸 / 光标 / 字体 / 音频 / scrim）。
 
   // 适配目标钩子（src/adapter.js）：把最终目标挂到 <body>，外壳材质类选择器
   // 一律经 [data-we-adapter^="desktop-"] 门控 —— 原生浏览器形态永远不吃桌面壳
@@ -613,13 +506,6 @@ function applyEffects(opts) {
   // 支持或不适用（非 Windows）时移除，保持原生。探测结果缓存，这里只做同步读写。
   if (detectMicaSupport() === false) document.body.setAttribute("data-we-mica", "off");
   else document.body.removeAttribute("data-we-mica");
-
-  // 软件渲染钩子（#95，见 detectSoftwareRender）：@supports 只做语法检查，软件
-  // 合成下 backdrop-filter 被静默忽略时它依然为真，所以近不透明回退必须靠运行时
-  // 探测来挂载。命中时 CSS（body[data-we-glass-fallback]）让面板/侧栏/内容面/
-  // 弹层改用与 @supports 回退完全相同的配方，并显式 backdrop-filter: none。
-  if (detectSoftwareRender()) document.body.setAttribute("data-we-glass-fallback", "1");
-  else document.body.removeAttribute("data-we-glass-fallback");
 
   if (!live) {
     // 字体自定义：**已无任何全局字体配置** —— 只剩「按角色」（颜色/排版/字重/字族，见
@@ -675,9 +561,6 @@ function clearEffects() {
   lastFadeBg = "";
   s.removeProperty("--we-scrim-color");
   s.removeProperty("--we-border-alpha");
-  s.removeProperty("--we-blur");
-  s.removeProperty("--we-saturate");
-  s.removeProperty("--we-glass-brightness");
   s.removeProperty("--we-media-filter");
   s.removeProperty("--we-object-fit");
   // 壁纸层取景（与上面那组写入成对）：卸载 / 禁用后 DOM 上不留变量。
@@ -696,75 +579,16 @@ function clearEffects() {
   s.removeProperty("--we-ui-file-icon");
   s.removeProperty("--we-ui-tab");
   s.removeProperty("--we-ui-deep-diving");
-  s.removeProperty("--we-glass-alpha");
-  s.removeProperty("--we-glass-color");
-  s.removeProperty("--we-surface-tint-light");
-  s.removeProperty("--we-surface-tint-dark");
-  s.removeProperty("--we-surface-tint-rgb-light");
-  s.removeProperty("--we-surface-tint-rgb-dark");
-  document.body.removeAttribute("data-we-glass-window");
-  // 页面玻璃总锚点（src/glass.js 恒挂）：漏撤 ⇒ 插件禁用 / HMR 卸载后整页的玻璃
-  // 令牌映射与对话栏那一族规则照旧生效（"插件已卸载，玻璃还在"）。与下面三个同批。
-  document.body.removeAttribute("data-we-glass-page");
-  document.body.removeAttribute("data-we-left-sidebar");
-  // 侧边栏四角圆角 / 直角（src/glass.js 的 applyGlass 写出）：同批清理 —— 漏撤 ⇒ 插件
-  // 卸载 / 禁用后宿主侧栏仍停在上次的圆角上（"插件没了，侧栏还是圆的"）。
-  document.body.removeAttribute("data-we-left-sidebar-radius");
-  document.body.removeAttribute("data-we-right-sidebar-radius");
-  document.body.removeAttribute("data-we-left-sidebar-square");
-  document.body.removeAttribute("data-we-right-sidebar-square");
-  s.removeProperty("--we-left-sidebar-radius");
-  s.removeProperty("--we-right-sidebar-radius");
-  // 标题栏液态玻璃门（与上面那个同批）：漏撤 ⇒ 插件卸载 / 禁用后，顶栏仍挂着玻璃底与
-  // 雾化层，而壳层自己的不透明底色被压住 —— 表现为"插件没了，标题栏还是玻璃的"。
-  document.body.removeAttribute("data-we-titlebar-glass");
-  // 思考块液态玻璃门（PR #130 引入）：同批的卸载残留口径 —— 漏撤 ⇒ 插件卸载后
-  // 宿主思考条的规则组照旧生效。合并 #132 时补上（第 ⑨ 组清理对称判据的要求）。
-  // 三挡的另一半（对话区原生挡）同批：漏撤 ⇒ 卸载后对话区令牌仍被钉回原生值。
-  document.body.removeAttribute("data-we-thinking-glass");
-  document.body.removeAttribute("data-we-thinking-native");
-  // ⚠️ W5 新增的三个门控属性**也必须在这里撤掉**（与上面两个同批）：
-  //    漏掉它们 ⇒ 插件被禁用 / HMR 卸载后，宿主 DOM 上仍留着 `data-we-glass-chat` /
-  //    `data-we-glass-floaters`，而挂在这些属性上的规则组**照旧生效** ——
-  //    表现为"插件已卸载，但玻璃还在"。这类残留只有卸载路径才暴露，日常切换看不出来。
-  document.body.removeAttribute("data-we-glass-chat");
-  document.body.removeAttribute("data-we-glass-floaters");
-  document.body.removeAttribute("data-we-sidebar-follow");
-  s.removeProperty("--we-sidebar-blur");
-  s.removeProperty("--we-sidebar-saturate");
-  s.removeProperty("--we-sidebar-sheen");
-  s.removeProperty("--we-sidebar-color");
-  s.removeProperty("--we-sidebar-tint");
-  document.body.removeAttribute("data-we-sidebar-glass");
-  document.body.removeAttribute("data-we-sidebar-fullclear");
+  // ── 玻璃段的摘除清单已随 ADR-0016 第三刀出户（packages/glass 的 disposeGlassLayer）：
+  //    全局玻璃量 / 逐面釉层变量 / 门控属性 / 软渲染钩子 / 额外补雾化标签都由那一层成对收走。
   document.body.removeAttribute("data-we-adapter"); // 适配目标钩子随 fiber 注销
   document.body.removeAttribute("data-we-mica"); // #73 Mica 能力钩子随 fiber 注销
-  document.body.removeAttribute("data-we-glass-fallback"); // #95 软件渲染回退钩子同上
-  s.removeProperty("--we-content-surface-alpha");
-  s.removeProperty("--we-content-surface-color");
-  // ⚠️ W2–W4 新增的**按面釉层变量**同样要撤（否则卸载后残留的变量值会继续被
-  //    那几条规则读到 —— 与属性残留是同一类问题）。逐面列出，不用循环：
-  //    它们分散在三个面、名字不同，显式列出比"一个前缀循环"更不容易漏。
-  for (const v of [
-    "--we-settings-window-blur", "--we-settings-window-alpha",
-    "--we-left-sidebar-blur", "--we-left-sidebar-alpha",
-    "--we-titlebar-blur", "--we-titlebar-alpha",
-    "--we-floaters-blur", "--we-floaters-alpha",
-    // ⚠️ 对话栏那一族（`--we-chat-*`）**提交态就没在撤** —— 既有缺陷，本次一并补上：
-    //    它们是对话栏专属釉层变量，卸载后残留同样会被那几条规则读到。
-    //    （判据"清理对称性"把这一组和上面 6 个一起抓了出来。）
-    "--we-chat-glass-fidelity", "--we-chat-surface-tint-light", "--we-chat-surface-tint-dark",
-    "--we-chat-surface-tint-rgb-light", "--we-chat-surface-tint-rgb-dark",
-  ]) s.removeProperty(v);
   // 画布兜底色写在根元素上（见 src/live-layer.js 的 refreshUnderlayColor）：它不在
   // body 的变量表里，必须显式撤掉 —— 否则禁用插件后根元素会一直带着上一张壁纸的颜色。
   clearUnderlayColor();
   removeFontStyles();
   s.removeProperty("--we-caret-color");
   removeCaretStyles();
-  // 额外补雾化通道（#200）：这一份是**运行期生成的** <style>，不在静态样式表里 ⇒
-  // 必须显式撤标签（与上面那批 body 属性 / 变量成对，理由同"清理对称性"）。
-  disposeExtraGlassCss();
   selection.sceneAudioUrl = null;
   selection.sceneHasAudio = false;
   syncSceneAudio(selection);

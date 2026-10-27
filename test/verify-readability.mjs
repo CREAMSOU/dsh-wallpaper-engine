@@ -105,7 +105,8 @@ try {
 } catch (err) { cssError = err && err.message; }
 
 // 3) the glass-alpha mapping, derived from the source (never re-typed here)
-const GMAP = SRC.match(/const glassAlpha = Math\.max\(([\d.]+), ([\d.]+) - \(selection\.glassAlpha \/ ([\d.]+)\) \* ([\d.]+)\);/);
+// ADR-0016 第三刀：glassAlpha 曲线随玻璃层出户 ⇒ 从双工件拼接面提取（主包 + 玻璃包产物）。
+const GMAP = PANEL_SRC_ALL.match(/const glassAlpha = Math\.max\(([\d.]+), ([\d.]+) - \(selection\.glassAlpha \/ ([\d.]+)\) \* ([\d.]+)\);/);
 const glassAlpha = GMAP
   ? (pct) => Math.max(Number(GMAP[1]), Number(GMAP[2]) - (pct / Number(GMAP[3])) * Number(GMAP[4]))
   : null;
@@ -967,9 +968,10 @@ function main() {
     // 链路：默认关（安全不变量）+ 成对挂摘 + UI 行过 weT。
     check('F7e 设置键默认关且 kind 为 boolFalse（默认态地板照旧兜底）',
       /sidebarFullClear:\s*false,/.test(SRC) && /sidebarFullClear:\s*\{\s*kind:\s*'boolFalse'\s*\}/.test(SRC));
-    const sets = (SRC.match(/setAttribute\("data-we-sidebar-fullclear"/g) || []).length;
-    const rems = (SRC.match(/removeAttribute\("data-we-sidebar-fullclear"/g) || []).length;
-    const paired = SRC.includes('else document.body.removeAttribute("data-we-sidebar-fullclear")');
+    // ADR-0016 第三刀：挂/摘都在玻璃包产物里（glass.js 写、disposeGlassLayer 摘）⇒ 双工件面计数。
+    const sets = (PANEL_SRC_ALL.match(/setAttribute\("data-we-sidebar-fullclear"/g) || []).length;
+    const rems = (PANEL_SRC_ALL.match(/removeAttribute\("data-we-sidebar-fullclear"/g) || []).length;
+    const paired = PANEL_SRC_ALL.includes('else document.body.removeAttribute("data-we-sidebar-fullclear")');
     check('F7f 门控属性有挂有摘：applyGlass 成对（if/else）+ clearEffects 卸载再摘一次（rem ≥2）',
       sets >= 1 && paired && rems >= 2, 'set=' + sets + ' rem=' + rems + ' paired=' + paired);
     check('F7g UI 行存在且文案过 weT（新中文必须进 weT + 词表；UI 行在玻璃包产物里，ADR-0016）',
@@ -991,9 +993,9 @@ function main() {
     const unpairOk = (src) => (src.match(/setAttribute\("data-we-sidebar-fullclear"/g) || []).length >= 1
       && src.includes('else document.body.removeAttribute("data-we-sidebar-fullclear")')
       && (src.match(/removeAttribute\("data-we-sidebar-fullclear"/g) || []).length >= 2;
-    check('negative control F7-4: 只挂不摘（漏 clearEffects 那次）会被同一条判据判出',
+    check('negative control F7-4: 只挂不摘（漏 dispose 那次）会被同一条判据判出（挂/摘面 = 双工件，ADR-0016）',
       !unpairOk('setAttribute("data-we-sidebar-fullclear","on"); else document.body.removeAttribute("data-we-sidebar-fullclear")')
-      && unpairOk(SRC));
+      && unpairOk(PANEL_SRC_ALL));
   }
 
   // ── F8 (#164)：原生 select 弹层的选项行必须显式「不透明底 + 对比墨」──────────────────

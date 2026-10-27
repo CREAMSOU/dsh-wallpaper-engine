@@ -461,31 +461,16 @@ const INLINE_MODULES = [
     markers: ['var OCCLUSION_POLL_MS = ', 'function startOcclusionPolling(', 'function stopOcclusionPolling(',
       'function occlusionTick(', 'function deliverOcclusionSnapshot('],
   },
-  {
-    // 玻璃后端的唯一落点（wip §10.13）：从 `effects.js` 抽出的那一段 ——
-    // 输入输出封闭（只要 `selection` + `body.style`），所以抽出来之后
-    // ⑪/⑫/⑬ 三组守卫读的"写了什么"有了单一归属，R3b 的形状改动也只落在这里。
-    file: 'src/glass.js',
-    why: '玻璃后端：取值解析 / 各面釉层变量 / 门控属性（无条件写，值槽位与开关正交）',
-    markers: ['const toRgbTriple = (hex) => {', 'function applyGlass(selection, s) {',
-      'const glassValue = (surface, param, profileValue, globalValue) =>'],
-  },
-  {
-    file: 'src/glass-surfaces.js',
-    why: '统一表面策略、安全载体、动态几何与可撤销生命周期',
-    markers: ['function weResolveSurface(', 'function syncGlassSurfaces(', 'function disposeGlassSurfaces('],
-  },
-  {
-    // 运行时表面管理先决定哪些额外目标可安全使用本地载体。
-    file: 'src/glass-extra.js',
-    why: '「额外补雾化的选择器」（#200）：把用户点名的选择器编译成 ::before 载体规则，写进本通道自己的 <style>',
-    markers: ['const EXTRA_GLASS_TAG_ID = ', 'function weExtraGlassCss(',
-      'function syncExtraGlassCss(', 'function disposeExtraGlassCss('],
-  },
+  // ── ADR-0016 第三刀（2026-10-28）：玻璃**运行时**（原 src/glass.js / glass-surfaces.js /
+  //    glass-extra.js + effects.js 的玻璃段 + detectSoftwareRender）**已迁出主 bundle**，
+  //    住 packages/glass/src/，由该包的 client.build.json 出产物，经 registerLayerHooks('glass')
+  //    挂进主包的 emit 节拍（sync = 原玻璃段写入、dispose = 原清理清单，逐字搬迁）；
+  //    weClampSurfaceColor / glassColorOf 两个纯函数**家留主包**（effects.js，染色地板判据
+  //    从主包产物抽取复算），子包经 HOST_BRIDGE 键集取同一份。
   {
     file: 'src/effects.js',
-    why: '效果应用层（设置 → DOM；契约见文件头，见 P1-7 后半）—— 玻璃那一段已抽到 src/glass.js',
-    markers: ['let lastScrimCss = "";', 'function applyEffects(', 'applyGlass(selection, s);',
+    why: '效果应用层（设置 → DOM；契约见文件头）—— 玻璃段已出户（ADR-0016 第三刀），本文件只剩非玻璃效果',
+    markers: ['let lastScrimCss = "";', 'function applyEffects(',
       'function clearEffects()', 'function resolveWallpaperFadeBg()'],
   },
   {

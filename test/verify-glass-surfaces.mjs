@@ -388,9 +388,12 @@ function claimKeysOf(surface) {
 // 构建期把两个文件**内联进同一个工厂作用域** ⇒ 判据要看的"玻璃代码"= 两者拼接
 // （顺序同构建表：glass.js 在前）。下面的谓词因此继续成立，而**不会**盯着一份
 // 已经没有玻璃代码的 `effects.js` 变成恒真。
-const GLASS_SRC = readFileSync(join(ROOT, 'src', 'glass.js'), 'utf8');
+const GLASS_SRC = readFileSync(join(ROOT, 'packages', 'glass', 'src', 'glass.js'), 'utf8');
 const EFFECTS_SRC = readFileSync(join(ROOT, 'src', 'effects.js'), 'utf8');
-const EFFECTS = GLASS_SRC + '\n' + EFFECTS_SRC;
+// ADR-0016 第三刀：effects 的玻璃段随玻璃层出户 ⇒ 执行面 = glass.js + effects.js + glass-layer.js
+// （glass-extra 仍由 Proxy 替身承担 —— 基线里 syncExtraGlassCss 本就是替身，行为不变）。
+const GLASS_LAYER_SRC = readFileSync(join(ROOT, 'packages', 'glass', 'src', 'glass-layer.js'), 'utf8');
+const EFFECTS = GLASS_SRC + '\n' + EFFECTS_SRC + '\n' + GLASS_LAYER_SRC;
 // 第 ⑫ 组要读样式表：它需要从 CSS 的**内层兜底**反推"没被 JS 写出的变量实际取到哪个值"
 // （单层链 `var(--we-<面>-x, var(--we-global, lit))`）⇒ 判据与"管道形状"解耦。
 // 刀3：样式族已按域拆成 8 个模块 + 组装点 ⇒ 这里取**整族源码文本**（构建序拼接），判据文本不变。
@@ -1102,7 +1105,7 @@ console.log('\n④ 接线 ↔ 注册表 ↔ 面名 三方对账');
   };
   const badOwnKey = [];
   // 取值接线住在 `src/glass.js`（"玻璃后端的唯一落点"）—— 直接读源文件（同 STYLES_TEXT 的做法）。
-  const glassSrc = readFileSync(join(ROOT, 'src', 'glass.js'), 'utf8');
+  const glassSrc = readFileSync(join(ROOT, 'packages', 'glass', 'src', 'glass.js'), 'utf8');
   // ⚠️ 这里自带一个实参提取器（不复用上面那个 `callArgs`：它定义在另一个判据组的块作用域里）
   //    —— 判据自己成块、自己能跑，是这份文件的一贯形态。
   const argsOf = (text) => {
@@ -1365,6 +1368,8 @@ console.log('\n⑨ W5：各面的锚点门控覆盖率（防"关掉后还剩一�
   //    这类残留只有卸载路径才暴露，日常切换看不出来 —— 所以必须写成判据。
   {
     const clearStart = EFFECTS.indexOf('function clearEffects');
+    // ADR-0016 第三刀：玻璃摘除清单随 disposeGlassLayer 出户（在 face 的 glass-layer 段）——
+    // clearBody 取"clearEffects 起到文件尾"即天然包含它（glass-layer 排在 effects 之后）。
     const clearBody = clearStart >= 0 ? uncommented(EFFECTS.slice(clearStart)) : '';
     // 从 applyEffects 里提取"会写出的门控属性"与"会写出的按面变量"
     const applyBody = clearStart >= 0 ? uncommented(EFFECTS.slice(0, clearStart)) : uncommented(EFFECTS);
@@ -1492,6 +1497,7 @@ const makeSandbox = (body) => {
     detectMicaSupport: () => true, detectSoftwareRender: () => false,
     useLegacySaturateCoupling: () => false,
     weClampSurfaceColor: (hex) => hex,
+    sanitizeExtraGlassSelectors: SCHEMA.sanitizeExtraGlassSelectors,
     snapshotHostFontDefaults: () => {}, applyComponentFonts: () => {},
     removeFontStyles: () => {}, removeComponentFonts: () => {},
     applyCaretStyles: () => {}, removeCaretStyles: () => {}, syncSceneAudio: () => {},
@@ -1503,13 +1509,13 @@ const makeSandbox = (body) => {
     set: () => true,
   });
   const mod = new Function('__scope', 'with (__scope) { ' + body
-    + '\nreturn { applyEffects }; }')(scope);
+    + '\nreturn { applyEffects, applyGlassLayer }; }')(scope);
   return {
     wrote, attrs,
     /** 按覆盖调一次；覆盖**累加**（模拟用户连续改设置）。 */
     call: (patch) => {
       Object.assign(selection, patch);
-      try { mod.applyEffects(); } catch (e) { runtimeErrors.push(String((e && e.message) || e)); }
+      try { mod.applyEffects(); mod.applyGlassLayer(); } catch (e) { runtimeErrors.push(String((e && e.message) || e)); }
     },
   };
 };
@@ -2025,7 +2031,11 @@ console.log('\n⑭ 三方对账：写出的变量必须有人读（R4 死码清�
   // 单一真源；与 test/verify-module-layout.mjs 的 parseInlineModules 同款口径）。
   // 覆盖面无损：迁走的四个浏览器半边文件里没有**字面量** setProperty("--we-…") 写入，
   // 也没有 var(--we-…) 消费（只有一处注释提及）⇒ 本组两个集合与迁移前逐字相同。
-  const CLIENT_MODULES = parseInlineModules().map((e) => e.file);
+  // ADR-0016 第三刀：玻璃运行时随玻璃包出产物 ⇒ 扫描面 = 主包 INLINE_MODULES ∪ 玻璃包
+  // 配方的 inline 文件（真源 = 各自的构建配方，不手抄文件列表）。
+  const GLASS_RECIPE = JSON.parse(readFileSync(join(ROOT, 'packages', 'glass', 'client.build.json'), 'utf8'));
+  const CLIENT_MODULES = parseInlineModules().map((e) => e.file)
+    .concat(GLASS_RECIPE.inline.map((e) => 'packages/glass/' + e.file));
   const texts = CLIENT_MODULES.map((f) => readFileSync(join(ROOT, f), 'utf8'));
   const written = new Set();
   for (const t of texts) {
@@ -2392,7 +2402,7 @@ console.log('\n⑲ 标记值跟走 resolver（t9-001 运行级断言：真跑 we
   // 真 `src/glass-surfaces.js` 装进 `new Function` + with-scope 替身 DOM，把
   // weSurfaceRefresh 真正跑起来 —— 源码子串断言看不见运行期的标记值漂移
   // （t9-001：resolver 返回 extra-fallback 时标记仍停留 "extra"，CSS 规则全不匹配）。
-  const SURF_SRC = readFileSync(join(ROOT, 'src', 'glass-surfaces.js'), 'utf8');
+  const SURF_SRC = readFileSync(join(ROOT, 'packages', 'glass', 'src', 'glass-surfaces.js'), 'utf8');
   const runSurfaces = (src) => {
     const elAttrs = new Map();
     const bodyAttrs = new Map([['data-we-glass-page', '']]);

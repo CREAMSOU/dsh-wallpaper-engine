@@ -36,15 +36,20 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, '..');
-const MOD_URL = pathToFileURL(join(ROOT, 'src', 'glass-extra.js')).href;
+const MOD_URL = pathToFileURL(join(ROOT, 'packages', 'glass', 'src', 'glass-extra.js')).href;
 const TAG_ID = 'dsh-wallpaper-engine/extra-glass';
 
 const schema = await import(pathToFileURL(join(ROOT, 'lib', 'settings-schema.js')).href);
 const effectsSrc = readFileSync(join(ROOT, 'src', 'effects.js'), 'utf8');
+// ADR-0016 第三刀：effects.js 的玻璃段（含 syncExtraGlassCss 调用与 --we-blur 写入）随玻璃层
+// 出户到 packages/glass —— 接线判据改读**玻璃层源码**。
+const glassLayerSrc = readFileSync(join(ROOT, 'packages', 'glass', 'src', 'glass-layer.js'), 'utf8');
 const panelSrc = readFileSync(join(ROOT, 'packages', 'glass', 'src', 'glass-panel.js'), 'utf8');
 const clientSrc = readFileSync(join(ROOT, 'src', 'client.js'), 'utf8');
 const quickSrc = readFileSync(join(ROOT, 'src', 'quick-panel.js'), 'utf8');
 const buildSrc = readFileSync(join(ROOT, 'scripts', 'build-client.mjs'), 'utf8');
+// ADR-0016 第三刀：glass-extra 随玻璃子包出产物 ⇒ 登记面判据改读**该包自己的配方**。
+const glassRecipe = readFileSync(join(ROOT, 'packages', 'glass', 'client.build.json'), 'utf8');
 
 let failed = 0;
 const check = (name, ok, detail) => {
@@ -290,11 +295,10 @@ function selectorList(css) {
 
 // ── ⑤ 接线（源码形态）─────────────────────────────────────────────────────────
 {
-  check('effects.applyEffects 同步这条通道',
-    /applyGlass\(selection, s\);\n[^\n]*\n(?:[^\n]*\n)*?\s+syncExtraGlassCss\(selection\);/.test(effectsSrc)
-    || /syncExtraGlassCss\(selection\);/.test(effectsSrc));
-  check('effects.clearEffects 撤标签（与 body 那批清理成对）', /disposeExtraGlassCss\(\);/.test(effectsSrc));
-  check('构建期内联清单已登记 src/glass-extra.js', buildSrc.includes("file: 'src/glass-extra.js'"));
+  check('玻璃层同步这条通道（ADR-0016 第三刀：原 effects.applyEffects 的玻璃段出户）',
+    /syncExtraGlassCss\(selection\);/.test(glassLayerSrc));
+  check('玻璃层 dispose 撤标签（与 body 那批清理成对）', /disposeExtraGlassCss\(\);/.test(glassLayerSrc));
+  check('构建期内联清单已登记 src/glass-extra.js', glassRecipe.includes('src/glass-extra.js'));
   check('面板渲染了这个控件（走 weT 词条 + 具名处理器）',
     /weT\("额外补雾化的选择器"\)/.test(panelSrc) && /onInput: \(e\) => onExtraGlassSelectors\(e\.target\.value\)/.test(panelSrc));
   check('渲染器解构了这个处理器（否则面板拿到 undefined）', /onExtraGlassSelectors,/.test(panelSrc));
@@ -345,11 +349,11 @@ function selectorList(css) {
     kindsSrc.includes('extraGlassSelectors') && !kindsSrc.includes('extraBlur')
     && !kindsSrc.includes('extraAlpha') && !kindsSrc.includes('extraTransparency')
     && !panelSrc.includes('sel.extraBlur') && !panelSrc.includes('sel.extraAlpha'));
-  check('⑦-5 端值刻度 = 全局滑杆真实刻度（雾化 0..60 / 玻璃透明度 0..100），非自有面 5..42/5..50；--we-blur 由 selection.blur 驱动',
+  check('⑦-5 端值刻度 = 全局滑杆真实刻度（雾化 0..60 / 玻璃透明度 0..100），非自有面 5..42/5..50；--we-blur 由 selection.blur 驱动（写入在玻璃层，ADR-0016）',
     /SliderRow\(weT\("雾化"\), 0, 60, 1, sel\.blur/.test(panelSrc)
     && /SliderRow\(weT\("玻璃透明度"\), 0, 100, 5, sel\.glassAlpha/.test(panelSrc)
     && !/SliderRow\(weT\("雾化"\), 5, 42/.test(panelSrc)
-    && /s\.setProperty\("--we-blur", selection\.blur \+ "px"\)/.test(effectsSrc));
+    && /s\.setProperty\("--we-blur", selection\.blur \+ "px"\)/.test(glassLayerSrc));
 }
 
 console.log('\n' + (failed ? 'EXTRA-GLASS CHECKS FAILED — ' + failed + ' failed' : 'ALL EXTRA-GLASS CHECKS PASSED'));
