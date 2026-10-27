@@ -5,7 +5,7 @@
 > 口径：只统计守卫**代码**里真正碰到的模块（先剥注释），并区分"直接读源文件"与"隔着产物 `lib/client.js`"。
 > 写法：字面量路径 / `join(...)` 拼接 / 唯一 basename / 产物配方 / **前缀族读法** `scopeFiles|scopeText(<前缀>)` / **经共享族助手读**（`import { panelText } from './tools/src-scope.mjs'` + 真调用；族口径封在那个库里，见 DEV-GUIDE §4.6「同时是守卫的库」）/ **真源定位读**（`locate('符号')` / `locateFile('文件名')`，`test/tools/source-locator.mjs`：符号唯一声明在哪就是读了哪个模块）。
 
-模块面 178 个 · 守卫 113 个
+模块面 178 个 · 守卫 114 个
 
 ## 守卫 → 模块
 
@@ -68,6 +68,7 @@
 | `verify-mp4-vfs.mjs` | `lib/faststart.js` `lib/host-boot.js` `lib/kernel/host-session.js` `lib/mp4-vfs.js` |  |
 | `verify-notice-routing.mjs` | `lib/index.js` `src/client.js` |  |
 | `verify-occlusion-client.mjs` | `src/api-client.js` `src/live-layer-diag.js` `src/live-layer-gate.js` `src/live-layer-pointer.js` `src/live-layer-underlay.js` `src/live-layer-watch.js` `src/live-layer.js` `src/occlusion.js` | ✅ |
+| `verify-occlusion-debounce.mjs` | `src/client.js` |  |
 | `verify-occlusion-hub.mjs` | `lib/index.js` `lib/json-response.js` `lib/occlusion/rects.js` `lib/occlusion/x11.js` `packages/media-bridge/lib/occlusion/index.js` `packages/media-bridge/lib/routes/occlusion.js` |  |
 | `verify-package-files.mjs` | `lib/http-body.js` `lib/index.js` `lib/pkg-read.js` | ✅ |
 | `verify-package-publish.mjs` | `lib/index.js` `lib/pkg-read.js` `src/client.js` | ✅ |
@@ -245,7 +246,7 @@
 | `src/client-audio-playback.js` | 2 | `verify-layer-ownership` `verify-scene-live` |
 | `src/client-media-frame.js` | 1 | `verify-scene-live` |
 | `src/client-rotation.js` | 1 | `verify-scene-live` |
-| `src/client.js` | 28 | `verify-about` `verify-adapter` `verify-api-client` `verify-avatar-interval-and-rotation` `verify-client` `verify-component-fonts` `verify-contracts` `verify-extra-glass` `verify-fontset` `verify-glass-surfaces` `verify-i18n` `verify-layer-ownership` `verify-module-layout` `verify-notice-routing` `verify-package-publish` `verify-pet-rope-entry` `verify-pet-sidebar-diag` `verify-pet-sidebar-rebound` `verify-presets` `verify-scene-live` `verify-subpackage-client-half` `verify-subpackage-purity` `verify-subpackage-toggle-roundtrip` `verify-system-fonts` `verify-theme-follow` `verify-theme-layer` `verify-transcode-state` `verify-types` |
+| `src/client.js` | 29 | `verify-about` `verify-adapter` `verify-api-client` `verify-avatar-interval-and-rotation` `verify-client` `verify-component-fonts` `verify-contracts` `verify-extra-glass` `verify-fontset` `verify-glass-surfaces` `verify-i18n` `verify-layer-ownership` `verify-module-layout` `verify-notice-routing` `verify-occlusion-debounce` `verify-package-publish` `verify-pet-rope-entry` `verify-pet-sidebar-diag` `verify-pet-sidebar-rebound` `verify-presets` `verify-scene-live` `verify-subpackage-client-half` `verify-subpackage-purity` `verify-subpackage-toggle-roundtrip` `verify-system-fonts` `verify-theme-follow` `verify-theme-layer` `verify-transcode-state` `verify-types` |
 | `src/effects.js` | 7 | `verify-adapter` `verify-client` `verify-component-fonts` `verify-extra-glass` `verify-glass-surfaces` `verify-scene-live` `verify-theme-layer` |
 | `src/ext-avatar.js` | 2 | `verify-avatar-interval-and-rotation` `verify-scene-live` |
 | `src/extension-registry.js` | 3 | `verify-fontset` `verify-scene-live` `verify-subpackage-toggle-roundtrip` |

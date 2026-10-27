@@ -226,6 +226,8 @@ const VERIFY_STEPS = [
   //    父链不得直接含 body。硬档依据：每一条的后果都是**用户在屏上能看见的残留/错层**，不是
   //    仓库内务（同上方包面判据的发布面口径）。
   step('test/verify-layer-ownership.mjs'),
+  // pauseOnHidden 的持续期防抖契约（#288：宿主可见性误判会让 6.4MB scene 包每次抖动全量冷重载）。
+  step('test/verify-occlusion-debounce.mjs'),
   // 可选桌宠联动的离线回归；安装和浏览器集成另走显式环境入口。
   step('test/verify-pet-package.mjs'),
   step('test/verify-pet-hotplug-host.mjs'),

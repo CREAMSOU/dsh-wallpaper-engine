@@ -625,6 +625,14 @@
         {
           "kind": "guard",
           "npm": null,
+          "file": "test/verify-occlusion-debounce.mjs",
+          "args": [],
+          "tier": "hard",
+          "probe": false
+        },
+        {
+          "kind": "guard",
+          "npm": null,
           "file": "test/verify-pet-package.mjs",
           "args": [],
           "tier": "hard",
@@ -1495,6 +1503,14 @@
           "kind": "guard",
           "npm": null,
           "file": "test/verify-layer-ownership.mjs",
+          "args": [],
+          "tier": "hard",
+          "probe": false
+        },
+        {
+          "kind": "guard",
+          "npm": null,
+          "file": "test/verify-occlusion-debounce.mjs",
           "args": [],
           "tier": "hard",
           "probe": false

@@ -380,7 +380,8 @@ async function main() {
     // 2026-10-27：合流 upstream v1.4.0（sync/upstream-1.4.0）后按**本树**实测重取 —— 上游步骤集
     // （桌宠/发布/治理/浏览器等）与本地 P-D 的两条（verify-layer-ownership / verify-token-domain）
     // 并存：verify 92→94、all 105→107（docs / smoke 仍各 6）。地板只许抬、不许降。
-    const CHAIN_FLOOR = { verify: 94, docs: 6, smoke: 6, all: 107 };
+    // 再：verify 94→95 / all 107→108 —— 新增 `test/verify-occlusion-debounce.mjs`（#288 可见性防抖契约）。
+    const CHAIN_FLOOR = { verify: 95, docs: 6, smoke: 6, all: 108 };
     /** 地板表与 GROUPS 的对齐体检：键名必须与**组名**逐一对齐（纯函数 ⇒ 负对照可直接喂）。 */
     const floorGaps = (groups, floors) => groups.map(([, g]) => g).filter((g) => !Number.isInteger(floors[g]));
     const problems = floorGaps(GROUPS, CHAIN_FLOOR).map((g) => '地板表缺组 ' + g

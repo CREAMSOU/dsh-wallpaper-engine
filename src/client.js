@@ -1794,10 +1794,24 @@ function weHexToColor(hex) {
 }
 
 let weBattery = null; // BatteryManager from navigator.getBattery (if available)
+/**
+ * `pauseOnHidden` 的**持续期防抖**（issue #288）。
+ *
+ * 宿主在虚拟桌面切换 / 焦点变化期间会瞬时把 `document.hidden` 误判为 true（Chromium 遮挡跟踪
+ * 竞态，2–3 秒后被复查纠正）。旧逻辑对 `document.hidden` **零防抖、照单全收** ⇒ 一次瞬时抖动就
+ * 走「暂停 → 拆页 → 重建 → 重新解析整个 scene 包（实测 6.4MB / 首帧 2001ms）」，用户看到黑屏
+ * 约 2 秒；可见性快速振荡时反复付这个代价。
+ *
+ * 现在只有隐藏**持续 ≥ HIDDEN_PAUSE_DEBOUNCE_MS** 才把 `hiddenHoldActive` 置真（由 apply 里
+ * 的 `applyHiddenHold` 维护，随 fiber 注销）；瞬时翻转不改变播放状态、也就不触发任何冷重载。
+ * 判定源仍只有一个：`occlusionReason()` 读这个布尔，`occlusionActive()` 由它派生。
+ */
+const HIDDEN_PAUSE_DEBOUNCE_MS = 1200;
+let hiddenHoldActive = false;
 // 遮挡原因（可读文案；空串 = 没被遮挡）。occlusionActive 由它派生，保证「是谁把
 // 渲染页停掉的」只有一个判定源 —— 诊断日志直接引用；失焦档再经适配目标门控（桌面壳失焦时壁纸多半仍整块可见，按失焦暂停会定格**可见**画面，见 adapterCaps）。
 function occlusionReason() {
-  if (selection.pauseOnHidden && typeof document !== "undefined" && document.hidden) return weT("标签页隐藏(pauseOnHidden)");
+  if (selection.pauseOnHidden && hiddenHoldActive) return weT("标签页隐藏(pauseOnHidden)");
   if (adapterCaps().blurPause && selection.pauseOnBlur && typeof document !== "undefined"
     && typeof document.hasFocus === "function" && !document.hasFocus()) return weT("窗口失焦(pauseOnBlur)");
   if (selection.pauseOnBattery && weBattery && !weBattery.charging) return weT("电池供电(pauseOnBattery)");
@@ -5950,6 +5964,32 @@ function apply(ctx) {
       // page hides/shows or the window loses/gains focus (see occlusionActive).
       // Fires syncLayers → play/pause on the video; decode drops to 0 while
       // minimized / covered by another app, exactly like desktop WE.
+      // #288：pauseOnHidden 的持续期防抖。瞬时 hidden（虚拟桌面切换 / 焦点竞态）直接忽略，
+      // 只有持续 ≥ HIDDEN_PAUSE_DEBOUNCE_MS 才置 hiddenHoldActive 并 emit（走正常暂停管线）；
+      // 回来时立刻清状态并 emit。绑定随 fiber 注销（下面的 cleanup）。
+      let hiddenDebounce = 0;
+      let hiddenHoldBound = false;
+      const applyHiddenHold = () => {
+        const hidden = typeof document !== "undefined" && document.hidden === true;
+        if (!hidden) {
+          if (hiddenDebounce) { clearTimeout(hiddenDebounce); hiddenDebounce = 0; }
+          if (hiddenHoldActive) { hiddenHoldActive = false; emit(); }
+          return;
+        }
+        if (hiddenHoldActive || hiddenDebounce) return;
+        hiddenDebounce = setTimeout(() => {
+          hiddenDebounce = 0;
+          if (typeof document !== "undefined" && document.hidden === true) {
+            hiddenHoldActive = true;
+            emit();
+          }
+        }, HIDDEN_PAUSE_DEBOUNCE_MS);
+      };
+      applyHiddenHold();
+      if (typeof document !== "undefined" && typeof document.addEventListener === "function") {
+        document.addEventListener("visibilitychange", applyHiddenHold);
+        hiddenHoldBound = true;
+      }
       const onOcclusionChange = () => emit();
       const ocListeners = [];
       if (typeof window !== "undefined" && typeof window.addEventListener === "function") {
@@ -6091,6 +6131,13 @@ function apply(ctx) {
         if (visBound && typeof document !== "undefined" && typeof document.removeEventListener === "function") {
           document.removeEventListener("visibilitychange", onVisibilityResyncPersist);
         }
+        // #288：防抖状态与监听随 fiber 一起收（模块级 hiddenHoldActive 必须复位，
+        // 否则禁用期间页面若是隐藏的，重挂后会带着旧态直接暂停）。
+        if (hiddenHoldBound && typeof document !== "undefined" && typeof document.removeEventListener === "function") {
+          document.removeEventListener("visibilitychange", applyHiddenHold);
+        }
+        if (hiddenDebounce) { clearTimeout(hiddenDebounce); hiddenDebounce = 0; }
+        hiddenHoldActive = false;
         if (fontVisBound && typeof document !== "undefined" && typeof document.removeEventListener === "function") {
           document.removeEventListener("visibilitychange", onVisibilityResyncFontSet);
         }
