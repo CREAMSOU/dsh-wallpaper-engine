@@ -377,6 +377,11 @@ const SUBPACKAGE_CLIENT_ARTIFACTS = [
   // 主 bundle 显式键集里的 registerPetLink 把服务登记回主包（门面缓冲 + 登记到达时补做）。
   // 求值在 apply() **之前** ⇒ 这里正是"子包先到"那一半的真实形态。
   ['../packages/pet-link/lib/client.pet-link.js', 'dsh-plugin-wallpaper-engine-pet-link'],
+  // ADR-0016 第二刀（2026-10-28）：「主题预设」+「玻璃 UI」节渲染器随玻璃子包出产物。
+  // 它的 factory 会调显式键集里的 registerPanelSection 把玻璃节登记进注册表；
+  // 挂载台不求值它 ⇒ 外观页签的玻璃节就是 null（占位桩按 id 取不到渲染器），
+  // 下面所有玻璃面板断言（玻璃颜色 6 色板 / #159② 深浅分色 / 表面策略控件…）全会红。
+  ['../packages/glass/lib/client.glass.js', 'dsh-plugin-wallpaper-engine-glass'],
 ];
 const subRequireMock = (spec) => {
   if (spec === 'dsh-plugin-wallpaper-engine') return exportsObj;
@@ -1521,7 +1526,7 @@ setTimeout(async () => {
     // 结构半边：旧实现是按主题选一侧（`singleGlassOnDark = sidebarSurface && panelThemeIsDark()`）。
     // 挂载台里 `document.body` 没有能力齐全的 hasAttribute ⇒ 只靠上面的行为断言抓不到"条件选侧"
     // 那一种回退，所以再钉一条源码判据 + 一条证明该判据真能抓到的负对照。
-    const glassPanelSrc = readFileSync(new URL('../src/glass-panel.js', import.meta.url), 'utf8');
+    const glassPanelSrc = readFileSync(new URL('../packages/glass/src/glass-panel.js', import.meta.url), 'utf8');
     // 只判**代码**：注释里正好写着"panelThemeIsDark 已随之删除"这句（第一版被自己的注释判红）。
     // 剥注释走共享的**字符串感知**实现（`test/tools/js-text.mjs`）—— 手写"块注释一条正则 +
     // 行注释一条正则"不认字符串与行注释，注释里出现那两个字符就会静默吃掉中间的真实代码，

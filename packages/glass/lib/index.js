@@ -2,9 +2,9 @@
  * packages/glass/lib/index.js —— 「液态玻璃」子包的**宿主半边**（ADR-0016 第一刀：骨架先行）。
  *
  * 本包分三刀出户（每刀独立可验收）：
- *   第一刀（本提交）：host-only 空壳 —— 行已登记、键表已通、宿主自检可解析，浏览器半边仍在
- *     主包 `src/glass-panel.js` 内联，用户观感零变化；
- *   第二刀：设置面板节（glass-panel.js）随包走（`exports['./client']` + `client.build.json`）；
+ *   第一刀：host-only 空壳 —— 行已登记、键表已通、宿主自检可解析，用户观感零变化；
+ *   第二刀（本提交）：设置面板节（glass-panel.js）随包走 —— `exports['./client']` +
+ *     `client.build.json` + 主包 HOST_BRIDGE_BINDINGS 玻璃段（pet-link 收口先例）；
  *   第三刀：玻璃运行时（glass.js / glass-surfaces.js / glass-extra.js）与玻璃 CSS 随包走，
  *     停用本行 = 摘掉全部 `data-we-glass-*` 门控与 `--dsw-*` 门控改写，宿主回到原生外观
  *     （ADR-0010 D2 一直「未实现」的 wallpaper-only 状态由此转正为行级开关）。
@@ -20,8 +20,8 @@
  *   ② 拆除账照交：ADR-0013 D15 / ADR-0014 S6.2「teardown 必须交 ctx.effect」⇒ host.handOff(ctx, dispose)。
  *
  * 纪律（与 fx 逐字同款）：不注册额外 ctx.effect、不读 config、不 acquireKernelLease、
- * 模块顶层只有声明（无求值期副作用）。第二刀落地前**不声明** dsh.client / exports["./client"]：
- * 声明了却没有产物，客户端会按 id 去取那个 lazy factory 然后抛错（ADR-0014 S3.4）。
+ * 模块顶层只有声明（无求值期副作用）。第三刀落地前，`data-we-glass-*` 门控仍由主包
+ * `src/effects.js` 写（本行的浏览器半边只画设置节）。
  */
 
 export const name = 'dsh-plugin-wallpaper-engine-glass';

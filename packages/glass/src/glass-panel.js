@@ -374,26 +374,6 @@ function renderGlassPresetsBlock(gp) {
   );
 }
 
-/**
- * 面板侧读「玻璃颜色」那一对（#159②）。
- *
- * 为什么本文件**自带**一份归一而不复用 effects.js 的 `glassColorOf` / client.js 的助手：
- * `test/verify-scene-live.mjs` 把本文件当**真模块 `import`**（与 `panel-tabs.js` 各在自己的模块
- * 作用域里，只有全局那几个替身可用）⇒ 引用工厂作用域里的兄弟名字就是渲染期 ReferenceError。
- * 这里只用局部逻辑 ⇒ 不依赖任何外部绑定，也不依赖 `document`。
- *
- * 形态：内部永远是一对 `{light, dark}`；标量（老预设定档直传）两侧同值；缺一侧用另一侧补；
- * 两侧都没有就回空串 —— 空串只让色板行没有选中项，**不猜颜色**（猜错的代价是面板显示与实际不符）。
- */
-function panelGlassPair(sel) {
-  const clean = (v) => (typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v.trim()) ? v.trim() : "");
-  const raw = sel && sel.glassColor;
-  if (typeof raw === "string") { const v = clean(raw); return { light: v, dark: v }; }
-  if (!raw || typeof raw !== "object") return { light: "", dark: "" };
-  const light = clean(raw.light) || clean(raw.dark);
-  const dark = clean(raw.dark) || light;
-  return { light, dark };
-}
 
 function renderGlassSurfaceControls(ctx) {
   const surfaces = [
@@ -550,8 +530,9 @@ function renderAppearanceGlassSection(ctx) {
   // 「思考块液态玻璃」三挡的当前值与按钮工厂（必须在 return 之前声明 —— 它们是语句，
   // 进不了下面的 createElement 实参表）。
   const thinkMode = sel.thinkingNative === true ? "native" : (sel.thinkingGlass === true ? "glass" : "off");
-  // #159②：玻璃色那一对（内部永远是一对；标量/残缺由本文件的 panelGlassPair 归一 ——
-  // 这里**不能**调 client.js / effects.js 的兄弟函数，见 panelGlassPair 的注释）。
+  // #159②：玻璃色那一对（内部永远是一对；标量/残缺由 panelGlassPair 归一 ——
+  // ADR-0016 第二刀起它的家在 lib/settings-schema.js（与 readGlassColors 同族，
+  // 「缺省回空串不猜色」vs「缺省回白釉」是两条不同的语义），经主 bundle 键集到本包）。
   const glassPair = panelGlassPair(sel);
   const thinkGear = (id, label, tip) => React.createElement("button", {
     key: "think-" + id,

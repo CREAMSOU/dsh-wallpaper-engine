@@ -428,7 +428,7 @@ try {
     await screenshot(tag+'-settings');
     // extra 端值 × 双主题（t9-003，真实参数合同取证）。真实范围（源码实测，非虚构滑杆）：
     // --we-settings-window-alpha ∈ [0.10, 0.25]（src/glass.js:103 Math.max(0.10, 0.25-pct/100*0.15)，
-    // 不是自有设置窗 5..42/5..50）；--we-blur ∈ [0,60]px（src/glass-panel.js SliderRow(cn.blur,0,60,1)）。
+    // 不是自有设置窗 5..42/5..50）；--we-blur ∈ [0,60]px（packages/glass/src/glass-panel.js SliderRow(cn.blur,0,60,1)）。
     // extra normal 霜读 --we-blur（src/glass-extra.js:59-61），底色两段 color-mix 消费
     // --we-settings-window-alpha×0.9 + readability-floor 地板（src/glass-extra.js:63-73）；
     // own-current 走同一配方表（src/styles-panel.js:378）⇒ 同一断言面。phase-two 此处

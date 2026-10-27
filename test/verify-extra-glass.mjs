@@ -41,7 +41,7 @@ const TAG_ID = 'dsh-wallpaper-engine/extra-glass';
 
 const schema = await import(pathToFileURL(join(ROOT, 'lib', 'settings-schema.js')).href);
 const effectsSrc = readFileSync(join(ROOT, 'src', 'effects.js'), 'utf8');
-const panelSrc = readFileSync(join(ROOT, 'src', 'glass-panel.js'), 'utf8');
+const panelSrc = readFileSync(join(ROOT, 'packages', 'glass', 'src', 'glass-panel.js'), 'utf8');
 const clientSrc = readFileSync(join(ROOT, 'src', 'client.js'), 'utf8');
 const quickSrc = readFileSync(join(ROOT, 'src', 'quick-panel.js'), 'utf8');
 const buildSrc = readFileSync(join(ROOT, 'scripts', 'build-client.mjs'), 'utf8');

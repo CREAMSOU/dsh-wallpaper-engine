@@ -94,22 +94,22 @@ graph LR
   LOADER -->|"dsh.client（子包各一份产物）"| FB["packages/fx/lib/client.fx.js"]
   LOADER -->|"同上"| PB["packages/parallax/lib/client.parallax.js"]
   LOADER -->|"同上"| FT["packages/fonts/lib/client.fonts.js"]
+  LOADER -->|"同上"| GLB["packages/glass/lib/client.glass.js（ADR-0016 第二刀）"]
   FB -->|"require('dsh-plugin-wallpaper-engine') —— 唯一外部说明符"| MAINB
   PB -->|"同上"| MAINB
   FT -->|"同上"| MAINB
+  GLB -->|"同上"| MAINB
 ```
 
 - 子包产物由**包内配方** `packages/<pkg>/client.build.json`（`artifact` / `entry` / `inline[]`）驱动
   `scripts/build-client.mjs` 逐项构建（产物被 `.gitignore` 排除、**不进 git**）；声明面
   （`exports['./client']` + `dsh.client`）与配方、盘上产物三方对账（S3.4 / S10.2）。
-- **三个子包现在都在这个平面上**（2026-10-16 P-C 第一刀之后）：`packages/fonts` 已带浏览器半边
-  （`src/client.js` + 外观页签字体节 + 字体集编辑器 ⇒ 产物 `lib/client.fonts.js`），与 fx / parallax 同形。
-  host-only **形态本身仍然合法**（宿主侧功能为主的包可以只有宿主半边）：本仓今天**两种形态并存** ——
-  在册的四个独立子包（`packages/fx` / `parallax` / `fonts` / `pet-link`）都带浏览器半边；三格已出户的组件行
-  （`packages/about-notice` / `mascot-avatar` / `media-bridge`）仍是 host-only，浏览器半边仍内联在主包 `src/**` 内；
-  **不要**为了"看起来统一"给 host-only 包补一个空的 `./client`（S3.4）。
-  `packages/glass`（ADR-0016 第一刀）今天也是 host-only：玻璃的浏览器半边（面板 / 运行时 / CSS）仍内联在
-  主包 `src/**`，第二刀起才出现在本平面上。
+- **五个子包现在都在这个平面上**：`packages/fx` / `parallax` / `fonts` / `pet-link`，以及
+  `packages/glass`（ADR-0016 第二刀，2026-10-28：外观页签「主题预设」+「玻璃 UI」节的渲染器随包走，
+  主包 `panel-tabs.js` 留按 id 取渲染器的**注册表占位桩**，屏上位置不变）。host-only **形态本身仍然合法**
+  （宿主侧功能为主的包可以只有宿主半边）：三格已出户的组件行（`packages/about-notice` / `mascot-avatar` /
+  `media-bridge`）仍是 host-only，浏览器半边仍内联在主包 `src/**` 内；**不要**为了"看起来统一"给
+  host-only 包补一个空的 `./client`（S3.4）。
 - ~~**第三种形态（PR #5 引入，2026-10-16）：源码在包内、构建归主包**~~ ⇒ **已于 2026-10-17 收口成一般形态**
   （`refactor/pet-link-client-half`）：`packages/pet-link` 的浏览器半边源码仍住 `packages/pet-link/src/**`，但已补齐
   **包内配方** `client.build.json`（`entry: src/client.js` → `artifact: lib/client.pet-link.js`）、
@@ -161,16 +161,16 @@ graph LR
 | `lib/index.js`（= `main`，宿主半边入口） | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | S2.2 / S6.1（有判据） |
 | 宿主半边路由族 `packages/<pkg>/lib/routes/<族>.js` | —（空壳：行为全在浏览器半边） | —（同上） | ✓ `fontsets` / `system-fonts` | ✓ `about-qr` / `github-stars` | ✓ `avatar` / `mascot` | ✓ `now-playing` | ✓ `pet-link`（仅 `/pet-link/capability` 一条能力路由） | —（第一刀空壳：玻璃面板/运行时/CSS 三刀随包走，ADR-0016） | S2.3（人工） |
 | 浏览器半边源码 `packages/<pkg>/src/**` | ✓ | ✓ | ✓（P-C 第一刀：入口 `src/client.js` + 外观页签字体节 + 字体集编辑器） | 无（浏览器半边仍在主包 `src/**` 内联） | 无（同上） | 无（同上） | ✓（入口 `src/client.js` + 两份内联 `pet-link-tuner.js` · `pet-link.js`；2026-10-17 起自出产物） | 无（第一刀仍内联主包 `src/**`；第二刀起入册） | S1.2 / S3.4 |
-| 构建产物 `lib/client.<pkg>.js`（构建产出；被 `.gitignore` 排除，**不进 git**） | ✓ | ✓ | ✓ `lib/client.fonts.js` | 无（浏览器半边仍在主包 `src/**` 内联） | 无（同上） | 无（同上） | ✓ `lib/client.pet-link.js`（2026-10-17 收口成一般形态；收口前由主包内联） | 无（第二刀 `lib/client.glass.js` 落地时 `FLOORS.clientArtifacts` 5→6） | S10.2（有判据） |
-| `exports['./client']` + `dsh.client` | ✓ | ✓ | ✓ | 无（浏览器半边仍在主包 `src/**` 内联） | 无（同上） | 无（同上） | ✓（2026-10-17 收口成一般形态） | 无（第二刀收口，同 pet-link 先例） | S3.4（有判据） |
+| 构建产物 `lib/client.<pkg>.js`（构建产出；被 `.gitignore` 排除，**不进 git**） | ✓ | ✓ | ✓ `lib/client.fonts.js` | 无（浏览器半边仍在主包 `src/**` 内联） | 无（同上） | 无（同上） | ✓ `lib/client.pet-link.js`（2026-10-17 收口成一般形态；收口前由主包内联） | ✓ `lib/client.glass.js`（2026-10-28 第二刀；`FLOORS.clientArtifacts` 同批 5→6） | S10.2（有判据） |
+| `exports['./client']` + `dsh.client` | ✓ | ✓ | ✓ | 无（浏览器半边仍在主包 `src/**` 内联） | 无（同上） | 无（同上） | ✓（2026-10-17 收口成一般形态） | ✓（2026-10-28 第二刀收口，同 pet-link 先例） | S3.4（有判据） |
 | 主包 patch 行（`id` / `name`） | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | S4.1 / S4.3（有判据） |
 | 根清单 `devDependencies: file:packages/<pkg>` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | S8.1（有判据） |
 | 发布形态：根 `dependencies` 同号精确版 + 删 `file:` | **未执行**（七包一致） | **未执行** | **未执行** | **未执行** | **未执行** | **未执行** | **未执行** | **未执行** | S8.2（人工执行 + `verify-package-publish.mjs` ⑨ 钉「全有或全无」） |
 | `package-lock.json` 同一次提交重算 | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | S8.3（有判据） |
 | `lib/subpackage-boot.js` 的 `SUBPACKAGE_KEY_TABLE` 一项（键 = id 去前缀） | ✓ `fx` | ✓ `parallax` | ✓ `fonts` | ✓ `about-notice` | ✓ `mascot-avatar` | ✓ `media-bridge` | ✓ `pet-link` | ✓ `glass`（壳形态 `base`/`log`，同 fx） | S10.1（有判据） |
-| 包内配方 `packages/<pkg>/client.build.json`（`artifact` = `exports['./client']` 落点） | ✓ | ✓ | ✓（P-C 第一刀新增） | 无（浏览器半边仍在主包 `src/**` 内联） | 无（同上） | 无（同上） | ✓（2026-10-17 收口成一般形态新增） | 无（第二刀新增） | S10.2（有判据） |
+| 包内配方 `packages/<pkg>/client.build.json`（`artifact` = `exports['./client']` 落点） | ✓ | ✓ | ✓（P-C 第一刀新增） | 无（浏览器半边仍在主包 `src/**` 内联） | 无（同上） | 无（同上） | ✓（2026-10-17 收口成一般形态新增） | ✓（第二刀新增） | S10.2（有判据） |
 | 生成物重算 `docs/ROUTE-INDEX.md` / `docs/GUARD-MAP.md` | 复算 | 复算 | 复算 | 复算 | 复算 | 复算 | 复算 | 复算（第一刀无路由变化，重算确认零漂移） | S10.3（生成物判据） |
-| 守卫的自动发现面（`test/tools/packages.mjs` 包发现层：磁盘枚举 + 根 patch 行；`host-route-index` / `guard-targets` / `verify-client-sync` 都读它） | 免手改 | 免手改 | 免手改 | 免手改 | 免手改 | 免手改 | 免手改 | 免手改（地板 `FLOORS.packages` 7→8、`rows` 8→9 已同批抬；`clientArtifacts` 第二刀再抬） | S10.3 |
+| 守卫的自动发现面（`test/tools/packages.mjs` 包发现层：磁盘枚举 + 根 patch 行；`host-route-index` / `guard-targets` / `verify-client-sync` 都读它） | 免手改 | 免手改 | 免手改 | 免手改 | 免手改 | 免手改 | 免手改 | 免手改（地板 `FLOORS.packages` 7→8、`rows` 8→9、`clientArtifacts` 5→6 已同批抬） | S10.3 |
 | 注释与引用只指向稳定位置（`S*` / 实现文件头 / 判据名；不引 `docs/wip/`、`docs/archive/`） | ✓ 已收口 | ✓ 已收口 | ✓ 已收口 | ✓ 已收口 | ✓ 已收口 | ✓ 已收口 | ✓ 已收口 | ✓ 已收口（引用 ADR-0016 / S* 条款） | S9.1 / S3.9（**人工**，无判据） |
 | **本文**（行树 / 图 / 边表 / 本矩阵） | 人工 | 人工 | 人工 | 人工 | 人工 | 人工 | 人工 | 人工 | D4（**无判据**） |
 

@@ -73,6 +73,11 @@ function check(name, ok, detail) {
 }
 
 const SRC = readFileSync(new URL('../lib/client.js', import.meta.url), 'utf8');
+// ADR-0016 第二刀起玻璃设置节的 UI 行（原 src/glass-panel.js）住玻璃子包产物 ⇒ 需要"UI 行
+// 在不在 / 文案过不过 weT"这类**面板文本**判据的，读双工件拼接面（主包 + packages/glass）；
+// 数值/配方判据仍以主包 SRC 为准（玻璃量写入仍在 src/effects.js，第三刀才随包走）。
+const GLASS_BUNDLE_SRC = readFileSync(new URL('../packages/glass/lib/client.glass.js', import.meta.url), 'utf8');
+const PANEL_SRC_ALL = SRC + GLASS_BUNDLE_SRC;
 
 // ── source → values ─────────────────────────────────────────────────────────
 function num(re, text = SRC) {
@@ -967,8 +972,8 @@ function main() {
     const paired = SRC.includes('else document.body.removeAttribute("data-we-sidebar-fullclear")');
     check('F7f 门控属性有挂有摘：applyGlass 成对（if/else）+ clearEffects 卸载再摘一次（rem ≥2）',
       sets >= 1 && paired && rems >= 2, 'set=' + sets + ' rem=' + rems + ' paired=' + paired);
-    check('F7g UI 行存在且文案过 weT（新中文必须进 weT + 词表）',
-      /weT\("侧栏全透明"\)/.test(SRC) && /"侧栏全透明":\s*"/.test(SRC));
+    check('F7g UI 行存在且文案过 weT（新中文必须进 weT + 词表；UI 行在玻璃包产物里，ADR-0016）',
+      /weT\("侧栏全透明"\)/.test(PANEL_SRC_ALL) && /"侧栏全透明":\s*"/.test(SRC));
     // 负对照：把上面几条判据各自喂坏输入，必须判出（判据不是恒真）。
     const gateOk = (r) => r.header.includes('data-we-wallpaper');
     check('negative control F7-1: 缺壁纸门的全透明规则会被同一条判据判出',

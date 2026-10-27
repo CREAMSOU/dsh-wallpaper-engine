@@ -18,6 +18,7 @@
 
 ### v1.5.0（未发布）
 
+- **玻璃效果抽离为第 8 个子包 `packages/glass`（ADR-0016 第二刀：设置面板节随包走）**：「主题预设」+「玻璃 UI」两节的渲染器（原 `src/glass-panel.js`，整文件逐字搬来）出户到子包 —— 包清单收口成一般形态（`exports['./client']` + `dsh.client` + `client.build.json` ⇒ `lib/client.glass.js`，pet-link 收口先例），主包 `HOST_BRIDGE_BINDINGS` 增玻璃显式键集七键（`moduleResetButtonNode` / `renderConfirmRow` / `GLASS_CHILDREN` / `childGlassKey` / `GLASS_COLOR_PRESETS` / `ROPE_FORMS` / `ROPE_FORM_VALUES`，acorn 自由标识符取证，fonts 同款两方向对账），`panel-tabs.js` 的玻璃节改为**按 id 取渲染器的注册表占位桩**（屏上位置与两个档面的顺序逐字不变；行未装/被关 = 缺这一节而不是这一页）。设置键、预设整机快照、i18n 域表与全部 `onGlass*` 写路径处理器留主包（ADR-0016 D3）。主包产物 4,507,410 → 4,439,398 B；`FLOORS.clientArtifacts` 5→6；玻璃域守卫（verify-glass-surfaces / verify-glass-compat / verify-extra-glass / verify-glass-runtime-browser / verify-presets / verify-scene-live / verify-fontset / verify-client）的 `glass-panel` 取证路径重定向到 `packages/glass/src/glass-panel.js`，判据条数守恒。
 - **玻璃效果抽离为第 8 个子包 `packages/glass`（ADR-0016 第一刀：骨架先行）**：新包以 host-only 空壳上线 —— `wallpaper-engine-glass` 行、`SUBPACKAGE_KEY_TABLE` 键表、根清单 `file:` 开发依赖与 `package-lock` 同批重算全部登记（`FLOORS.packages` 7→8、`rows` 8→9；`clientArtifacts` 留待第二刀 5→6）。玻璃的设置面板、运行时与 CSS 本刀**仍全部内联在主包浏览器半边**，用户观感零变化；后续两刀（面板节随包走 → 运行时 + CSS 随包走）按 ADR-0016 节奏推进，最终形态 = 停用 `wallpaper-engine-glass` 行即回到宿主原生外观（ADR-0010 的 wallpaper-only 态转正）。决策记录见 [`docs/adr/0016-glass-subpackage.md`](./adr/0016-glass-subpackage.md)。
 
 ### v1.3.3（2026-10-15 · npm 已发布）

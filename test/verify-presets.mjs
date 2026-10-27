@@ -1357,7 +1357,7 @@ section('③e #199：随包层旧 tag ⇒ 422「版本已作废」（不是 404�
 section('④ 客户端形态棘轮：新编排链（合并→落盘→reapplyAll→emit）/ 失败滚回 / 无第二持久化');
 {
   const storeSrc = readFileSync(join(root, 'src', 'preset-store.js'), 'utf8');
-  const panelSrc = readFileSync(join(root, 'src', 'glass-panel.js'), 'utf8');
+  const panelSrc = readFileSync(join(root, 'packages', 'glass', 'src', 'glass-panel.js'), 'utf8');
   const storeCode = stripComments(storeSrc);
   const panelCode = stripComments(panelSrc);
 
@@ -1630,10 +1630,10 @@ section('④b 行为判据：删除令牌链 + broken 行禁用与可删 + 勾�
       ] };
     },
     swatchRow: (label) => ({ type: 'swatch', label }),
-    // ⚠️ glass-panel.js 在 bundle 里与 src/client.js（`ROPE_FORMS` 定义在 `src/client.js`）和
+    // ⚠️ glass-panel.js 在主 bundle 里曾与 src/client.js（`ROPE_FORMS` 定义在 `src/client.js`）和
     //   lib/settings-schema.js（`ROPE_FORM_VALUES` 定义在 `lib/settings-schema.js`）**同处一个
-    //   作用域**（build 把各 src 文件顺序拼成一个 lib/client.js；`src/glass-panel.js` 的
-    //   `ROPE_FORMS[k].label` 早就是同一形态的既有用法）。单独 eval 时这两个模块作用域符号必须由
+    //   作用域**（build 把各 src 文件顺序拼成一个 lib/client.js）。ADR-0016 第二刀出户后它住 packages/glass/src/glass-panel.js，
+    //   `ROPE_FORMS[k].label` 是同一形态的既有用法；单独 eval 时这两个模块作用域符号必须由
     //   台架按**真实形状**补上，否则渲染第一步就 ReferenceError —— 判据根本跑不到（本仓最忌的
     //   "台架自己造字段"：这里只补作用域，不替代任何被判定为真的字段）。
     //   值域**从真源读**（本文件已把 `lib/settings-schema.js` 取成 `schema`）—— 手抄一份必然
@@ -1647,7 +1647,7 @@ section('④b 行为判据：删除令牌链 + broken 行禁用与可删 + 勾�
       glm: 'GLM', grok: 'Grok', kimi: 'Kimi', qwen: 'Qwen',
     }).map(([k, label]) => [k, { label }])),
   };
-  const gpSrc = readFileSync(join(root, 'src', 'glass-panel.js'), 'utf8')
+  const gpSrc = readFileSync(join(root, 'packages', 'glass', 'src', 'glass-panel.js'), 'utf8')
     .replace(/export\s*\{[^}]*\};?/g, '');
   const makeBlock = new Function(...Object.keys(gpStub), gpSrc + ';return { renderGlassPresetsBlock };');
   const { renderGlassPresetsBlock } = makeBlock(...Object.keys(gpStub).map((k) => gpStub[k]));

@@ -1,0 +1,15 @@
+{
+  "entry": "src/client.js",
+  "artifact": "lib/client.glass.js",
+  "inline": [
+    {
+      "file": "src/glass-panel.js",
+      "why": "「主题预设」+「玻璃 UI」节的渲染器（原 src/glass-panel.js，整文件逐字搬来，ADR-0016 第二刀）：注册表驱动（GLASS_CHILDREN + childGlassKey）、只读 ctx、动作经 on* 处理器；入口的 registerPanelSection 把它的 render 登记进面板节注册表（预设卡片由主包 glassPresetCtx 组装后经 ctx 传入，ADR-0011 整机快照留主包）",
+      "markers": [
+        "function renderGlassPresetsBlock(gp) {",
+        "function renderGlassSurfaceControls(ctx) {",
+        "function renderAppearanceGlassSection(ctx) {"
+      ]
+    }
+  ]
+}

@@ -6312,8 +6312,8 @@ const petLink = {
 // ── 跨包浏览器半边通道（BUNDLE-SPLIT §6.2「宿主注入显式键集」）──────────────────────────
 // 子包产物由 loader 用 `require("dsh-plugin-wallpaper-engine")` 取本 bundle 的导出面。
 // 这里挂的是**显式键集**，不是整个 module.exports：子包要什么就登记什么，多给一个键就是多
-// 一条没人维护的隐式契约。键集与 packages/{fx,parallax,fonts}/src/client.js 的
-// *_HOST_REQUIRED 逐字对齐（缺键那三包自己会大声抛），判据见 test/verify-subpackage-client-half.mjs
+// 一条没人维护的隐式契约。键集与 packages/{fx,parallax,fonts,glass}/src/client.js 的
+// *_HOST_REQUIRED 逐字对齐（缺键那四包自己会大声抛），判据见 test/verify-subpackage-client-half.mjs
 // 与 .integration-notes/p-c-contract.md §5 的两方向清单。
 // 一律用 **getter**：这些是活的模块级绑定（React / selection / 文案表在求值期才落地），
 // 值拷贝既会在求值期撞 TDZ，也会让子包拿到过期的引用。
@@ -6368,6 +6368,27 @@ const HOST_BRIDGE_BINDINGS = {
   wallSidebarClose: () => wallSidebarClose,
   wallSidebarToggle: () => wallSidebarToggle,
   registerPetLink: () => petLinkRegister,
+  // ── 玻璃半边（packages/glass，ADR-0016 第二刀）的显式键集 ───────────────────────────
+  // 来源 = 被搬文件里的**自由标识符**逐个点名（acorn 扫，手法与 fonts / pet-link 那两次相同）：
+  //   packages/glass/src/glass-panel.js（原 src/glass-panel.js，2026-10-27 整文件逐字搬来）
+  //     React×65 · weT×176 · SliderRow×14 · switchRow×15 · swatchRow×6 · ctlText×5 · sectionHead×2
+  //     · moduleResetButtonNode×1 · renderConfirmRow×1 · GLASS_CHILDREN×2 · childGlassKey×1
+  //     · GLASS_COLOR_PRESETS×6 · ROPE_FORMS×2 · ROPE_FORM_VALUES×1 · panelGlassPair×1
+  //   panelGlassPair 原是 glass-panel 的本地副本；第二刀发现主包写路径（onGlassColor）也要它
+  //   ⇒ 归位 lib/settings-schema.js（与 readGlassColors 同族、「缺省回空串不猜色」的显示口径），
+  //   主包同作用域直取、子包经这里取同一份（防漂移）。
+  // React / weT / switchRow / SliderRow / swatchRow / ctlText / sectionHead 是 fx / fonts 那半
+  // 已经要过的键，glass 复用它们、**不重复登记**（重复键在对象字面量里是静默覆盖 —— eslint
+  // no-dupe-keys 会判红，fonts 那次已经踩过）。新增八键如下；反面同样严格：多一个键就是多一条
+  // 没人维护的隐式契约（多一个都不给）。判据：test/verify-subpackage-client-half.mjs 两方向对账。
+  moduleResetButtonNode: () => moduleResetButtonNode,
+  renderConfirmRow: () => renderConfirmRow,
+  GLASS_CHILDREN: () => GLASS_CHILDREN,
+  childGlassKey: () => childGlassKey,
+  GLASS_COLOR_PRESETS: () => GLASS_COLOR_PRESETS,
+  ROPE_FORMS: () => ROPE_FORMS,
+  ROPE_FORM_VALUES: () => ROPE_FORM_VALUES,
+  panelGlassPair: () => panelGlassPair,
 };
 const HOST_BRIDGE_KEYS = Object.keys(HOST_BRIDGE_BINDINGS);
 for (const bridgeKey of HOST_BRIDGE_KEYS) {

@@ -255,30 +255,30 @@ const INLINE_MODULES = [
   // 本数组里 `preset-store → section-head` 的相邻关系不变（各模块都按名字引用，顺序不承载语义）。
   {
     // 面板各节的统一节头构件（二次修订：**两档都支持隐藏**）。
-    // ⚠️ 必须排在 `src/glass-panel.js` 与 `src/panel-tabs.js` **之前**：那两个模块都按名字
-    //    直接调它（内联后同作用域）。虽然函数声明有提升、顺序其实不致命，但排在调用方前面
-    //    才读得出依赖方向 —— 与 `we-base.js` 排最前是同一条理由。
+    // ⚠️ 必须排在 `src/panel-tabs.js` **之前**：它按名字直接调它（内联后同作用域）。
+    //    虽然函数声明有提升、顺序其实不致命，但排在调用方前面才读得出依赖方向 —— 与
+    //    `we-base.js` 排最前是同一条理由。（ADR-0016 第二刀起 glass-panel 那份经主 bundle
+    //    的 HOST_BRIDGE 键 `sectionHead` 取同一实现，不再本表内联。）
     file: 'src/section-head.js',
-    why: '节头构件（可折叠）：panel-tabs 与 glass-panel 共用的那一份，抽出来是为了让挂载台能 import 真实现',
+    why: '节头构件（可折叠）：panel-tabs 用；packages/glass 经桥接键 sectionHead 取同一份，抽出来是为了让挂载台能 import 真实现',
     markers: ['function sectionHead(label, open, onToggle, action) {',
       'className: "we-picker__section-head we-picker__section-head--toggle"'],
   },
   {
     // 模块级重置按钮（issue #192 的 ↺）：与 section-head 同一条理由抽出来 ——
-    // panel-tabs（外观各节 + 扩展模块头）与 glass-panel（玻璃 UI）共用同一枚构件，
-    // 抽成独立文件才能让挂载台 import 到真实现。
+    // panel-tabs（外观各节 + 扩展模块头）在主 bundle 用；packages/glass（玻璃 UI）经桥接键
+    // moduleResetButtonNode 取同一实现（ADR-0016 第二刀起不再本表内联）。
     file: 'src/module-reset.js',
-    why: '模块级重置按钮（↺）：panel-tabs 与 glass-panel 共用；模块名查 RESET_MODULES 取键集',
+    why: '模块级重置按钮（↺）：panel-tabs 用；packages/glass 经桥接键 moduleResetButtonNode 取同一份；模块名查 RESET_MODULES 取键集',
     markers: ['function moduleResetButtonNode(moduleName, onResetModule, labels) {',
       'className: "we-mod-reset"'],
   },
-  {
-    // 「玻璃 UI」节的渲染器（wip §10.13）：与其余页签只共享**模块级纯助手**，
-    // 所以抽出去不需要 ctx 传参样板。
-    file: 'src/glass-panel.js',
-    why: '「玻璃 UI」节渲染器（注册表驱动：GLASS_CHILDREN + childGlassKey；只读 ctx、动作经 on* 处理器）',
-    markers: ['function renderAppearanceGlassSection(ctx) {', 'const CHILD_CN = {'],
-  },
+  // ── ADR-0016 第二刀（2026-10-27）：「主题预设」+「玻璃 UI」节渲染器（原 src/glass-panel.js）
+  //    **已迁出主 bundle**，住 packages/glass，由该包自己的 client.build.json 出产物
+  //    lib/client.glass.js；主包只留 panel-tabs 里那枚按 id 取渲染器的**注册表占位桩**
+  //    （屏上位置不变：主题 → 细节 → 玻璃 UI → 侧栏圆角 → 全局 UI 配色 → 全局字体）。
+  //    迁出的等价性证据与 fx/parallax 同款：逐字节相同（`git diff --no-index` 可复核），
+  //    差量只有 outline 的 host 绑定与空 apply/inject。
   // ── P-A 起：点击拖尾与 3D 两份「画布层 + 描述符」**已迁出主 bundle**，各自住自己的包
   //    （packages/fx、packages/parallax），由各包自己的 `client.build.json` 配方各出一份产物；主包只留
   //    `src/extension-registry.js` 这张收件箱（谁登记了什么只能问它）。

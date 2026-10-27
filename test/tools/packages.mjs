@@ -15,7 +15,7 @@
  *   export function parseRows(patchText)    → [{ id, name }]，按文件顺序。
  *   export function discoverPackages(root=ROOT) → 模型（见下）。
  *   export function enumerateViolations(model, io) → string[]（**纯函数**，io 注入）。
- *   export const FLOORS = { packages: 8, clientArtifacts: 5, rows: 9 }
+ *   export const FLOORS = { packages: 8, clientArtifacts: 6, rows: 9 }
  *   CLI: `node test/tools/packages.mjs selftest`（退出码 0/1，逐条打印 ✓/✗）、
  *        可选 `--json`（打印模型）、无参（打印摘要，有违规则退出码 1）。
  *
@@ -57,10 +57,10 @@ export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '
  */
 // 2026-10-20：内置桌宠副本（packages/pet）解耦 ⇒ 8→7 包、6→5 浏览器产物、9→8 行。
 // 地板随真值下调，但**不许**再往下：再少一个包/产物/行就说明又有整块被静默削掉。
-// 2026-10-27：玻璃子包（packages/glass，ADR-0016 第一刀）host-only 空壳上线 ⇒ 7→8 包、8→9 行。
-// clientArtifacts 暂不动（5）：第一刀无浏览器半边产物；ADR-0016 第二刀（设置面板节随包走）
-// 落地 lib/client.glass.js 时 5→6。
-export const FLOORS = { packages: 8, clientArtifacts: 5, rows: 9 };
+// 2026-10-27：玻璃子包（packages/glass，ADR-0016 第一刀）host-only 空壳上线 ⇒ 7→8 包、8→9 行；
+// 同日第二刀：设置面板节随包走（packages/glass/src/client.js + client.build.json ⇒
+// lib/client.glass.js，pet-link 收口先例）⇒ 5→6 浏览器产物。
+export const FLOORS = { packages: 8, clientArtifacts: 6, rows: 9 };
 
 // ── 路径小工具（模型一律根相对 POSIX）─────────────────────────────────────────
 
