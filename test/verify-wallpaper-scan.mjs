@@ -604,6 +604,40 @@ section('S. project.json containment (issue #252)');
     mbyId.has('99010') && Boolean(mbyId.get('99011')) && mbyId.get('99011').previewAbs !== null);
 }
 
+// ── T. WE「移出库」= visibility.json（issue #260）──────────────────────────────────
+section('T. WE visibility.json filter (issue #260)');
+{
+  const env = makeEnv('t-visibility');
+  const dp = join(env.install, 'projects', 'defaultprojects');
+  project(join(dp, '99020'), { file: 'scene.pkg' }, { 'scene.pkg': 'x' });
+  project(join(dp, '99021'), { file: 'scene.pkg' }, { 'scene.pkg': 'x' });
+  const visFile = join(dp, 'visibility.json');
+  writeFileSync(visFile, JSON.stringify({ 99020: false, 99021: true }));
+  const kit = makeKit();
+  const listed = async () => new Set((await kit.enumerateWallpapersAsync(env.install, [])).map((p) => p.id));
+  check('T1 entry marked false in visibility.json is hidden', !(await listed()).has('99020'));
+  check('T2 entry marked true / absent stays listed', (await listed()).has('99021'));
+  // 在 WE 里「加回库」= 同一文件里改回 true / 删键 ⇒ 不重启也要重新出现。
+  writeFileSync(visFile, JSON.stringify({ 99020: true, 99021: true }));
+  check('T3 removing the flag brings the entry back without restart', (await listed()).has('99020'));
+  // 坏 JSON / 文件缺失 ⇒ 不过滤（宁可多列，不能凭空少列）。
+  writeFileSync(visFile, '{ nope');
+  check('T4 broken visibility.json does not filter anything', (await listed()).has('99020'));
+  // 签名必须掺 visibility.json（否则「移出库」不触发重扫，列表会一直旧）。
+  writeFileSync(visFile, JSON.stringify({ 99020: true }));
+  const sigBefore = await kit.scanSignatureP(env.install, []);
+  writeFileSync(visFile, JSON.stringify({ 99020: false }));
+  const bumped = new Date(Date.now() + 3000);
+  utimesSync(visFile, bumped, bumped);
+  const sigAfter = await kit.scanSignatureP(env.install, []);
+  check('T5 scan signature follows visibility.json edits', sigBefore !== sigAfter, sigBefore.slice(0, 8) + ' -> ' + sigAfter.slice(0, 8));
+  // 负对照：把过滤换成空集合 ⇒ T1 必须红（证明判据有牙）。
+  const mutantKit = await loadMutant('no-visibility-filter', (src) => src
+    .replace('const hidden = await hiddenEntryNamesP(root);', 'const hidden = new Set();'));
+  const mlist = await mutantKit({ WE_APPID: APPID, ...realDeps() }).enumerateWallpapersAsync(env.install, []);
+  check('T6 negative control: without the filter the hidden entry comes back', mlist.some((p) => p.id === '99020'));
+}
+
 if (failed) {
   console.log(`WALLPAPER-SCAN CHECKS FAILED — ${failed} failed, ${passed} passed`);
   process.exit(1);
