@@ -155,7 +155,8 @@
         "uiColorTab": "",
         "uiColorDeepDiving": "",
         "extraGlassSelectors": "",
-        "glassSurfacePolicy": {}
+        "glassSurfacePolicy": {},
+        "sceneAutoQuality": true
       },
       "host": {
         "id": "",
@@ -468,7 +469,8 @@
         "uiColorTab": "",
         "uiColorDeepDiving": "",
         "extraGlassSelectors": "",
-        "glassSurfacePolicy": {}
+        "glassSurfacePolicy": {},
+        "sceneAutoQuality": true
       },
       "host": "__null__"
     },
@@ -634,7 +636,8 @@
         "uiColorTab": "",
         "uiColorDeepDiving": "",
         "extraGlassSelectors": "",
-        "glassSurfacePolicy": {}
+        "glassSurfacePolicy": {},
+        "sceneAutoQuality": true
       },
       "host": "__null__"
     },
@@ -800,7 +803,8 @@
         "uiColorTab": "",
         "uiColorDeepDiving": "",
         "extraGlassSelectors": "",
-        "glassSurfacePolicy": {}
+        "glassSurfacePolicy": {},
+        "sceneAutoQuality": true
       },
       "host": "__null__"
     },
@@ -958,7 +962,8 @@
         "uiColorTab": "",
         "uiColorDeepDiving": "",
         "extraGlassSelectors": "",
-        "glassSurfacePolicy": {}
+        "glassSurfacePolicy": {},
+        "sceneAutoQuality": true
       },
       "host": {
         "id": "",
@@ -1320,7 +1325,8 @@
         "uiColorTab": "",
         "uiColorDeepDiving": "",
         "extraGlassSelectors": "",
-        "glassSurfacePolicy": {}
+        "glassSurfacePolicy": {},
+        "sceneAutoQuality": true
       },
       "host": {
         "id": "",
@@ -1727,7 +1733,8 @@
         "uiColorTab": "",
         "uiColorDeepDiving": "",
         "extraGlassSelectors": "",
-        "glassSurfacePolicy": {}
+        "glassSurfacePolicy": {},
+        "sceneAutoQuality": true
       },
       "host": {
         "id": "",
@@ -2033,7 +2040,8 @@
         "uiColorTab": "",
         "uiColorDeepDiving": "",
         "extraGlassSelectors": "",
-        "glassSurfacePolicy": {}
+        "glassSurfacePolicy": {},
+        "sceneAutoQuality": true
       },
       "host": {
         "id": "",
@@ -2353,7 +2361,8 @@
         "uiColorTab": "",
         "uiColorDeepDiving": "",
         "extraGlassSelectors": "",
-        "glassSurfacePolicy": {}
+        "glassSurfacePolicy": {},
+        "sceneAutoQuality": true
       },
       "host": {
         "id": "",
@@ -2673,7 +2682,8 @@
         "uiColorTab": "",
         "uiColorDeepDiving": "",
         "extraGlassSelectors": "",
-        "glassSurfacePolicy": {}
+        "glassSurfacePolicy": {},
+        "sceneAutoQuality": true
       },
       "host": {
         "id": "",
@@ -2980,7 +2990,8 @@
         "uiColorTab": "",
         "uiColorDeepDiving": "",
         "extraGlassSelectors": "",
-        "glassSurfacePolicy": {}
+        "glassSurfacePolicy": {},
+        "sceneAutoQuality": true
       },
       "host": {
         "id": "",
@@ -3292,7 +3303,8 @@
         "uiColorTab": "",
         "uiColorDeepDiving": "",
         "extraGlassSelectors": "",
-        "glassSurfacePolicy": {}
+        "glassSurfacePolicy": {},
+        "sceneAutoQuality": true
       },
       "host": {
         "id": "",
@@ -3601,7 +3613,8 @@
         "uiColorTab": "",
         "uiColorDeepDiving": "",
         "extraGlassSelectors": "",
-        "glassSurfacePolicy": {}
+        "glassSurfacePolicy": {},
+        "sceneAutoQuality": true
       },
       "host": {
         "id": "",
@@ -3917,7 +3930,8 @@
         "uiColorTab": "",
         "uiColorDeepDiving": "",
         "extraGlassSelectors": "",
-        "glassSurfacePolicy": {}
+        "glassSurfacePolicy": {},
+        "sceneAutoQuality": true
       },
       "host": {
         "id": "",
@@ -4298,7 +4312,8 @@
         "uiColorTab": "",
         "uiColorDeepDiving": "",
         "extraGlassSelectors": "",
-        "glassSurfacePolicy": {}
+        "glassSurfacePolicy": {},
+        "sceneAutoQuality": true
       },
       "host": {
         "id": "",
@@ -4628,7 +4643,8 @@
         "uiColorTab": "",
         "uiColorDeepDiving": "",
         "extraGlassSelectors": "",
-        "glassSurfacePolicy": {}
+        "glassSurfacePolicy": {},
+        "sceneAutoQuality": true
       },
       "host": {
         "id": "",
@@ -4933,7 +4949,8 @@
         "uiColorTab": "",
         "uiColorDeepDiving": "",
         "extraGlassSelectors": "",
-        "glassSurfacePolicy": {}
+        "glassSurfacePolicy": {},
+        "sceneAutoQuality": true
       },
       "host": {
         "id": "wallpaper-42",
@@ -5239,7 +5256,8 @@
         "uiColorTab": "",
         "uiColorDeepDiving": "",
         "extraGlassSelectors": "",
-        "glassSurfacePolicy": {}
+        "glassSurfacePolicy": {},
+        "sceneAutoQuality": true
       },
       "host": {
         "id": "",

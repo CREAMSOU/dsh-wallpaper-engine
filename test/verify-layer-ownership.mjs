@@ -435,6 +435,7 @@ function teardownViolations(cleanupBody) {
     rotationAudioGate: null, retireFadingLayer() {}, stopSceneAudioEl() {},
     cancelLiveFrameBackfill() {}, stopLiveWatch() {}, cancelLiveMount() {},
     abortTranscodeUpgrade() {}, cancelPendingPersist() {}, cancelPendingFontSet() {},
+    cancelUserPropsCommit() {},
     abortMediaInfoProbe() {}, sceneVideoResyncTimer: null, weStopDraw() {},
     releaseLayerMedia(n) { m.log.push('release'); n.__released = true; },
     clearEffects() {}, setWallpaperActive() {},
