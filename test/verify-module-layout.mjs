@@ -555,7 +555,7 @@ console.log('\n⑤ 路由模块必须自己 import 用到的库函数（不得�
 // 它按 [`docs/adr/0006`](../docs/adr/0006-comment-discipline-as-written-convention.md) **撤除**了：
 // 判据在守"作者怎么措辞"，而且它的失效方式正是它想防的那种 —— 句子一改写，判据就从
 // "复算数字"退化成"守住那两句话"，于是它开始拦的是编辑而不是腐化。
-// 边界依 ADR-0006：**读代码的守卫照留（①②③⑤⑥⑦⑧），读散文的守卫不加。**
+// 边界依 ADR-0016 / ADR-0007：**读代码的守卫照留（①②③⑤⑥⑦），读散文/文档名册的守卫不加。**
 //
 // 数值腐化改由**符号引用**承担：文档不再写"共 N 个内联模块"，而是指向
 // `scripts/build-client.mjs` 的 `INLINE_MODULES`（唯一真源）。
@@ -635,42 +635,9 @@ console.log('⑥ `src/` 子目录成员数 ≥3');
     !judge('// 见 ' + NEEDLE + 'g'));
 }
 
-// ═══ ⑧ 手动工具与适配层必须在 docs/DEV-GUIDE.md 里点名（不许有"没人知道的工具"）══════════════
-// 回答的边界问题：「`test/tools/` 里那些没有 CI 消费者的脚本，读的人找得到吗」。
-// 实测过的形状：9 个工具里只有 1 个被文档点名 —— 其余等于只对作者可见（别人不知道该跑哪个、怎么跑）。
-// `test/compat-*.mjs` 同理：它们是 CI 调的，但人也要能手动跑（文档里写的是不带扩展名的名字）。
-//
-// ⚠️ **中英两份都要点名**（实测过的失效形状）：本判据原来只读中文 `docs/DEV-GUIDE.md`，
-//    于是英文版的 `test/tools/` 清单少了 2 项（`i18n-scan.mjs` / `weT-shim.mjs`）而**无人发现** ——
-//    中文那份是权威版，但英文读者照着 §4.6 找不到这两个工具。两份都据同一份磁盘清单对账。
-//    这是"读文件清单"而不是"读散文"：判据对的是**枚举面完整性**，措辞仍由写作约定承担。
-{
-  // ⚠️ 只对账**磁盘上真实存在**的那几份：`docs/en/DEV-GUIDE.md` 已按
-  //    `docs/README.md` §语言结构「维护者向文档只留中文」撤除。硬读一个已删的路径
-  //    会让本守卫**整条崩掉**（ENOENT ⇒ 后面所有规则都不再被判定）—— 实测过一次。
-  //    中文那份是**权威版**，必须在册（下面的覆盖面断言钉住这点）。
-  const docs = [
-    { label: 'zh', path: join(ROOT, 'docs', 'DEV-GUIDE.md') },
-    { label: 'en', path: join(ROOT, 'docs', 'en', 'DEV-GUIDE.md') },
-  ].filter((d) => existsSync(d.path)).map((d) => ({ ...d, text: readFileSync(d.path, 'utf8') }));
-  const tools = readdirSync(join(ROOT, 'test', 'tools')).filter((f) => f.endsWith('.mjs')).sort();
-  const compat = readdirSync(join(ROOT, 'test')).filter((f) => /^compat-.*\.mjs$/.test(f)).sort();
-  // 按**不带扩展名的文件名**判（文档里工具写成 `x.mjs`、compat 写成 `x`，两种都算点名）
-  const judge = (doc, files) => files.filter((f) => !doc.includes(f.replace(/\.mjs$/, '')));
-  check('覆盖面：⑧ 扫到 ≥8 个工具 + ≥3 个 compat（防扫描面为空而恒真）',
-    tools.length >= 8 && compat.length >= 3, tools.length + ' 工具 / ' + compat.length + ' compat');
-  check('覆盖面：⑧ 在册文档非空且含权威版 zh（防"文件被删 ⇒ 判据静默空转"）',
-    docs.length >= 1 && docs.some((d) => d.label === 'zh'), docs.map((d) => d.label).join(',') || '（一份都没有）');
-  for (const d of docs) {
-    const undocumented = judge(d.text, [...tools, ...compat]);
-    check(`每个 test/tools/*.mjs 与 test/compat-*.mjs 都在 ${d.label} 的 DEV-GUIDE 里点名`,
-      undocumented.length === 0,
-      undocumented.length ? '未点名：' + undocumented.join(', ') : (tools.length + compat.length) + ' 个都被点名');
-  }
-  check('negative control: 合成一个没被点名的工具会被判出',
-    docs.every((d) => judge(d.text, ['zzz-合成未点名.mjs']).join() === 'zzz-合成未点名.mjs'));
-  check('positive control: 已点名的工具不算（判据不是恒真）', judge(docs[0].text, [tools[0]]).length === 0, tools[0]);
-}
+// ⑧（"手动工具必须被 docs/DEV-GUIDE 点名"）已按 ADR-0016 / ADR-0007 撤除：
+// 它判的是文档名册是否被同步编辑，与代码正确性无关，且新增工具会强制改文档。
+// 工具的可发现性改由目录本身（test/tools/）与 `test/tools/` 的 README/清单式脚本说明承担。
 
 console.log('');
 if (failed) {

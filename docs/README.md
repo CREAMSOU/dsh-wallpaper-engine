@@ -29,40 +29,21 @@
 
 **`docs/wip/` 的门槛**（2026-10 曾整体清空一次 —— 清空的是**当时的文件**，目录本身保留）：它只放**还没做成事实的东西**；
 完成即移入 `docs/archive/wip/`，并且**不许出现"唯一的进度真源"这类台账** —— 需要看守的东西一律写成守卫
-（见 §写作纪律 与 [`adr/0007`](./adr/0007-machine-checks-target-code-not-prose.md)），账本自己会漂、且漂了不会变红。
+（判据边界见 [`adr/0007`](./adr/0007-machine-checks-target-code-not-prose.md)，文档原则见 [`adr/0016`](./adr/0016-code-is-truth-docs-reference-source.md)），账本自己会漂、且漂了不会变红。
 过程记录**先把结论写进它该住的地方**（机制 → 实现文件的头注释；判据 → `test/`；取舍 → `adr/`），写不进去的才留在 `wip/`。
 
-## 写作纪律（**注释 / 守卫 / 文档**三处的共同底线）
+## 写作原则（ADR-0016：代码即真相）
 
-> 本仓的成文纪律只有这几条 —— 它们的**家在这里**（入库），不借住在任何本机专用的文件里。
->
-> **纪律靠约定，不靠守卫。** 这里此前挂着一批"机器判定"的文档类守卫，已按
-> [`adr/0006`](./adr/0006-comment-discipline-as-written-convention.md) **撤除并已下线**
-> （决策与执行都已落地 —— 那两条守散文的守卫不再在链上跑）：
-> 写作纪律判断的是「读者会不会被误导」，把它降级成正则匹配只会让作者去躲词表，
-> 而且守卫自身会腐化与自相矛盾。
-> 因此下表第三列**只写"由什么兜住"**，且**没有就是没有** —— 不许用一条恒真的判据冒充覆盖。
->
-> 撤除的**只**是文档 / 注释 / 账本散文类；守**代码**问题的守卫（可达性、退役线、声明孤儿、
-> 模块布局）**保留**，且不因本次撤除而放松。
-> **加一条判据前请过 [`adr/0007`](./adr/0007-machine-checks-target-code-not-prose.md) 的四问** ——
-> 尤其第 4 问：判据里出现面向用户的文案字面量（`includes('某句中文')`）本身就是要修的信号，
-> 出路是改成 `weT(...)` 可译键、或撤除。
+- **源码是唯一真相。** 解释机制时引用 `路径:符号` / 文件头注释 / 复算命令，**不复制源码、清单、默认值、条数、行数**；文档里出现会随代码漂的值，按"文档待修"处理，不是维护承诺。
+- **文档只留三类内容：** 决策与代价（`adr/`）、用户可见行为的解释（README / UPGRADING / TROUBLESHOOTING / HOW-IT-WORKS 等）、由工具生成并逐字节校验的契约索引（`ROUTE-INDEX.md` / `GUARD-MAP.md` / `TOKEN-CONTRACT.md`）。人工快照/名册/进度账本不是必维护项。
+- **不做文档类门禁与文档审阅。** 文档改动只走 docs 快通道的轻量检查（冲突标记 / 断链 / 素材），不要求与代码同 PR 更新，不因"文档没同步"阻塞合并；评审可建议，但不是规则。
+- **冲突时以代码为准。** 看到文档与代码不一致就顺手修；历史归档与 `CHANGELOG.md` 是账本，不追溯改写。
+- **删减优先于维护。** 主要是源码副本且已漂移的文档，优先删除/归档，只留指向源码的索引，不为它新增守卫。
 
-| # | 规则 | 由什么兜住 |
-|---|---|---|
-| 1 | **注释写不变量，不写编年史** —— 日期、「曾经 / 旧实现」框定、实测症状与踩坑记录一律不进代码注释 | 无守卫（写作约定）。历史价值的内容进 `CHANGELOG.md` 或 git 历史 |
-| 2 | **「实测 X ≈ Y」是出处，不是编年史** —— 给经验值与浏览器行为标出处的句子必须留，否则读者分不清「测出来的」与「猜的」 | 无守卫（写作约定）。出处**留在被实测的那个代码位置附近**，不搬进常青文档散文 |
-| 3 | **能写在代码旁的规则不单写文档** —— 机制 / 不变量 / 契约写在**文件头**；文档只留决策、顺序、验收判据与证据锚点 | 无守卫（写作约定）；落点规范见 [`CODE-STRUCTURE.md`](./CODE-STRUCTURE.md) |
-| 4 | **常青文档不写会漂的数值** —— 默认值 / 范围 / 枚举清单 / 条数 / 行数 / 体积 / 耗时阈值一律改为**符号引用**或**复算命令**。真源：设置 → `lib/settings-schema.js`，路由 → [`ROUTE-INDEX.md`](./ROUTE-INDEX.md) | 无守卫（写作约定，见 ADR-0006）。**例外**：`CHANGELOG.md` 与 `docs/archive/**` 是账本，其中数值**保持原样**，改了就是伪造记录 |
-| 5 | **退役线只许缩小** —— 反向探针先于删除；基线只许收紧，删完清空即为「零残留」 | `test/verify-retired-lines.mjs` |
-| 6 | **守卫判据只针对代码，不针对散文** —— 断言「源码里不再有 X」之前先剥注释 | [`DEV-GUIDE.md`](./DEV-GUIDE.md) §4.7 |
-| 7 | **跳过不得与通过同形** —— 缺前置要么红，要么要求显式 `--allow-skip`；静默跳过等于悄悄失去覆盖 | `test/verify-media-bridge.mjs`（`--provision` / `--allow-skip`） |
-| 8 | **决策进 ADR，机制进文件头** —— 有备选方案、有人付了代价的取舍写成 [`adr/`](./adr/)；"怎么实现的"写在对应实现文件的头注释 | 无守卫（写作约定）；格式见 [`adr/README.md`](./adr/README.md) |
-| 9 | **活文档不引用归档件** —— 归档区只作记录；活文档（含 `docs/wip/` 与 `src/**`、`test/**` 的注释）**不出现**指向归档的路径或归档条目号。需要那条信息就把它**写进活文档**：机制 → 实现文件头、判据 → `test/`、取舍 → `adr/`、历史 → `CHANGELOG.md` 或 git 历史。**例外**：本文与 [`adr/README.md`](./adr/README.md)（两级索引要列归档件）、`CHANGELOG.md`（账本）、命令与 pathspec 里的路径 | 无守卫（写作约定）。复算：`git grep -n 'archive/' -- ':!docs/archive' ':!docs/README.md' ':!docs/adr/README.md' ':!docs/CHANGELOG.md' ':!docs/en/CHANGELOG.md'` |
+## 写作纪律（历史名称）
 
-**入库文档不得引用本机专用的未跟踪路径** —— 读者打不开的东西不要指向它。唯一豁免是 `docs/archive/`
-（历史记录，顶部已声明不反映现行实现）与其取证线索。
+> 旧的 9 条写作纪律已由 [ADR-0016](./adr/0016-code-is-truth-docs-reference-source.md) 取代并删除；
+> 现行写法见上一节「写作原则」。其他文档里的"§写作纪律 N"引用均为历史残留，按"以代码为准"处理。
 
 ## 用户文档（中英双语，中文在前）
 
@@ -76,7 +57,7 @@
 
 **分层约定**：门面 `README.md` / `README.en.md` 只放**不随版本变化、且新访客决策必需**的事实；
 任何**带版本号 / issue 号 / 性能数字 / 排障步骤 / 实现细节**的内容一律进上表或 `CHANGELOG.md`
-（起因：首页曾有一批 `localStorage` 陈述在某次持久化改造后**集体失真** —— 这正是本文 §写作纪律 4 的由来）。
+（起因：首页曾有一批 `localStorage` 陈述在某次持久化改造后**集体失真** —— 这正是 ADR-0016"文档不复制会漂的事实"的由来）。
 
 ## 规范与参考（常青，中文）
 
@@ -105,7 +86,7 @@
 它们住在对应实现文件的头注释里（本仓的成文纪律：能写在代码旁的规则不单写文档）。
 
 写新 ADR 前先读 [`adr/README.md`](./adr/README.md)：那里有该写什么 / 不该写什么、
-头部格式、以及**为什么不写会漂的数值**（与本文 §写作纪律 同口径）。
+头部格式、以及**为什么文档只引用源码而不复制数值**（与 ADR-0016 同口径）。
 
 | ADR | 决定 |
 |---|---|
@@ -162,6 +143,8 @@
 | [audits/TEST-ANTIPATTERN-FIX-PLAN.md](./archive/audits/TEST-ANTIPATTERN-FIX-PLAN.md) | 同一轮审计的**遗留与风险清单**（收口后重写为"现在还有什么问题"）—— 只剩仍未解决或本机证明不了的项（F4/F5 两个手动工具、harness 与 e2e 的覆盖空洞、M16 只剩正判据、设置夹具是漂移棘轮、`%TEMP%` 里删不掉的探针）+ 需要决定的事 + 复核命令。逐条现状在审计报告里，不在这里重复 |
 | [wip/](./archive/wip/) 的**第二期收口批** | **追版本第二期（追链 / 文档注释同步 / 测试锚定）的过程记录整体归档**：`TEST-ANCHORING.md`（task-8 判据锚定）· `TEST-CREDIBILITY-AUDIT.md`（对抗性审计 + 修复落地账）· `UNWIRED-MODULES.md`（task-9 孤儿盘点）· `DOC-DRIFT-REPORT.md` + `DOC-ROT-REPORT-2.md` + `DOC-ROT-REPORT-3.md`（三轮文档 / 注释腐化复核）· `COMPONENT-TOGGLE-REPORT.md`（P2-11 开关语义实测取证）· `ISSUE-190-FX-PERF-DESIGN.md`（#190 光效层治理）· `ISSUE-AUDIT-148PLUS.md`（issue ≥148 核查；**残留 6 条未做项写在它的归档横幅里**）。各件的结论已分头落位：机制 → 实现文件头注释、判据 → `test/`、取舍 → [`adr/`](./adr/README.md) |
 | [wip/BUNDLE-SPLIT.md](./archive/wip/BUNDLE-SPLIT.md) | **插件包多包拆分重构（P-A … P-E 全部落地，整体归档）** —— 计划 / 判据 / 阶段账 / 风险 / 待决策。**结论落点**：机制 → 实现文件头注释（`lib/subpackage-boot.js`、`src/client.js`、渲染内核各文件）；判据 → `test/verify-*.mjs`（跨包契约、token 域、层所有权、occlusion、页签 gate）；取舍 → [`adr/0013`](./adr/0013-bundle-multi-component-rows.md) 与 [`adr/0014`](./adr/0014-subpackage-contract.md)；账 → [`CHANGELOG.md`](./CHANGELOG.md) 的 v1.3.3 三条 |
+| [wip/COEXISTENCE-AUDIT.md](./archive/wip/COEXISTENCE-AUDIT.md) | 共存审计与玻璃/壁纸解耦的原始记录（2026-10-27 归档）—— 当时的 S1–S8 计划与逐项复核；**不反映现行实现**，现行取舍见 [`adr/0010`](./adr/0010-glass-off-revisit-four-states.md) 与源码 |
+| [wip/SLIDER-CONSOLIDATION.md](./archive/wip/SLIDER-CONSOLIDATION.md) | 画面/玻璃滑块的命名与曲线收拢计划（2026-10-27 归档）—— 原计划未实施；按 ADR-0016 不再以文档维护计划 |
 
 ### 其它归档
 
@@ -173,7 +156,7 @@
 ## 其它
 
 - 现状 / 进度：**没有活账本**（2026-10 瘦身：重构账本整体归档）—— 需要看守的东西一律是守卫
-  （入口 [`DEV-GUIDE.md`](./DEV-GUIDE.md) §4 与本文档 §写作纪律），历史评估在
+  （入口 [`DEV-GUIDE.md`](./DEV-GUIDE.md) §4 与 [`adr/0016`](./adr/0016-code-is-truth-docs-reference-source.md)），历史评估在
   [`archive/REFACTOR-ASSESSMENT.md`](./archive/REFACTOR-ASSESSMENT.md) 与
   [`archive/wip/OPEN-ITEMS.md`](./archive/wip/OPEN-ITEMS.md)（**都不反映现行实现**）。
   **尚在进行的工作**的计划可临时住 `docs/wip/`（**保留目录**：它随工作项的开工与收口一进一出，

@@ -134,7 +134,7 @@ console.log('\n②b 独立锚点表（A1：口径不能自己证明自己）');
   //      · 无门控封闭白名单 = thinking-native + 插件自有 bare roots 封闭集
   //        {.we-layer, .we-picker, .we-picker__modal, .we-qp}
   //        （thinking/layer 来源=docs/COEXISTENCE.md §审计、docs/adr/0010-*:17-19、
-  //        docs/wip/COEXISTENCE-AUDIT.md:198；picker 三根来源=src/styles-panel.js:368-373
+  //        docs/archive/wip/COEXISTENCE-AUDIT.md:198；picker 三根来源=src/styles-panel.js:368-373
   //        注释自证「本插件自有控件的局部表面…令牌仅挂本插件根节点」，与 .we-layer 同类
   //        豁免，经 t9 窄 amend 授权加入；docs/TOKEN-CONTRACT.md 白名单表与工具口径同步）；
   //      · 玻璃门 = 链上有 `[data-we-glass-*]`（docs/CHANGELOG.md「页面玻璃锚点 data-we-glass-page」、

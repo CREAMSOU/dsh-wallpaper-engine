@@ -25,8 +25,8 @@
  * ## 负对照怎么带牙
  * 判据主体是纯函数 `textEntries` / `crlfOffenders`，负对照把**内存里的** CRLF / 裸 CR / LF /
  * 白名单扩展名 / 含 NUL 的字节喂给**同一个**函数（不碰共享工作树里的真文件 —— 负对照写临时文件
- * 在 Windows 上是并跑守卫之间的共享状态）。断言逻辑不另开 `test/tools/*.mjs`：那会让
- * `test/verify-module-layout.mjs` ⑧ 要求新工具在 `docs/DEV-GUIDE.md` 里点名；单文件守卫没有这个面。
+ * 在 Windows 上是并跑守卫之间的共享状态）。断言逻辑不另开 `test/tools/*.mjs`：单文件守卫没有这个面
+ *（旧 `verify-module-layout` ⑧ 的文档名册要求已按 ADR-0016 撤除；这里只是保持单文件自洽）。
  *
  * Usage: node test/verify-eol.mjs
  */

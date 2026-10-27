@@ -212,7 +212,7 @@ node test/tools/host-route-index.mjs --write   # 重算并写入 docs/ROUTE-INDE
 | 档 | 什么时候红 | 谁跑 | 清单 |
 |---|---|---|---|
 | **硬档** | 失败意味着**用户会撞上**：真机行为、发布面、平台契约、打包面 | `npm run verify`（在 `verify:all` 与 CI 里） | 真源是 `test/run-guards.mjs` 里 `tier: 'hard'` 的条目 —— **不在这里列清单**（删/加守卫都会让它过时，本仓真实发生过）。其中 `verify-media-bridge` 是**软档**条目且带 `probe: true`（经 `test/warn-only.mjs --probe-spawn`：环境起不了子进程时**点名式 SKIP**）；CI 的 `verify:bridge` 变体另有两道门（平凡调用探针 + 产物 sha256 可信度），只有都指向环境才允许记"环境跳过"并点名 |
-| **软档** | 失败意味着**仓库内务 / 一次性清理的验收判据**不准了 —— 要人回来看，但不该拦住别人的改动 | `npm run verify:docs`（在 `verify:all` 与 CI 的一条 `continue-on-error` 步骤里） | 同样是 `test/run-guards.mjs` 的 `docs` 组（**步数与清单的真源都在那里**；含模块布局 / 可达性 / 退役线 / 声明孤儿 / **未定义引用** / 守卫映射 / 守卫链），每条 `tier: 'soft'` ⇒ runner 经 `test/warn-only.mjs` 起它 |
+| **软档** | 失败意味着**仓库内务 / 一次性清理的验收判据**不准了 —— 要人回来看，但不该拦住别人的改动 | `npm run verify:docs`（本地 `verify:all` 里；CI 改为 `.github/workflows/housekeeping.yml` 每周定时 + 手动，不再进 PR 必过链） | 同样是 `test/run-guards.mjs` 的 `docs` 组（**步数与清单的真源都在那里**；含模块布局 / 可达性 / 退役线 / 声明孤儿 / **未定义引用** / 守卫映射 / 守卫链），每条 `tier: 'soft'` ⇒ runner 经 `test/warn-only.mjs` 起它 |
 
 > **软档里只剩"守代码"的守卫。** 此前软档还有两条守**文档 / 注释散文**的守卫
 > （`verify-comment-discipline` · `verify-ledger`），已随
@@ -319,7 +319,7 @@ node test/tools/host-route-index.mjs --write   # 重算并写入 docs/ROUTE-INDE
    否则"零残留"这类判据会在空域上恒真。
 4. **剥注释用字符串感知实现**（`test/tools/js-text.mjs`），别用朴素块注释正则。
 5. **验证判据本身有效**：把判据中和成"永远说没问题"，负对照**必须变红**（§4.7 约定 8）。
-6. 新工具 / `compat-*` 要在 §4.6 点名（守卫会判"不许有没人知道的工具"）。
+6. 新工具写不写进 §4.6 由作者决定；**不再有"文档名册必须同步"的守卫**（ADR-0016：代码即真相）。
 
 **⚠️ 不要加"守散文"的守卫。** 判据若去正则匹配**文档里的措辞或数字**，它守的就是编辑而不是腐化：
 句子一改写，判据就从"复算"退化成"守住那两句话"。这条边界由
@@ -341,6 +341,8 @@ node test/tools/host-route-index.mjs --write   # 重算并写入 docs/ROUTE-INDE
   断言于是恒真（实测踩过）。用能**精确匹配标签**的查找（如 `findSliderRow` / `findCtlInput`）。
 
 ### 4.6 `test/tools/` 清单（都没有 CI 消费者）
+
+> 本表只是索引，**不是必须维护的名册**：新增工具不必更新本表（ADR-0016）。`test/tools/` 的磁盘枚举才是权威。
 
 | 工具 | 回答什么 | 怎么跑 |
 |---|---|---|

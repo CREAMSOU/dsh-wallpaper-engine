@@ -60,7 +60,7 @@ issue 必须处于 **open**，已由维护者添加 `status:accepted`，且不�
 2. 在该 issue 评论 `/assign`，等待维护者 `/approve @login` 或合规的 UI 手动指派，确认自己已成为 assignee；
 3. 从最新 `main` 开分支，按 [`CONTRIBUTING.md`](../CONTRIBUTING.md) 准备环境，并按完整改动类型选择验证路径；修改 `src/**` 时先 `npm run build`，构建产物不入库；
 4. **完成受理、申请、批准及指派后再创建 PR**，正文按下文关联 issue；一个 PR 只解决一个明确问题；
-5. 合并前必须满足仓库现有代码 CI 与 `issue-claim-policy`，并经过维护者审阅。实时权限豁免仅针对认领门禁，不豁免代码 CI。
+5. 合并前必须满足 **`ci/result` + `issue-claim-policy`** 全绿（当前 Ruleset 的 Required checks）。实时权限豁免仅针对认领门禁，不豁免代码 CI；CODEOWNERS 会请求维护者审阅，但 Ruleset 当前不强制 approving review。
 
 ## PR 关联与时间判据
 
@@ -91,9 +91,8 @@ Refs elysia395/dsh-wallpaper-engine#126
 - GitHub API 故障、权限查询失败或历史数据获取不完整而无法可靠判定时，检查仅判失败并说明无法完成校验，**不因状态未知误关 PR**；取得可靠数据后再重新判断。完整历史确认没有事前申请或批准的，仍属于违规，而不是 API 故障。
 - issue 开闭、受理相关标签或分配变化时，重新校验所有按上述格式关联该 issue 的开放 PR。机器人执行 `/approve` 或 `/unassign` 后，必须在当前运行中主动刷新关联 PR 的检查，不能依赖机器人或 `GITHUB_TOKEN` 产生的事件触发另一次工作流。
 - GitHub 不支持预先禁止外部贡献者打开 PR 创建页。因此执行方式是**创建后自动解释并关闭 + 必过检查阻断合并**，不是禁用创建页面。
-- 审批命令与 PR 门禁的可信工作流必须先合入默认分支 **`main`** 才生效。维护者还须在 Ruleset / 分支保护的 **Required checks** 中保留当前配置并追加 `issue-claim-policy`；不能借此替换或移除既有代码 CI，也不在此流程中擅自迁移到 `ci/result`。
-
-合并要求统一为：**现有代码 CI + `issue-claim-policy` 全绿**。当前分支的代码 CI 汇总名为 `ci/result`，不代表远程 Required checks 已迁移；现有 CI 检查名称的调整须另行确认。
+- 审批命令与 PR 门禁的可信工作流必须先合入默认分支 **`main`** 才生效。维护者须在 Ruleset / 分支保护的 **Required checks** 中保留 `ci/result`（代码 CI 汇总勾）并追加 `issue-claim-policy`；两者当前都在 `main-protection` 中生效。
+- 合并要求统一为：**`ci/result` + `issue-claim-policy` 全绿**。Ruleset 当前 `required_approving_review_count = 0`（CODEOWNERS 仅请求审阅、不阻断）；若将来要提高审批门槛，须同时更新 Ruleset 与本节。
 
 ---
 
