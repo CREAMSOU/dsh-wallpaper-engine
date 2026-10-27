@@ -86,13 +86,7 @@ function renderGlassPresetsBlock(gp) {
   // i18n 判据是文本扫描，只认 weT("…") 字面量；数据里的名字扫描看不见）。
   // 两侧靠 id 对齐；漏了的出厂 id 回落显示文件里的原名（渐进式，不炸）。
   const FACTORY_PRESET_CN = {
-    "factory-default": weT("黑客绿(Fish)"),
-    "purple-mood": weT("紫色心情"),
-    "factory-frosted": weT("重磨砂"),
-    "factory-night": weT("暗夜釉色"),
-    "factory-vivid": weT("原色直出"),
-    "factory-readable": weT("可读优先"),
-    "factory-author": weT("作者自用"),
+    "factory-default": weT("黑客绿(Fish)"), "purple-mood": weT("紫色心情"), "factory-frosted": weT("重磨砂"), "factory-night": weT("暗夜釉色"), "factory-vivid": weT("原色直出"), "factory-readable": weT("可读优先"), "factory-author": weT("作者自用"),
   };
   const labelOf = (row) => (row.origin === "builtin" && FACTORY_PRESET_CN[row.id])
     ? FACTORY_PRESET_CN[row.id]
@@ -147,16 +141,14 @@ function renderGlassPresetsBlock(gp) {
         React.createElement("button", {
           key: "own",
           type: "button",
-          className: "we-picker__btn we-picker__rate" + (mascotPoint ? "" : " we-picker__rate--active"),
-          "aria-pressed": mascotPoint ? "false" : "true",
+          className: "we-picker__btn we-picker__rate" + (mascotPoint ? "" : " we-picker__rate--active"), "aria-pressed": mascotPoint ? "false" : "true",
           title: weT("按本机现状存这一族：有自定义立绘就连图带显示盒一起存，没有就声明「无」（套用的人回到内置立绘）"),
           onClick: () => onMascotPoint(""),
         }, weT("本机现状")),
         ROPE_FORM_VALUES.map((k) => React.createElement("button", {
           key: k,
           type: "button",
-          className: "we-picker__btn we-picker__rate" + (mascotPoint === k ? " we-picker__rate--active" : ""),
-          "aria-pressed": mascotPoint === k ? "true" : "false",
+          className: "we-picker__btn we-picker__rate" + (mascotPoint === k ? " we-picker__rate--active" : ""), "aria-pressed": mascotPoint === k ? "true" : "false",
           title: weT("预设里只存「指向出厂自带的「{name}」」（不内嵌图片；套用它的人换回那一只，本机自己的立绘不动）", { name: ROPE_FORMS[k].label }),
           onClick: () => onMascotPoint(k),
         }, ROPE_FORMS[k].label)),
@@ -299,8 +291,7 @@ function renderGlassPresetsBlock(gp) {
           className: "we-picker__select",
           value: exportTargetId || "",
           disabled: loading === true || exportable.length === 0,
-          onChange: (e) => onExportTargetChange(e.target.value),
-          "aria-label": weT("导出哪一份"),
+          onChange: (e) => onExportTargetChange(e.target.value), "aria-label": weT("导出哪一份"),
         },
           exportable.length === 0
             ? React.createElement("option", { key: "__none", value: "" }, weT("没有可导出的预设"))
@@ -529,18 +520,15 @@ function renderAppearanceGlassSection(ctx) {
     //    硬编码会让那两个面多出一个"点了没反应"的旋钮 —— 正是要消灭的那类死开关。
     if (c.params.blur !== undefined) {
       childRows.push(SliderRow(cn.blur, 0, 60, 1,
-        sel[P("blur")], (v) => onGlassChildParam(c.id, "blur", v),
-        sel[P("blur")] + "px", "gc-blur-" + c.id));
+        sel[P("blur")], (v) => onGlassChildParam(c.id, "blur", v), "px", "gc-blur-" + c.id));
     }
     if (c.params.transparency !== undefined) {
       childRows.push(SliderRow(cn.alpha, 0, 100, 5,
-        sel[P("transparency")], (v) => onGlassChildParam(c.id, "transparency", v),
-        sel[P("transparency")] + "%", "gc-alpha-" + c.id));
+        sel[P("transparency")], (v) => onGlassChildParam(c.id, "transparency", v), "%", "gc-alpha-" + c.id));
     }
     if (c.params.fidelity !== undefined) {
       childRows.push(SliderRow(cn.fidelity, 0, 100, 5,
-        sel[P("fidelity")], (v) => onGlassChildParam(c.id, "fidelity", v),
-        sel[P("fidelity")] + "%", "gc-fid-" + c.id));
+        sel[P("fidelity")], (v) => onGlassChildParam(c.id, "fidelity", v), "%", "gc-fid-" + c.id));
     }
     if (c.params.color !== undefined) {
       childRows.push(swatchRow(cn.color, GLASS_COLOR_PRESETS,
@@ -558,8 +546,7 @@ function renderAppearanceGlassSection(ctx) {
     className: "we-picker__btn we-picker__rate" + (thinkMode === id ? " we-picker__rate--active" : ""),
     type: "button",
     title: tip,
-    onClick: () => onThinkingMode(id),
-    "aria-pressed": thinkMode === id ? "true" : "false",
+    onClick: () => onThinkingMode(id), "aria-pressed": thinkMode === id ? "true" : "false",
   }, label);
   // ── 高级配置行（D4 = 侧栏「详细玻璃调节」折叠块的内容）────────────
   //   胶囊细调 + 各面「独立配置」层及其子项参数 + 子 UI 独立配置 —— 只在侧栏档
@@ -573,7 +560,7 @@ function renderAppearanceGlassSection(ctx) {
     //（本仓要防的那类死旋钮，见 glass-panel 文件头）。
     if (sel.thinkingGlass === true && sel.thinkingNative !== true) {
       advRows.push(SliderRow(weT("胶囊雾化"), 0, 60, 1,
-        sel.capsuleBlur, onCapsuleBlur, sel.capsuleBlur + "px", "capsule-blur", {
+        sel.capsuleBlur, onCapsuleBlur, "px", "capsule-blur", {
         tooltip: weT("正文里行内代码胶囊、新会话按钮、导航按钮的模糊半径 —— 越大越像磨砂玻璃。只在这些胶囊吃玻璃（思考块液态玻璃开着）时生效；0 = 关掉雾化。"),
       }));
       // 胶囊釉色（capsuleColor，默认白 = 原观感）：与胶囊雾化同族同门。色板行不做
@@ -598,11 +585,9 @@ function renderAppearanceGlassSection(ctx) {
       //    不消费颜色与保真度 ⇒ 画了就是死旋钮（R3a）。
       if (childIndependentOn && childIndependentOn("leftSidebar")) {
         advRows.push(SliderRow(weT("左侧栏玻璃·玻璃透明度"), 0, 100, 5,
-          sel.leftSidebarTransparency, (v) => onGlassChildParam("leftSidebar", "transparency", v),
-          sel.leftSidebarTransparency + "%", "ls-alpha"));
+          sel.leftSidebarTransparency, (v) => onGlassChildParam("leftSidebar", "transparency", v), "%", "ls-alpha"));
         advRows.push(SliderRow(weT("左侧栏玻璃·雾化"), 0, 60, 1,
-          sel.leftSidebarBlur, (v) => onGlassChildParam("leftSidebar", "blur", v),
-          sel.leftSidebarBlur + "px", "ls-blur"));
+          sel.leftSidebarBlur, (v) => onGlassChildParam("leftSidebar", "blur", v), "px", "ls-blur"));
       }
     }
     // ── 标题栏玻璃·独立配置（与「标题栏液态玻璃」耦合，同左栏）──
@@ -618,11 +603,9 @@ function renderAppearanceGlassSection(ctx) {
       //    不消费颜色与保真度 ⇒ 画了就是死旋钮（R3a）。
       if (childIndependentOn && childIndependentOn("titlebar")) {
         advRows.push(SliderRow(weT("标题栏玻璃·玻璃透明度"), 0, 100, 5,
-          sel.titlebarTransparency, (v) => onGlassChildParam("titlebar", "transparency", v),
-          sel.titlebarTransparency + "%", "tb-alpha"));
+          sel.titlebarTransparency, (v) => onGlassChildParam("titlebar", "transparency", v), "%", "tb-alpha"));
         advRows.push(SliderRow(weT("标题栏玻璃·雾化"), 0, 60, 1,
-          sel.titlebarBlur, (v) => onGlassChildParam("titlebar", "blur", v),
-          sel.titlebarBlur + "px", "tb-blur"));
+          sel.titlebarBlur, (v) => onGlassChildParam("titlebar", "blur", v), "px", "tb-blur"));
       }
     }
     // ── 侧栏族（dsh-better-sidebar）的「独立配置」层：`glassMode` 的唯一写入方是
@@ -640,8 +623,8 @@ function renderAppearanceGlassSection(ctx) {
             tooltip: weT("打开后**紧接在本行下方**出现这一项自己的独立配置，**完全覆盖**上面的全局配置；关闭则回到继承全局"),
           }));
         if (childIndependentOn && childIndependentOn("sidebar")) {
-          advRows.push(SliderRow(weT("侧栏模糊"), 0, 60, 1, sel.sidebarBlur, onSidebarBlur, sel.sidebarBlur + "px", "sb-blur"));
-          advRows.push(SliderRow(weT("侧栏透明度"), 0, 100, 1, sel.sidebarAlpha, onSidebarAlpha, sel.sidebarAlpha + "%", "sb-alpha"));
+          advRows.push(SliderRow(weT("侧栏模糊"), 0, 60, 1, sel.sidebarBlur, onSidebarBlur, "px", "sb-blur"));
+          advRows.push(SliderRow(weT("侧栏透明度"), 0, 100, 1, sel.sidebarAlpha, onSidebarAlpha, "%", "sb-alpha"));
           advRows.push(swatchRow(weT("侧栏玻璃颜色"), GLASS_COLOR_PRESETS, sel.sidebarColor, onSidebarColor, { key: "sb-color" }));
         }
       }
@@ -673,7 +656,7 @@ function renderAppearanceGlassSection(ctx) {
         tooltip: weT("打开后**紧接在本行下方**出现内容面自己的两项（透明度 / 底色），**完全覆盖**全局玻璃配置；关闭则回到继承全局"),
       }));
     if (childIndependentOn && childIndependentOn("sidebarContent")) {
-      advRows.push(SliderRow(weT("内容面透明度"), 0, 100, 5, sel.sidebarContentAlpha, onSidebarContentAlpha, sel.sidebarContentAlpha + "%", "content-alpha",
+      advRows.push(SliderRow(weT("内容面透明度"), 0, 100, 5, sel.sidebarContentAlpha, onSidebarContentAlpha, "%", "content-alpha",
         { tooltip: weT("阅读文件页、编辑器与终端的底板不透明度（0 = 接近全透、100 = 最实）。越大越透，与玻璃透明度同语义。") }));
       advRows.push(swatchRow(weT("内容面底色"), GLASS_COLOR_PRESETS, sel.sidebarContentColor, onSidebarContentColor, {
         key: "content-color",
@@ -683,8 +666,7 @@ function renderAppearanceGlassSection(ctx) {
           className: "we-picker__swatch we-picker__swatch--auto" + (sel.sidebarContentColor === "" ? " we-picker__swatch--active" : ""),
           type: "button",
           title: weT("跟随主题面板色"),
-          onClick: () => onSidebarContentColor(""),
-          "aria-label": weT("内容面底色 跟随主题"),
+          onClick: () => onSidebarContentColor(""), "aria-label": weT("内容面底色 跟随主题"),
         }, weT("主题")),
         colorValue: sel.sidebarContentColor || "#1e1f26",
       }));
@@ -744,7 +726,7 @@ function renderAppearanceGlassSection(ctx) {
         (hex, live) => onGlassColor("light", hex, live), { key: "glass-color" }),
       !sidebarSurface && sel.glassDarkSeparate === true && swatchRow(weT("玻璃颜色 · 深色"), GLASS_COLOR_PRESETS, glassPair.dark,
         (hex, live) => onGlassColor("dark", hex, live), { key: "glass-color-dark" }),
-      SliderRow(weT("玻璃透明度"), 0, 100, 5, sel.glassAlpha, onGlassAlpha, sel.glassAlpha + "%"),
+      SliderRow(weT("玻璃透明度"), 0, 100, 5, sel.glassAlpha, onGlassAlpha, "%"),
       // 「雾化」控制的只有**模糊半径**（雾面深度），饱和度是解耦的常量材料属性（见 GLASS_SATURATE）。
       // ⚠️ 覆盖面的实测口径（`.test-cache/blur-selectors.mjs` 复算，按规则头归面）：
       //    它喂的 `--we-blur` 被这些面消费 —— 对话栏一族（输入卡片 / 气泡 / 工具弹卡）、
@@ -752,7 +734,7 @@ function renderAppearanceGlassSection(ctx) {
       //    插件自身浮层（更新提示 / 仓库面板）。
       //    而**侧栏**（dsh-better-sidebar 与右栏面板）走的是它**自己的** `--we-sidebar-blur`
       //    （由「侧栏模糊」管）—— 那才是唯一不吃本项的面。
-      SliderRow(weT("雾化"), 0, 60, 1, sel.blur, onBlur, sel.blur + "px", "glass-frost", {
+      SliderRow(weT("雾化"), 0, 60, 1, sel.blur, onBlur, "px", "glass-frost", {
         tooltip: weT("玻璃面板（对话栏卡片、左侧栏、设置窗口、插件浮层）的模糊半径 —— 越大越像磨砂玻璃；色彩饱和度不随本滑块变化。侧栏有自己的「侧栏模糊」，不受本项影响"),
       }),
       // ── 额外补雾化的选择器（上游 #200）────────────────────────────────────────
@@ -778,7 +760,7 @@ function renderAppearanceGlassSection(ctx) {
       // 釉色向用户原色线性回退（单调，中间档不会更黑/更白）+ 地板层覆盖度同比例
       // 减薄，正文在极端壁纸上可读性让位；0 = 原色直出不钳制。数学入口
       // weClampSurfaceColor 第三参 + --we-glass-fidelity。
-      SliderRow(weT("玻璃保真度"), 0, 100, 5, sel.glassFidelity, onGlassFidelity, sel.glassFidelity + "%", "glass-fidelity", {
+      SliderRow(weT("玻璃保真度"), 0, 100, 5, sel.glassFidelity, onGlassFidelity, "%", "glass-fidelity", {
         tooltip: weT("100 = 完整可读性红线（默认）：自定义玻璃色经亮度钳制，正文对比度始终 ≥4.5:1 —— 深色主题下颜色被压暗、浅色主题下被提亮。拉低后颜色更贴你选的原色，但正文在极端明暗的壁纸上可能看不清；看不清字时把本项拉回 100，或按「看不清字三步」调节。"),
       }),
       // ⚠️ 「对话栏的保真度」**只有**「对话框玻璃·独立配置」下的「对话框玻璃·玻璃保真度」一个入口

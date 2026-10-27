@@ -318,6 +318,14 @@ console.log('sidebar glass selectors are wallpaper-independent: true · page gla
   const iOut = sliderSrc.indexOf('.we-picker__value"');
   assert.ok(iInput >= 0 && iOut > iInput && sliderSrc.includes('input.value = String(el.value)'),
     'numberEdit 行拖动期必须先认输入框并只改 input.value（写 textContent 会抹掉 React 输入框子树）');
+  // #255⑤ 后半：23 处「值+单位」预格式化后缀已改裸单位（否则那些行仍只读）；
+  // 唯一保留的预格式化是吉祥物大小（显示倍率刻度 ≠ 存储刻度，保持只读）。
+  const readSrc = (rel) => readFileSync(new URL('../' + rel, import.meta.url), 'utf8');
+  const bareUnitFiles = ['src/glass-panel.js', 'src/panel-tabs-effects.js', 'src/panel-tabs-appearance.js'];
+  const leftovers = bareUnitFiles.filter((rel) => /\+ "(?:px|%)"/.test(readSrc(rel)));
+  assert.ok(leftovers.length === 0, '滑杆后缀应已全部改裸单位（仍预格式化的文件：' + leftovers.join(', ') + '）');
+  assert.ok(/Math\.round\(sel\.ropeScale \* 100\) \+ "%"/.test(readSrc('src/panel-tabs.js')),
+    '吉祥物大小保持预格式化只读回显（倍率刻度不同）');
 }
 // A3 之后客户端产物不再只有主 bundle 一份：packages/{fx,parallax}/lib/client.*.js 各自在
 // 同一个 loader 上注册一份 bundle（id = 子包真实包名）。所以这里收**数组**，主 bundle = 第一份。

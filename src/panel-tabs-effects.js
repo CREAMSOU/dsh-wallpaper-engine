@@ -7,10 +7,10 @@
   function renderEffectsSlidersSection(ctx) {
     const { onBackgroundBrightness, onBackgroundContrast, onBackgroundSaturate, onLayerPositionX, onLayerPositionY, onLayerReset, onLayerScale, onScrim, onWallpaperBlur, onWallpaperOpacity, sel } = ctx;
     return React.createElement(React.Fragment, null,
-      SliderRow(weT("壁纸模糊"), 0, 60, 1, sel.wallpaperBlur, onWallpaperBlur, sel.wallpaperBlur + "px"),
-      SliderRow(weT("亮度"), 40, 160, 5, sel.backgroundBrightness, onBackgroundBrightness, sel.backgroundBrightness + "%"),
-      SliderRow(weT("对比度"), 40, 200, 5, sel.backgroundContrast, onBackgroundContrast, sel.backgroundContrast + "%"),
-      SliderRow(weT("饱和度"), 0, 200, 5, sel.backgroundSaturate, onBackgroundSaturate, sel.backgroundSaturate + "%"),
+      SliderRow(weT("壁纸模糊"), 0, 60, 1, sel.wallpaperBlur, onWallpaperBlur, "px"),
+      SliderRow(weT("亮度"), 40, 160, 5, sel.backgroundBrightness, onBackgroundBrightness, "%"),
+      SliderRow(weT("对比度"), 40, 200, 5, sel.backgroundContrast, onBackgroundContrast, "%"),
+      SliderRow(weT("饱和度"), 0, 200, 5, sel.backgroundSaturate, onBackgroundSaturate, "%"),
       // 壁纸层取景（位置 / 缩放）：WE 壁纸属性面板那三项（对齐方式 = 自由 时的 水平 / 垂直 /
       // 缩放，即 alignmentx / alignmenty / alignmentz）是 WE 引擎内置属性，存在 WE 自己的
       // config.json 里、本插件读不到；场景层的适配也只有 cover / contain / center / fill
@@ -36,10 +36,10 @@
       // 深色纯黑，IDEA 背景图式）。与暗化互补 —— 一个减淡壁纸本身，一个压暗
       // 整体画面；上限 90% 避免调到「壁纸完全不可见但暗化还在」的诡异状态
       // （想关壁纸直接关掉即可）。
-      SliderRow(weT("壁纸透明度"), 0, 90, 5, sel.wallpaperOpacity, onWallpaperOpacity, sel.wallpaperOpacity + "%", "wallpaper-opacity", {
+      SliderRow(weT("壁纸透明度"), 0, 90, 5, sel.wallpaperOpacity, onWallpaperOpacity, "%", "wallpaper-opacity", {
         tooltip: weT("壁纸向原生底色淡出（浅色纯白 / 深色纯黑）；透明生效时壁纸层会垫这层原生底色，以保证玻璃模糊不被透明背景破坏。场景壁纸的垫底实时帧会在实时画面出场后退场，不会在淡出时透出来"),
       }),
-      SliderRow(weT("暗化"), 0, 90, 5, Math.round(sel.scrim * 100), onScrim, Math.round(sel.scrim * 100) + "%"),
+      SliderRow(weT("暗化"), 0, 90, 5, Math.round(sel.scrim * 100), onScrim, "%"),
     );
   }
 
@@ -117,8 +117,7 @@
           weT("场景壁纸「这张画面从哪来」。两档：**实时画面**（有抓帧就用它，没有则留空）与**自定义画面**（手动导入的截图）。点一次切换一次，选择记忆在当前壁纸上。实时渲染生效时本行不显示（那时画面来自实时渲染，切这里不会生效）")),
         React.createElement("button", {
           className: "we-picker__btn", type: "button",
-          onClick: onRefreshFrame,
-          "aria-label": weT("切换出图来源"),
+          onClick: onRefreshFrame, "aria-label": weT("切换出图来源"),
         }, weT("切换")),
         React.createElement("span", { className: "we-picker__hint we-picker__value" },
           // 按**档位值**查表，不能当下标：值域有洞（0 与 4），下标会越界成 undefined.label
@@ -151,13 +150,11 @@
         React.createElement("button", {
           className: "we-picker__btn", type: "button",
           onClick: onRecaptureGpuFrame,
-          disabled: gpuFrameUi.recapturing,
-          "aria-label": weT("重新截取当前壁纸实时帧"),
+          disabled: gpuFrameUi.recapturing, "aria-label": weT("重新截取当前壁纸实时帧"),
         }, gpuFrameUi.recapturing ? weT("抓帧中…") : weT("重新截")),
         gpuPinnedHere && React.createElement("button", {
           className: "we-picker__btn", type: "button",
-          onClick: onClearGpuFrame,
-          "aria-label": weT("清除 GPU 实时帧缓存"),
+          onClick: onClearGpuFrame, "aria-label": weT("清除 GPU 实时帧缓存"),
         }, gpuFrameUi.busy ? weT("清除中…") : weT("清除 GPU 帧")),
         gpuPinnedHere && gpuFrameUi.w > 0
           && React.createElement("span", { className: "we-picker__hint we-picker__value" },

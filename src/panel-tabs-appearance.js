@@ -43,7 +43,7 @@
     // ── 细节：只剩**非釉层**的「边框」（边框 / 分割线对比度）—— 不属于玻璃配方 ──
     React.createElement("div", { className: "we-picker__section" },
       sectionHead(weT("细节"), open, onToggleDetailSection, moduleResetButton("detail", onResetModule)),
-      open && SliderRow(weT("边框"), 0, 90, 5, Math.round(sel.border * 100), onBorder, Math.round(sel.border * 100) + "%", "border-emphasis", {
+      open && SliderRow(weT("边框"), 0, 90, 5, Math.round(sel.border * 100), onBorder, "%", "border-emphasis", {
         tooltip: weT("提高边框 / 分割线的对比度（浅色与深色主题通用）"),
       }),
       // ── 「左侧栏液态玻璃」及其子项在「玻璃 UI」节（门槛 `leftSidebarGlass`，见
@@ -73,9 +73,7 @@
               key: v,
               className: "we-picker__btn we-picker__rate" + (sel[radiusKey] === v ? " we-picker__rate--active" : ""),
               type: "button",
-              onClick: () => onSidebarCornerRadius(side, v),
-              "aria-pressed": sel[radiusKey] === v ? "true" : "false",
-              "aria-label": weT("{side}统一圆角 {value}", { side: sideLabel, value: radiusLabels[v] }),
+              onClick: () => onSidebarCornerRadius(side, v), "aria-pressed": sel[radiusKey] === v ? "true" : "false", "aria-label": weT("{side}统一圆角 {value}", { side: sideLabel, value: radiusLabels[v] }),
             }, radiusLabels[v]),
           ),
         ),
@@ -88,9 +86,7 @@
               key: c,
               className: "we-picker__btn we-picker__rate" + (isSquare(c) ? " we-picker__rate--active" : ""),
               type: "button",
-              onClick: () => onSidebarCornerSquare(side, c, !isSquare(c)),
-              "aria-pressed": isSquare(c) ? "true" : "false",
-              "aria-label": weT("{side}{corner}：{state}", { side: sideLabel, corner: cornerLabel, state: weT(isSquare(c) ? "直角" : "圆角") }),
+              onClick: () => onSidebarCornerSquare(side, c, !isSquare(c)), "aria-pressed": isSquare(c) ? "true" : "false", "aria-label": weT("{side}{corner}：{state}", { side: sideLabel, corner: cornerLabel, state: weT(isSquare(c) ? "直角" : "圆角") }),
             }, weT("{corner}角 {state}", { corner: cornerLabel, state: weT(isSquare(c) ? "直角" : "圆角") })),
           ),
         ),
@@ -145,8 +141,7 @@
       className: "we-picker__swatch we-picker__swatch--auto" + (sel[key] === "" ? " we-picker__swatch--active" : ""),
       type: "button",
       title: weT("跟随「全局配色」"),
-      onClick: () => onUiColorElement(key, ""),
-      "aria-label": weT("跟随全局配色"),
+      onClick: () => onUiColorElement(key, ""), "aria-label": weT("跟随全局配色"),
     }, weT("跟随"));
     return React.createElement(React.Fragment, null,
     React.createElement("div", { className: "we-picker__section" },
@@ -192,8 +187,7 @@
             className: "we-picker__swatch we-picker__swatch--auto" + (sel.caretColor === "" ? " we-picker__swatch--active" : ""),
             type: "button",
             title: weT("跟随 dsh 原生光标颜色"),
-            onClick: () => onCaretColor(""),
-            "aria-label": weT("光标颜色 自动"),
+            onClick: () => onCaretColor(""), "aria-label": weT("光标颜色 自动"),
           }, weT("自动")),
           colorValue: sel.caretColor || "#4f8cff",
         }),

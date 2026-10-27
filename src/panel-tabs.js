@@ -132,8 +132,7 @@ function weComponentVisibleOf(components, name) {
           React.createElement("span", { className: "we-picker__section-label" }, weT("声音")),
         ),
         SliderRow(weT("音量"), 0, 100, 5,
-          Math.round((Number(sel.videoVolume) || 0) * 100), onVideoVolume,
-          Math.round((Number(sel.videoVolume) || 0) * 100) + "%"),
+          Math.round((Number(sel.videoVolume) || 0) * 100), onVideoVolume, "%"),
         switchRow(weT("壁纸音轨"), sel.videoAudioEnabled !== false, () => onToggleAudio(), {
           hint: weT("关闭=静音（保留音量数值）· 开启时音量 0 自动 50%"),
           tooltip: weT("视频壁纸与场景壁纸（内嵌 MP4 音轨 / 包内独立音频）共用；默认静音，开启时若音量为 0 会自动提到 50%"),
@@ -183,6 +182,8 @@ function weComponentVisibleOf(components, name) {
         renderMascotFormCards(sel, previewArt, previewW, previewH, onRopeFormChange, onMascotPick, onMascotClear, onMascotFormConfirm, onDisarmConfirm, paneWidth),
         sel.mascotError
           && React.createElement("div", { className: "we-picker__hint we-avatar-error", key: "rope-custom-err" }, sel.mascotError),
+        // 吉祥物大小的**显示刻度**与存储刻度不同（ropeScale = 倍率，滑杆值本身也是倍率）：
+        // 右侧是 `Math.round(scale*100)+"%"` 的预格式化整串 ⇒ 保持只读回显（#255⑤ 明确保留）。
         SliderRow(weT("吉祥物大小"), ROPE_SCALE_MIN, ROPE_SCALE_MAX, ROPE_SCALE_STEP,
           sel.ropeScale, onRopeScaleChange, Math.round(sel.ropeScale * 100) + "%", "rope-scale"),
       ),
