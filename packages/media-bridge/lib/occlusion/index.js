@@ -235,6 +235,8 @@ export function createOcclusionHub({
       pollTimer = setInterval(() => {
         recompute().catch(() => { /* recompute 不外抛；这里兜底防 unhandled */ });
       }, pollMs);
+      // #241：宿主优雅退出不等插件 unload ⇒ 轮询定时器必须 unref，否则事件循环永远撑住。
+      try { pollTimer.unref?.(); } catch { /* ignore */ }
     } catch (err) {
       snapshot = degradedSnapshot(snapshot.gen + 1, now());
       logOnce('start-failed', `x11 adapter start failed, backend=none: ${err && err.message}`);
