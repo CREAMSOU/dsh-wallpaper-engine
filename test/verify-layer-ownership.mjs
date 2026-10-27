@@ -436,6 +436,8 @@ function teardownViolations(cleanupBody) {
     cancelLiveFrameBackfill() {}, stopLiveWatch() {}, cancelLiveMount() {},
     abortTranscodeUpgrade() {}, cancelPendingPersist() {}, cancelPendingFontSet() {},
     cancelUserPropsCommit() {},
+    // #288：暂停持续期防抖的状态面（cleanup 会成对撤定时器 / 摘标志）。
+    applyHiddenHold() {}, hiddenDebounce: 0, hiddenHoldBound: false,
     abortMediaInfoProbe() {}, sceneVideoResyncTimer: null, weStopDraw() {},
     releaseLayerMedia(n) { m.log.push('release'); n.__released = true; },
     clearEffects() {}, setWallpaperActive() {},

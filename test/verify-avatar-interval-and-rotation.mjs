@@ -424,8 +424,9 @@ const videoSrc = read('src/video-layer.js');
 // 永远点不动的「请先选择或新建一个轮播列表」。
 {
   const rotationSrc = read('packages/media-bridge/src/wallpaper-rotation-section.js');
-  // 注释里的旧文案不算代码（本文件在 #255② 的说明里引用了旧提示原文）。
-  const rotationCode = rotationSrc.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/^\s*\/\/.*$/gm, ' ');
+  // 注释里的旧文案不算代码（本文件在 #255② 的说明里引用了旧提示原文）——用共享的
+  // 字符串感知剥注释实现（verify-module-layout 禁止朴素块注释正则）。
+  const rotationCode = stripComments(rotationSrc);
   const gatedCtl = (t) => t.includes('(sel.rotationGroupId && !editing) &&') && !t.includes('请先选择或新建一个轮播列表');
   check('#255② 「自动轮转」行按 sel.rotationGroupId && !editing 门控，旧提示分支已删',
     gatedCtl(rotationCode));

@@ -8,7 +8,7 @@ const root = new URL('../', import.meta.url);
 const built = readFileSync(new URL('packages/pet-link/lib/client.pet-link.js', root), 'utf8');
 assert.doesNotMatch(built, /\n\s*exports\.apply = \(\) => undefined;/, '构建不得覆盖官方桥接的 apply');
 const manifest = JSON.parse(readFileSync(new URL('packages/pet-link/package.json', root), 'utf8'));
-assert.deepEqual(manifest.dsh.client.inject, ['@deepseek-ai/dsh-client-runtime'], '包依赖仍由客户端清单声明');
+assert.deepEqual(manifest.dsh.client.inject, ['@deepseek-ai/dsh-client-runtime', 'dsh-plugin-wallpaper-engine'], '包依赖仍由客户端清单声明（#281 起还声明主包以固定装载序）');
 const { plugin: clientEntry, bridge, listeners } = clientEntryFixture(built);
 assert.deepEqual(clientEntry.inject, [], '包名不是 Cordis 服务；可选官方服务不得阻塞客户端激活');
 const services = new Map(), cleanups = [];
@@ -28,7 +28,7 @@ assert.equal(listeners.size, 0, '卸载后清理客户端监听器');
 const routes = new Map();
 const dispose = applyImpl({ webServer: { port: 7341, register(route) {
   routes.set(route.path, route); return () => routes.delete(route.path);
-} } }, {}, { base: '/wallpaper-engine', http: httpView });
+} } }, {}, { base: '/wallpaper-engine', http: httpView, tolerantWebServer: (ws) => ws });
 try {
   assert.ok(routes.has('/wallpaper-engine/pet-link/official'), '默认联动必须直接注册官方控制，不再留内置或预览开关');
   assert.ok(!routes.has('/wallpaper-engine/pet-link/capability'), '不再签发内置资格');
