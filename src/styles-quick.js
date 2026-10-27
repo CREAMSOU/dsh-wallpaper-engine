@@ -66,6 +66,51 @@ const CSS_QUICK = `  /* ── Rope dock: chibi pull-cord + glass repo drawer �
     pointer-events: none; /* drag/capture stays on the .we-rope box */
   }
 
+  /* #249：.we-update-notice / .we-repo-panel 都渲染在 body 末尾的独立 React root 里，
+     是块级子节点。此前它们全部样式（含定位）都挂在 body[data-we-glass-floaters] 下；
+     「皮肤在台上」的让路态会把该门控属性整族摘掉 ⇒ 节点退化成 body 流里的普通块
+     （左下角裸文本 + 公告图顶穿窗口底部，整屏布局被撑歪）。这里把「脱离文档流所需的
+     定位 / 尺寸 / 层叠 / 收起态」抽成无条件基础规则；门控属性只负责玻璃外观，不再决定
+     节点是否脱离文档流。后面的门控规则特异性更高，会整组覆盖这些基础声明。
+     ⚠️ 本段在模板字符串里：注释内不许出现反引号或美元加大括号（会提前闭合/插值模板）。 */
+  .we-update-notice {
+    position: fixed; left: 50%; bottom: 26px; z-index: 1100;
+    transform: translateX(-50%);
+    width: min(600px, 92vw);
+    max-height: min(78dvh, 720px);
+    box-sizing: border-box;
+    display: flex; flex-direction: column; gap: 10px;
+    padding: 16px 18px; border-radius: 14px;
+    background-color: rgba(24, 24, 28, 0.88);
+    color: inherit;
+  }
+  .we-repo-panel {
+    position: fixed; top: 0; right: 0;
+    width: 360px; max-width: 92vw;
+    height: 100vh; height: 100dvh;
+    z-index: 995;
+    display: flex; flex-direction: column;
+    padding: 14px;
+    box-sizing: border-box;
+    transform: translateX(102%);
+    opacity: 0; visibility: hidden; pointer-events: none;
+    transition:
+      transform 640ms cubic-bezier(0.32, 0.72, 0.24, 1),
+      opacity 480ms ease,
+      visibility 0s linear 640ms;
+  }
+  html[data-windows-titlebar] .we-repo-panel {
+    padding-top: calc(14px + var(--dsh-windows-titlebar-height, 40px));
+  }
+  .we-repo-panel--open {
+    transform: translateX(0);
+    opacity: 1; visibility: visible; pointer-events: auto;
+    transition:
+      transform 640ms cubic-bezier(0.32, 0.72, 0.24, 1),
+      opacity 480ms ease,
+      visibility 0s;
+  }
+
   /* One-time update notice — a floating glass toast (bottom-center) that tells
      immersive/kiosk-window users about the white flash and its one fix. High
      z-index so it sits above the chat; buttons reuse the flat picker style.

@@ -903,6 +903,59 @@ function main() {
     fakeSame.length === pairedTokens.filter((t) => lightDecls.get(t) && darkDecls.get(t)).length,
     'flagged=' + JSON.stringify(fakeSame));
 
+  // ── G10: 浮层脱离文档流的基础定位不得依赖玻璃门控属性（#249）──────────────
+  // .we-update-notice / .we-repo-panel 挂在 body 末尾；皮肤在台上时 applyGlass 会摘掉
+  // data-we-glass-floaters 整族 ⇒ 若定位规则只在该门控下，两个节点会退化成 body 流里的裸块
+  // （左下裸文本 + 公告图顶穿底部）。本条要求：两类浮层各至少有一条不依赖门控属性的
+  // position:fixed 规则；玻璃配方仍可在门控下。
+  // 为什么不用 indexOf 扫块：本仓实测会被声明值/字符串里的花括号带偏（整表只切出 2 条规则），
+  // 所以按"跳过引号字符串 + 配平花括号"取规则块。
+  const ruleBlocks = (cssText) => {
+    const out = [];
+    let i = 0, segStart = 0;
+    while (i < cssText.length) {
+      const ch = cssText[i];
+      if (ch === '"' || ch === "'") {
+        const q = ch; i += 1;
+        while (i < cssText.length) { if (cssText[i] === '\\') { i += 2; continue; } if (cssText[i] === q) { i += 1; break; } i += 1; }
+        continue;
+      }
+      if (ch === '{') {
+        const header = cssText.slice(segStart, i);
+        let depth = 1; i += 1;
+        const bodyStart = i;
+        while (i < cssText.length && depth > 0) {
+          const c = cssText[i];
+          if (c === '"' || c === "'") {
+            const q = c; i += 1;
+            while (i < cssText.length) { if (cssText[i] === '\\') { i += 2; continue; } if (cssText[i] === q) { i += 1; break; } i += 1; }
+            continue;
+          }
+          if (c === '{') depth += 1;
+          else if (c === '}') depth -= 1;
+          i += 1;
+        }
+        out.push({ header, body: cssText.slice(bodyStart, i - 1) });
+        segStart = i;
+        continue;
+      }
+      i += 1;
+    }
+    return out;
+  };
+  const hasUngatedFixed = (cssText, cls) => ruleBlocks(cssText).some((r) => {
+    const header = r.header.replace(/\/\*[\s\S]*?\*\//g, '');
+    return header.includes(cls)
+      && !/data-we-glass|data-we-fallback|@supports|@media|@keyframes/.test(header)
+      && /position\s*:\s*fixed/.test(r.body);
+  });
+  check('G10 floating overlays keep un-gated position:fixed (issue #249: skin-yield drops the glass gate)',
+    hasUngatedFixed(CSS, '.we-update-notice') && hasUngatedFixed(CSS, '.we-repo-panel'),
+    'notice=' + hasUngatedFixed(CSS, '.we-update-notice') + ' repoPanel=' + hasUngatedFixed(CSS, '.we-repo-panel'));
+  check('G10 negative control: a gate-only rule does not satisfy the detector',
+    hasUngatedFixed('body[data-we-glass-floaters] .we-update-notice { position: fixed; }', '.we-update-notice') === false
+      && hasUngatedFixed('body[data-we-glass-floaters] .we-repo-panel { position: fixed; }', '.we-repo-panel') === false);
+
   const failed = results.filter((r) => !r.ok);
   console.log('\n' + (failed.length === 0
     ? 'ALL GLASS COMPOSITING CHECKS PASSED'
