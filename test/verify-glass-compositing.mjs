@@ -956,6 +956,20 @@ function main() {
     hasUngatedFixed('body[data-we-glass-floaters] .we-update-notice { position: fixed; }', '.we-update-notice') === false
       && hasUngatedFixed('body[data-we-glass-floaters] .we-repo-panel { position: fixed; }', '.we-repo-panel') === false);
 
+  // ── G11: 边框滑杆覆盖的 UI 边缘不许再写死白色发丝边（#255④）──────────────
+  // 这五类边（行内代码胶囊 / 侧栏新建会话胶囊 / 更新提示面板 + 配图 / 仓库抽屉左缘）此前写死
+  // rgba(255,255,255,…) ⇒ 拉「边框」滑杆时它们纹丝不动。现在统一读 --dsw-alias-border-l2。
+  {
+    const needles = [':not(pre) > code', '_newSession', '.we-update-notice', '.we-repo-panel--open'];
+    const literalHairline = (rules) => rules.filter((r) => needles.some((n) => r.header.includes(n))
+      && /border[^;:]*:[^;]*rgba\(255,\s*255,\s*255/.test(r.body));
+    const offenders = literalHairline(ruleBlocks(CSS)).map((r) => r.header.replace(/\s+/g, ' ').trim());
+    check('G11 border-slider-covered edges use the border token, not a hard-coded white hairline (#255④)',
+      offenders.length === 0, offenders.join(' | ') || '4 组选择器全部走 token');
+    const synthetic = literalHairline(ruleBlocks('.we-update-notice { border: 1px solid rgba(255, 255, 255, 0.22); }'));
+    check('G11 negative control: a synthetic hard-coded white hairline is flagged', synthetic.length === 1);
+  }
+
   const failed = results.filter((r) => !r.ok);
   console.log('\n' + (failed.length === 0
     ? 'ALL GLASS COMPOSITING CHECKS PASSED'

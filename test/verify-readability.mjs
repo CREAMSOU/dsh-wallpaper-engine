@@ -471,7 +471,8 @@ function main() {
       && declValue(chip.body, 'backdrop-filter') === 'blur(var(--we-inline-code-blur, 8px)) saturate(var(--we-saturate, 1.3)) brightness(var(--we-glass-brightness, 1.04))'
       && declValue(chip.body, '-webkit-backdrop-filter') === declValue(chip.body, 'backdrop-filter')
       && declValue(chip.body, 'background-image') === 'none !important'
-      && declValue(chip.body, 'border-color') === 'rgba(255, 255, 255, 0.14) !important'
+      && (declValue(chip.body, 'border-color') || '').startsWith('var(--dsw-alias-border-l2')
+      && declValue(chip.body, 'border-color') === 'var(--dsw-alias-border-l2, rgba(128, 128, 128, 0.14)) !important'
       && !/(?:^|[;\s])(?:color|filter|opacity)\s*:/.test(chip.body));
     // #197：推理正文由宿主用 compact 变体渲染（宿主模块类带 _thinkBody 后缀），那里的
     // 行内代码是 display:inline。跨行折断时 backdrop-filter 的取值区取的是**所有行盒的

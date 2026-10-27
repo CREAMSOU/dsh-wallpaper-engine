@@ -345,7 +345,7 @@ const CSS_SHELL = `  /* ── iOS liquid glass ──────────�
     background-image: none !important;
     -webkit-backdrop-filter: blur(var(--we-inline-code-blur, 8px)) saturate(var(--we-saturate, 1.3)) brightness(var(--we-glass-brightness, 1.04));
     backdrop-filter: blur(var(--we-inline-code-blur, 8px)) saturate(var(--we-saturate, 1.3)) brightness(var(--we-glass-brightness, 1.04));
-    border-color: rgba(255, 255, 255, 0.14) !important;
+    border-color: var(--dsw-alias-border-l2, rgba(128, 128, 128, 0.14)) !important;
   }
   /* #197: the host renders the reasoning body with Markdown's compact variant,
      where the inline-code chip is display:inline. A backdrop-filter carrier that
@@ -383,7 +383,7 @@ const CSS_SHELL = `  /* ── iOS liquid glass ──────────�
      Scope the expanded button; keep its label, shortcut and collapsed state. */
   body[data-we-glass-page][data-we-thinking-glass] [data-slot="sidebar"] :not([class*="_collapsed"]) > button[class*="_newSession"] {
     background: var(--we-capsule-glass-fill) !important;
-    border-color: rgba(255, 255, 255, 0.14) !important;
+    border-color: var(--dsw-alias-border-l2, rgba(128, 128, 128, 0.14)) !important;
     -webkit-backdrop-filter: blur(var(--we-inline-code-blur, 8px)) saturate(var(--we-saturate, 1.3)) brightness(var(--we-glass-brightness, 1.04));
     backdrop-filter: blur(var(--we-inline-code-blur, 8px)) saturate(var(--we-saturate, 1.3)) brightness(var(--we-glass-brightness, 1.04));
   }
