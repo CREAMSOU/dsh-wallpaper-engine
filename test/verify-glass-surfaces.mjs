@@ -1310,11 +1310,12 @@ console.log('\n⑨ W5：各面的锚点门控覆盖率（防"关掉后还剩一�
     { id: 'left-sidebar-override', member: /:has\(> \[data-slot="sidebar"\]\)(?!\))/, anchor: /data-we-left-sidebar/, done: true },
     // 标题栏：与左栏同族的"乙类"面，门是 body[data-we-titlebar-glass]
     // （开关），另加 html[data-windows-titlebar]（壳层形态锚，只出现在 Windows Electron）。
-    // ⚠️ member 必须是**这一面自己的选择器形态**（顶栏那个 CSS 模块哈希类名的子串
-    //    `div[class*="pI_x6G_frame"]`，见 src/styles-sidebar.js 的标题栏 `::before` 规则），**不能**写成门控属性本身 ——
+    // ⚠️ member 必须是**这一面自己的选择器形态**（[data-we-titlebar-anchor] 是插件运行时
+    //    探针打的属性标记，见 src/effects.js 的 syncTitlebarAnchor），**不能**写成门控属性本身 ——
     //    两者写成同一条正则时，"这条规则丢了门控"会让它同时不再是 member ⇒ ungated 恒空、
     //    该面的 W5 判据**不可能红**（正是这条要防的失效模式：锚点外新增一条同面规则）。
-    { id: 'titlebar-override', member: /pI_x6G_frame/, anchor: /data-we-titlebar-glass/, done: true },
+    //    #235 起不再认宿主 CSS-module 构建哈希（pI_x6G_frame 之类，跨构建会漂）。
+    { id: 'titlebar-override', member: /data-we-titlebar-anchor/, anchor: /data-we-titlebar-glass/, done: true },
     // W5 推广（本轮）：对话栏三条主规则已加 `[data-we-glass-chat]` 锚点。
     // ⚠️ 合并 #134：思考玻璃一族在对话面新增了「+」白釉 / 气泡清底等规则，它们的门是
     //    `data-we-thinking-glass`（默认关）—— 与 chat 门同样满足"关 ⇒ 整组不生效"，

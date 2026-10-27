@@ -236,6 +236,8 @@ const VERIFY_STEPS = [
   step('test/verify-lazy-engine-dir.mjs'),
   // 缓存产物文件名与 checkout 深度解耦（#208：键里不放 base64url(abs)，统一短哈希）。
   step('test/verify-cache-keys.mjs'),
+  // 标题栏玻璃的容器锚点必须是运行时探针（#235：不写死宿主 CSS-module 构建哈希）。
+  step('test/verify-titlebar-anchor.mjs'),
   // 可选桌宠联动的离线回归；安装和浏览器集成另走显式环境入口。
   step('test/verify-pet-package.mjs'),
   step('test/verify-pet-hotplug-host.mjs'),

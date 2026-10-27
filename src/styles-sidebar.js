@@ -125,8 +125,18 @@ const CSS_SIDEBAR = `  /* ── 左侧栏液态玻璃（宿主原生左栏的�
         visibility:hidden），裸锚会给收起态留一块板子（#107，与右栏玻璃同一条护栏）。
      ⚠️ 默认（统一档 = 跟随原生、四角都不直角）时 body 上没有任何属性 ⇒ 本块全部不生效，
         逐字节等于今天。
-     ⚠️ 宿主原生左栏与右栏面板都**不带圆角**（.pI_x6G_sidebarCol 只有底色 + 右分割线；
+     ⚠️ 宿主原生左栏与右栏面板都**不带圆角**（*_sidebarCol 只有底色 + 右分割线；
         右栏面板的圆角长在内部 pane 上）⇒「圆角」靠统一档给 px 值才看得见。 */
+  /* ── issue #236：左栏整列抬到标题栏模糊层之上 ──────────────────────────────
+     #131 的修法给这一列加了 z-index:0（把 ::before 的 z-index:-1 圈在列内），代价是
+     这一列成了层叠上下文：钉在标题栏左上角的两枚宿主按钮虽是 position:fixed + z-index:30，
+     但它们是这一列的后代 ⇒ 那个 30 只在列内部排序，整列按 0 参与外层排序，被标题栏玻璃
+     的 ::after 模糊层盖住。修法 = 只在「左栏玻璃 + 标题栏玻璃同时开」时把整列抬到 1。
+     ⚠️ 锚点沿用 :has(> [data-slot="sidebar"])（不用任何宿主哈希）；只写 z-index，
+        position:relative 已由 #131 那条规则给出。判据见 verify-glass-compositing 的 S2d。 */
+  html[data-windows-titlebar] body[data-we-left-sidebar][data-we-glass-page][data-we-titlebar-glass][data-we-adapter^="desktop-"] div:has(> [data-slot="sidebar"]) {
+    z-index: 1;
+  }
   body[data-we-left-sidebar-radius] div:has(> [data-slot="sidebar"]) {
     border-radius: var(--we-left-sidebar-radius) !important;
   }
@@ -164,6 +174,22 @@ const CSS_SIDEBAR = `  /* ── 左侧栏液态玻璃（宿主原生左栏的�
     border-left: none !important;
   }
 
+  /* ── issue #237：右侧栏不画外沿描边（与左栏玻璃同一政策）──────────────────
+     旧「去边框」规则门控在圆角档上：圆角=跟随原生时整段不匹配。这里把门控搬到玻璃开关本身：
+     只要右栏是玻璃面，就不再留宿主原生描边 / 竖线；关掉玻璃后宿主外观逐字节恢复。 */
+  body[data-we-sidebar-glass] [data-sidebar-right-panel][data-sidebar-right-open] {
+    box-shadow: none !important;
+  }
+  body[data-we-sidebar-glass] [data-dockkit-divider]:not([data-dockkit-pane] *)::before {
+    border: none !important;
+    background: none !important;
+  }
+  body[data-we-sidebar-glass] [data-dockkit-host="dock"][data-dockkit-column="0"],
+  body[data-we-sidebar-glass] [data-dockkit-host="dock"][data-dockkit-column="0"] > * {
+    border-left: none !important;
+    box-shadow: none !important;
+  }
+
   /* ── 标题栏液态玻璃（壳层顶栏的玻璃接管，默认关）────────────────────────────────
      开关（body[data-we-titlebar-glass]，设置键 titlebarGlass，默认关）把顶栏改挂**与其余
      面板同一张配方表**，且与左侧栏那条**逐条同形**。
@@ -176,7 +202,7 @@ const CSS_SIDEBAR = `  /* ── 左侧栏液态玻璃（宿主原生左栏的�
         在当前 DSH Desktop 里**都不存在**（app.asar 字面扫描命中 0 次），不得用作锚点。
      ⚠️ **锚点为什么不用 [data-sidebar-collapsed]**：AppFrame 只在**收起**时才渲染该属性
         ⇒ 把条件属性写进选择器会让本块在默认展开态**恒不生效**。data-rightbar-* 同理。
-     ⚠️ **锚点只用一条**：保留的 div[class*="pI_x6G_frame"] 是 CSS 模块哈希类名的**子串**
+     ⚠️ **锚点只用一条**：保留的 [data-we-titlebar-anchor] 是 CSS 模块哈希类名的**子串**
         匹配（哈希跨版本会漂，漂了的最坏结果是"本块不生效"，失败安全、绝不误伤；运行时实测
         n1=1 / n3=1）。两条硬门是 [data-windows-titlebar]（壳层写进 <html>，只在 Windows
         Electron 形态；实测 winTB=1）与 body[data-we-adapter^="desktop-"]（本插件自己挂；
@@ -196,7 +222,7 @@ const CSS_SIDEBAR = `  /* ── 左侧栏液态玻璃（宿主原生左栏的�
         左栏判据 S2）。⚠️ 任何调色改动都必须**同时**改这两块，否则色差立刻出现。
      ⚠️ **可覆盖性**：本块用 !important —— 壳层那条 :before 声明同特异度但写在别的样式表里，
         靠加载顺序取胜不可靠；伪元素只此一层，覆盖它没有副作用。 */
-  html[data-windows-titlebar] body[data-we-glass-page][data-we-titlebar-glass][data-we-adapter^="desktop-"] div[class*="pI_x6G_frame"]::before {
+  html[data-windows-titlebar] body[data-we-glass-page][data-we-titlebar-glass][data-we-adapter^="desktop-"] [data-we-titlebar-anchor]::before {
     /* 底色：压掉壳层那条 background: var(--dsw-specific-sidebar-fill)，换成与左侧栏
        **逐条同形**的配方（只有面变量 --we-titlebar-alpha 替 --we-left-sidebar-alpha）。
        ⚠️ 必须写成 background-color + background-image 两条**分开的**声明（不是
@@ -244,7 +270,7 @@ const CSS_SIDEBAR = `  /* ── 左侧栏液态玻璃（宿主原生左栏的�
         pointer-events:none ⇒ 不挡壳层 ::before 的 app-region 拖拽区，也不挡壳层 z-index:30 的固定按钮。
      ⚠️ 不写 z-index（保持 auto）：这样才能在 ::before **之上**按树序绘制；写成 -1 会掉到
         frame 底色之下，甚至跑到壁纸后面。 */
-  html[data-windows-titlebar] body[data-we-glass-page][data-we-titlebar-glass][data-we-adapter^="desktop-"] div[class*="pI_x6G_frame"]::after {
+  html[data-windows-titlebar] body[data-we-glass-page][data-we-titlebar-glass][data-we-adapter^="desktop-"] [data-we-titlebar-anchor]::after {
     content: "";
     position: absolute;
     inset: 0 0 auto;
@@ -257,7 +283,7 @@ const CSS_SIDEBAR = `  /* ── 左侧栏液态玻璃（宿主原生左栏的�
      ⚠️ 釉光必须**和浅色那条一样恒定**（单停靠点 sheen-a）：照抄左栏三段渐变就会重现
         那个"盒尺寸色差" —— 40px 与 1111px 两个盒子会算出不同白釉强度。
         TB4a 对深浅两条都跑。 */
-  html[data-windows-titlebar] body[data-ds-dark-theme][data-we-glass-page][data-we-titlebar-glass][data-we-adapter^="desktop-"] div[class*="pI_x6G_frame"]::before {
+  html[data-windows-titlebar] body[data-ds-dark-theme][data-we-glass-page][data-we-titlebar-glass][data-we-adapter^="desktop-"] [data-we-titlebar-anchor]::before {
     background-color: color-mix(in srgb,
       var(--we-readability-base) calc(var(--we-readability-floor) * 100%),
       color-mix(in srgb, var(--we-surface-tint-dark, #0d1524) calc(var(--we-titlebar-alpha) * 100%), transparent) calc((1 - var(--we-readability-floor)) * 100%)) !important;
@@ -268,15 +294,15 @@ const CSS_SIDEBAR = `  /* ── 左侧栏液态玻璃（宿主原生左栏的�
   }
   /* 无 backdrop-filter：同一政策 —— 近不透明玻璃，顶栏文字绝不直接落在壁纸上。 */
   @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-    html[data-windows-titlebar] body[data-we-glass-page][data-we-titlebar-glass][data-we-adapter^="desktop-"] div[class*="pI_x6G_frame"]::before {
+    html[data-windows-titlebar] body[data-we-glass-page][data-we-titlebar-glass][data-we-adapter^="desktop-"] [data-we-titlebar-anchor]::before {
       background: color-mix(in srgb, var(--we-surface-tint-light, #ffffff) 92%, transparent) !important;
     }
-    html[data-windows-titlebar] body[data-ds-dark-theme][data-we-glass-page][data-we-titlebar-glass][data-we-adapter^="desktop-"] div[class*="pI_x6G_frame"]::before {
+    html[data-windows-titlebar] body[data-ds-dark-theme][data-we-glass-page][data-we-titlebar-glass][data-we-adapter^="desktop-"] [data-we-titlebar-anchor]::before {
       background: color-mix(in srgb, var(--we-surface-tint-dark, #0d1524) 92%, transparent) !important;
     }
     /* 模糊层整个不存在：本档不支持 backdrop-filter，留着 ::after 只会多一层
        什么都画不出来的绝对定位块（含 pointer-events:none 的空层）。 */
-    html[data-windows-titlebar] body[data-we-glass-page][data-we-titlebar-glass][data-we-adapter^="desktop-"] div[class*="pI_x6G_frame"]::after {
+    html[data-windows-titlebar] body[data-we-glass-page][data-we-titlebar-glass][data-we-adapter^="desktop-"] [data-we-titlebar-anchor]::after {
       content: none;
     }
   }
@@ -364,11 +390,9 @@ const CSS_SIDEBAR = `  /* ── 左侧栏液态玻璃（宿主原生左栏的�
       rgba(255, 255, 255, var(--we-sidebar-sheen-a)),
       rgba(255, 255, 255, var(--we-sidebar-sheen-b)) 38%,
       rgba(255, 255, 255, var(--we-sidebar-sheen-c))) !important;
-    /* 模糊在独立叶节点，宿主 dock 内容仍按其原生层级绘制。 */
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, calc(var(--we-sidebar-sheen) * 0.32)),
-      inset 0 -1px 0 rgba(255, 255, 255, calc(var(--we-sidebar-sheen) * 0.08)),
-      inset 0 0 0 0.5px rgba(255, 255, 255, calc(var(--we-sidebar-sheen) * 0.06));
+    /* 模糊在独立叶节点，宿主 dock 内容仍按其原生层级绘制。
+       #237：外沿描边不画（左栏玻璃也不画）—— 宿主 inset 三明治由 body[data-we-sidebar-glass]
+       的 box-shadow:none 规则兜住。 */
   }
   body[data-ds-dark-theme][data-we-sidebar-glass] [data-sidebar-right-panel][data-sidebar-right-open]:where([data-we-surface-runtime="right-sidebar"]) {
     background-color: color-mix(in srgb,

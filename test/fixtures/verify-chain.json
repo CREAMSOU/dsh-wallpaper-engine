@@ -665,6 +665,14 @@
         {
           "kind": "guard",
           "npm": null,
+          "file": "test/verify-titlebar-anchor.mjs",
+          "args": [],
+          "tier": "hard",
+          "probe": false
+        },
+        {
+          "kind": "guard",
+          "npm": null,
           "file": "test/verify-pet-package.mjs",
           "args": [],
           "tier": "hard",
@@ -1575,6 +1583,14 @@
           "kind": "guard",
           "npm": null,
           "file": "test/verify-cache-keys.mjs",
+          "args": [],
+          "tier": "hard",
+          "probe": false
+        },
+        {
+          "kind": "guard",
+          "npm": null,
+          "file": "test/verify-titlebar-anchor.mjs",
           "args": [],
           "tier": "hard",
           "probe": false

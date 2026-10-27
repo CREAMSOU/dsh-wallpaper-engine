@@ -567,6 +567,21 @@ function main() {
   check('TB1 负对照：死锚点要被判红、正常选择器要放行（判据有牙）',
     hasDeadAnchor(['html[data-windows-titlebar] body[data-we-titlebar-glass] ' + deadAnchor]) === false
       && hasDeadAnchor(['html[data-windows-titlebar] div[class*="pI_x6G_frame"]']) === true);
+  // #235：锚点不许再依赖宿主 CSS-module 的**构建哈希**（pI_x6G_ / BynINW_ …）：宿主一升级就
+  // 静默失效，而两道硬门都还在 ⇒「开关怎么点都没反应」。只认运行时探针打的属性。
+  const HASH_FRAME_SELECTOR = /div\[class\*="[A-Za-z0-9_]+_frame"\]/;
+  // 只判"打到顶栏容器上"的选择器（::before/::after 那几条）；纯变量声明行（body[data-we-titlebar-glass]）
+  // 本来就不需要锚点。
+  const tbFrameSelectors = tbSelectors.filter((s) => /::(?:before|after)/.test(s));
+  check('TB1b 标题栏选择器统一走运行时锚点 [data-we-titlebar-anchor]，不含宿主构建哈希子串（#235）',
+    tbFrameSelectors.length > 0
+      && tbFrameSelectors.every((s) => s.includes('[data-we-titlebar-anchor]'))
+      && !tbSelectors.some((s) => HASH_FRAME_SELECTOR.test(s)),
+    'frame selectors=' + tbFrameSelectors.length + ' · 缺锚点=' + tbFrameSelectors.filter((s) => !s.includes('[data-we-titlebar-anchor]')).length
+      + ' · hash-anchor hits=' + tbSelectors.filter((s) => HASH_FRAME_SELECTOR.test(s)).length);
+  check('TB1b 负对照：旧的哈希锚点会被同一判据判红、新锚点放行',
+    HASH_FRAME_SELECTOR.test('div[class*="pI_x6G_frame"]') === true
+      && HASH_FRAME_SELECTOR.test('[data-we-titlebar-anchor]') === false);
   const tbLightRule = tbRules.find((r) => r.header.includes('::before')
     && !r.header.includes('data-ds-dark-theme') && !r.header.includes('glass-fallback')
     && /background-color\s*:/.test(r.body)); // 排除 @supports not 里那两条 background 简写
@@ -968,6 +983,41 @@ function main() {
       offenders.length === 0, offenders.join(' | ') || '4 组选择器全部走 token');
     const synthetic = literalHairline(ruleBlocks('.we-update-notice { border: 1px solid rgba(255, 255, 255, 0.22); }'));
     check('G11 negative control: a synthetic hard-coded white hairline is flagged', synthetic.length === 1);
+  }
+
+  // ── S2d: #236 左栏整列在「左栏玻璃 + 标题栏玻璃同开」时抬到 z-index:1 ──────────
+  {
+    const liftPredicate = (text) => {
+      const rule = /html\[data-windows-titlebar\][^{]*data-we-left-sidebar[^{]*data-we-titlebar-glass[^{]*:has\(> \[data-slot="sidebar"\]\)\s*\{[^}]*z-index:\s*1;/.test(text);
+      return rule;
+    };
+    check('S2d 标题栏玻璃 + 左栏玻璃同开时整列抬到 z-index:1（#236：否则左上角按钮被模糊层盖住）',
+      liftPredicate(CSS));
+    // 负对照：少一个门控条件就不许命中（避免"无条件抬层"被误判为修好）。
+    check('S2d negative control: 少一个开关门控的选择器不算修好',
+      liftPredicate(CSS) && liftPredicate(CSS.replace('body[data-we-left-sidebar][data-we-glass-page][data-we-titlebar-glass]', 'body[data-we-glass-page]')) === false);
+  }
+
+  // ── RT1/RT2: #237 右栏玻璃不画外沿描边，宿主两处竖线显式清除 ──────────────────
+  {
+    const rightGlassRules = rules.filter((r) => r.header.includes('data-sidebar-right-panel')
+      && r.header.includes('data-we-sidebar-glass'));
+    const insetSandwich = rightGlassRules.filter((r) => /inset 0 1px 0 rgba\(255,\s*255,\s*255,\s*calc\(var\(--we-sidebar-sheen\)\s*\*\s*0\.32\)\)/.test(r.body));
+    check('RT1 右栏玻璃规则不再复刻宿主 inset 三明治（与左栏同策：不画外沿描边，#237）',
+      rightGlassRules.length > 0 && insetSandwich.length === 0,
+      'right-glass rules=' + rightGlassRules.length + ' inset-sandwich=' + insetSandwich.length);
+    check('RT1 negative control: 把 inset 三明治种回同面规则 ⇒ 同一判据判红',
+      insetSandwich.length === 0
+        && /inset 0 1px 0 rgba\(255,\s*255,\s*255,\s*calc\(var\(--we-sidebar-sheen\)\s*\*\s*0\.32\)\)/.test('box-shadow: inset 0 1px 0 rgba(255, 255, 255, calc(var(--we-sidebar-sheen) * 0.32));'));
+    const clearPanelOf = (text) => /body\[data-we-sidebar-glass\] \[data-sidebar-right-panel\]\[data-sidebar-right-open\]\s*\{[^}]*box-shadow:\s*none\s*!important/.test(text);
+    const clearPanel = clearPanelOf(CSS);
+    const clearDivider = /body\[data-we-sidebar-glass\] \[data-dockkit-divider\]:not\(\[data-dockkit-pane\] \*\)::before\s*\{[^}]*border:\s*none\s*!important[^}]*background:\s*none\s*!important/.test(CSS);
+    const clearDock = /body\[data-we-sidebar-glass\] \[data-dockkit-host="dock"\]\[data-dockkit-column="0"\][^{]*\{[^}]*border-left:\s*none\s*!important/.test(CSS);
+    check('RT2 宿主两处竖线 + 面板描边在玻璃面下被显式清除（门控 = 玻璃开关，#237）',
+      clearPanel && clearDivider && clearDock,
+      JSON.stringify({ clearPanel, clearDivider, clearDock }));
+    check('RT2 negative control: 删掉面板 box-shadow 清除 ⇒ 同一判据判红',
+      clearPanel && !clearPanelOf(CSS.replace(/body\[data-we-sidebar-glass\] \[data-sidebar-right-panel\]\[data-sidebar-right-open\]\s*\{[^}]*box-shadow:\s*none\s*!important/, '')));
   }
 
   const failed = results.filter((r) => !r.ok);
