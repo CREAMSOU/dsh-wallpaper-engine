@@ -343,6 +343,9 @@ const CSS_BASE = `
     --dsw-alias-border-l1: rgba(180, 180, 180, var(--we-border-alpha, 0.35));
     --dsw-alias-border-l2: rgba(180, 180, 180, var(--we-border-alpha, 0.35));
     --dsw-alias-border-l2-darkmode-thin: rgba(180, 180, 180, var(--we-border-alpha, 0.35));
+    /* #255④：l3/l4 此前没纳入「边框」滑杆（宿主用它们画次级/浮层描边）⇒ 滑杆只“管到一部分边框”。 */
+    --dsw-alias-border-l3: rgba(180, 180, 180, var(--we-border-alpha, 0.35));
+    --dsw-alias-border-l4: rgba(180, 180, 180, var(--we-border-alpha, 0.35));
   }
   /* ── 浮层不吃页面玻璃那张令牌映射（issue #161 的漏网形态）─────────────────────────
      上面两处在令牌源头把面板梯度改成「底色压可读性下限 + 玻璃色」的半透明配方：对面板
@@ -478,6 +481,9 @@ const CSS_BASE = `
     --dsw-alias-border-l1: rgba(180, 180, 180, var(--we-border-alpha, 0.35));
     --dsw-alias-border-l2: rgba(180, 180, 180, var(--we-border-alpha, 0.35));
     --dsw-alias-border-l2-darkmode-thin: rgba(180, 180, 180, var(--we-border-alpha, 0.35));
+    /* #255④：l3/l4 此前没纳入「边框」滑杆（宿主用它们画次级/浮层描边）⇒ 滑杆只“管到一部分边框”。 */
+    --dsw-alias-border-l3: rgba(180, 180, 180, var(--we-border-alpha, 0.35));
+    --dsw-alias-border-l4: rgba(180, 180, 180, var(--we-border-alpha, 0.35));
   }
 
   /* #73 增强模式 + Win10（无 Mica）：桌面外壳只在系统材质可用时让左侧工作区
