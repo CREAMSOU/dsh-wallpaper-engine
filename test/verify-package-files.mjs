@@ -345,8 +345,9 @@ async function main() {
     // `handOffTeardown` 必须早于 `apply()` 体内任何注册点，中途抛错时 fiber 才拿得到 teardown；
     // 硬档依据 = 后果是"路由整族残留在宿主表里、开关再也关不干净"）。
     //  再：verify 70→71 / docs 7→6 —— `verify-guard-chain`（链的形状自检）由 docs 软档升 hard
-    // （ADR-0004：链的形状属**发布面** —— 静默掉一条守卫 = 一条硬档判据无声脱离 PR 门禁，而 CI 对
-    // `verify:docs` 是 `continue-on-error`，软档拦不住；R-4。它另含 R-5「脱链必须有代码内理由」⑤）。
+    // （ADR-0004：链的形状属**发布面** —— 静默掉一条守卫 = 一条硬档判据无声脱离 PR 门禁；旧 CI 对
+    // `verify:docs` 曾是 `continue-on-error`，正是它拦不住的原因；R-4。它另含 R-5「脱链必须有代码内理由」⑤）。
+    // 现在内务已移到定时 housekeeping，full 链无软档，但这条升 hard 的历史理由仍成立。
     // all 不变（组内搬家）。
     //  再：verify 71→72 / all 84→85 —— 新增 `test/verify-ci-steps.mjs`（R-7：CI 步骤表自身无判据时，
     // 删掉 `verify:static` / `verify:bridge` 步不会让任何判据变红；硬档依据 = 后果是"一整类门禁静默

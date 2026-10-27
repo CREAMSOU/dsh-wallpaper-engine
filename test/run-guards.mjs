@@ -260,14 +260,14 @@ const VERIFY_STEPS = [
   // ⑧ 链的**形状自检**（R-4 收口：由 docs 软档升 hard）。它把 MANIFEST 与
   //    `test/fixtures/verify-chain.json` 逐条对账（顺序 / 档位 / 参数 / 文件名），另判每组硬档地板、
   //    每个 file 真实存在、`all` = build + 三组有序拼接，以及 ⑤「守卫面上脱链者必须有代码内理由」。
-  //    原先它挂在 docs 组，而 CI 的 `verify:docs` 步是 `continue-on-error: true` ⇒ 把链上头两步
-  //    交换一下，**硬档可以全绿**、只有软档出声。"链的形状"是发布面（静默掉一条守卫 = 一条硬档
+  //    原先它挂在 docs 组，而 CI 的 `verify:docs` 步曾是 `continue-on-error: true` ⇒ 把链上头两步
+  //    交换一下，**硬档可以全绿**、只有软档出声（现内务已移到定时 housekeeping，full 链不再有软档）。"链的形状"是发布面（静默掉一条守卫 = 一条硬档
   //    判据无声脱离 PR 门禁）⇒ 按 ADR-0004 归硬档，放本组末尾（它是全组的自检，读的是 MANIFEST
   //    而非某一步的产物；`--list-json` 只打印不执行，不会递归）。
   step('test/verify-guard-chain.mjs'),
   // ⑨ CI 步骤表自检（R-7，task-11 交付）：`test/tools/ci-workflow.mjs` 的行扫描 + 判据（序列 / 脚本
-  //    存在性 / `continue-on-error` 只在 verify:docs / 产物出库与无尾随空白两步真的在跑 / install 在
-  //    第一条 npm run 之前），正判据与 10 条负对照共用一个纯函数（变异喂内存文本，不碰真 workflow）。
+  //    存在性 / full 链零 continue-on-error / 判定脚本信任边界 / 作业 timeout / 产物出库与无尾随空白两步真的在跑 / install 在
+  //    第一条 npm run 之前），正判据与负对照共用一个纯函数（变异喂内存文本，不碰真 workflow）。
   //    与 ⑧ 同理归硬档：删掉 `verify:static` 或 `verify:bridge` 这类改动只有它能拦。
   step('test/verify-ci-steps.mjs'),
   // ⑩ CI 分流接线最小守卫（CI 阶段一）：verify.yml 必须带固定名 `ci/result` 汇总且真的在跑

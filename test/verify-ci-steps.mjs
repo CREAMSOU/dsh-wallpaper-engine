@@ -24,7 +24,6 @@ import {
   INSTALL_COMMAND,
   REQUIRED_JOBS,
   RESULT_JOB_NAME,
-  SOFT_STEP,
   STEP_FLOOR,
   auditCiWorkflow,
   dropJob,
@@ -81,11 +80,11 @@ const control = (desc, mutatedText, id) => {
 };
 
 control('删掉 docs 作业', dropJob(workflowText, 'docs'), 'job-structure');
-control('full 作业只剩 9 步', dropStep(dropStep(dropStep(workflowText, 'verify:bridge'), 'smoke'), 'verify:docs'), 'step-floor');
+control('full 作业只剩 8 步', dropStep(dropStep(dropStep(workflowText, 'verify:bridge'), 'smoke'), 'verify:static'), 'step-floor');
 control('分类步骤不写 GITHUB_OUTPUT', removeLineMatching(workflowText, /--github-output/), 'changes-wiring');
 control('docs 作业偷偷跑 npm run verify', insertStepIntoJob(workflowText, 'docs', 'npm run verify', '顺手全量'), 'docs-fast-path');
 control('docs 作业去掉 mode 守卫', setJobIf(workflowText, 'docs', ''), 'docs-fast-path');
-// docs 腿的核心步必须是真 docs CLI（同一差异二次分类）；退回六步 warn-only 内务必须红。
+// docs 腿的核心步必须是真 docs CLI（同一差异二次分类）；退回 warn-only 内务必须红。
 // docs 腿 run 已是多行 bash（三个事件分支 + --base-mode 档位），负控对着整个 run 块替换。
 const DOCS_RUN_BLOCK = [
   '        run: |',
@@ -119,7 +118,10 @@ control('full 漏掉 verify:bridge', dropStep(workflowText, 'verify:bridge'), 'f
 control('full 漏掉 smoke', dropStep(workflowText, 'smoke'), 'full-coverage');
 control('full 把安装放到第一次 npm run 之后', swapStepsNamed(workflowText, 'npm ci', 'verify:static'), 'full-coverage');
 control('给 verify 加 continue-on-error', setContinueOnError(workflowText, 'verify', true), 'soft-tier');
-control('去掉 verify:docs 的 continue-on-error', setContinueOnError(workflowText, SOFT_STEP, false), 'soft-tier');
+// 信任边界负对照：判定脚本不再从 base 树取（把 overlay 的 git show 全换成 true）⇒ trusted-gate 必须红。
+control('去掉 base 树判定脚本 overlay（判定器变回 PR 树）', workflowText.replace(/git show/g, 'true'), 'trusted-gate');
+// 硬化负对照：full 作业去掉 timeout-minutes ⇒ job-timeouts 必须红。
+control('full 作业去掉 timeout-minutes', workflowText.replace('    timeout-minutes: 30\n', ''), 'job-timeouts');
 control('ci/result 不再 always()', removeLineMatching(workflowText, /if: always\(\)/), 'result-gate');
 control('ci/result 不用 judgeResult', removeLineMatching(workflowText, /judgeResult/), 'result-gate');
 control('ci/result 少 needs 一条腿', removeLineMatching(workflowText, /needs: \[changes, docs, notice, full\]/), 'result-gate');
