@@ -2155,8 +2155,10 @@ function SliderRow(label, min, max, step, value, onInput, suffix, key, opts) {
   // `opts.numberEdit`：右侧数值区改成**可取数**的输入框（数值 + 单位同处一个胶囊）。
   // 与滑块走同一个处理器：键入即时生效，回车 / 失焦提交并夹取到本控件的 min..max；
   // 打字中途的空串**不写值**（`Number("") === 0` 会让退格那一下把画面弹到最小值）。
-  // 旧调用点不传它就还是原来的只读回显。
-  const numberEdit = Boolean(opts.numberEdit) && !preformatted;
+  // #255⑤：**默认可输入**（只有显式传 false 或预格式化口径才退回只读回显）——「滑杆右侧
+  // 那格数字只能看不能改」是用户报障的那条；预格式化口径（整串含数字）仍保持只读，
+  // 因为那种调用点传的已经是「值+单位」的完整串，拆不出裸值。
+  const numberEdit = opts.numberEdit !== false && !preformatted;
   // 拖动期的轨道填充与**数值回显**：就地改这一行的 --we-fill 与右侧数值文本
   //（**局部 DOM 写，不触发 React 渲染**）。抬手那一次仍走完整 emit（含落盘），
   // 于是慢帧下也不会出现"数字跟不上滑块"的空档。
@@ -2166,16 +2168,15 @@ function SliderRow(label, min, max, step, value, onInput, suffix, key, opts) {
       const pct = hi > lo ? Math.max(0, Math.min(100, ((v - lo) / (hi - lo)) * 100)) : 0;
       el.style.setProperty("--we-fill", pct + "%");
       const row = el.parentNode;
+      // #255⑤：numberEdit 行的右侧是 <input>（.we-picker__value-input）——拖动期必须**只改
+      // input.value**；写父级 .we-picker__value 的 textContent 会把 React 的输入框子树抹掉，
+      // 下一次 emit 就崩（用户报障的「拖动几下输入框没了」）。
+      const input = row && typeof row.querySelector === "function" ? row.querySelector(".we-picker__value-input") : null;
+      if (input) { input.value = String(el.value); return; }
       const out = row && typeof row.querySelector === "function" ? row.querySelector(".we-picker__value") : null;
       // 预格式化口径不做拖动期就地改写 —— 保持原有的既有观感
-      //（放手后的 emit 重渲染会给出正确文本）。
-      // 缺元素 / 预格式化整串：什么都不做。
+      //（放手后的 emit 重渲染会给出正确文本）。缺元素 / 预格式化整串：什么都不做。
       if (out && !preformatted) out.textContent = readout(el.value);
-      else return;
-      // numberEdit 口径下右侧是 <input>：它有**自己的 value 属性** ⇒ 改走 value，
-      // 且必须在上面那次 textContent 之后**判形态再覆盖**（写 textContent 会把
-      // React 的子节点删掉，下一次 emit 就崩）。非输入框元素没有 value，无害。
-      if (typeof out.value === "string") out.value = String(el.value);
     } catch { /* 回显是增强，失败不影响取值 */ }
   };
   // 键入提交住在 NumberValueInput 里（编辑期不受控 + 回车 / 失焦提交），这里只剩滑杆。
@@ -3042,8 +3043,12 @@ function syncAvatarCropLive() {
     if (typeof range.style.setProperty === "function" && isFinite(lo) && isFinite(hi) && hi > lo) {
       range.style.setProperty("--we-fill", ((pct - lo) / (hi - lo) * 100) + "%");
     }
-    const out = row.querySelector(".we-picker__value");
-    if (out) out.textContent = pct + "%";
+    const input = row.querySelector(".we-picker__value-input");
+    if (input) input.value = String(pct);
+    else {
+      const out = row.querySelector(".we-picker__value");
+      if (out) out.textContent = pct + "%";
+    }
   } catch { /* 回显是增强，失败不影响取值 */ }
 }
 /** 拖动取景：把**这一步**的指针增量换成归一化平移（1 = 可用位移的满量）。 */

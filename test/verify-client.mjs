@@ -304,6 +304,21 @@ assert.ok(!code.includes(clearGated(' [class*="_frame"]')) && !code.includes(cle
 assert.ok((blockBodyOf(clearGated(hostRoot + ' {')) || '').includes('background: transparent !important'),
   'the known host canvas still needs an effective transparent fallback');
 console.log('sidebar glass selectors are wallpaper-independent: true · page glass is anchored on data-we-glass-page: true');
+// #255⑤：滑杆右侧数值**默认可输入**（不再 opt-in）；拖动期只改 input.value，不写父级 textContent。
+{
+  const at = code.indexOf('function SliderRow(');
+  const rest = at >= 0 ? code.slice(at) : '';
+  const boundary = /\n\s*function [A-Za-z_$]/.exec(rest);
+  const sliderSrc = boundary ? rest.slice(0, boundary.index) : rest;
+  assert.ok(sliderSrc, 'SliderRow 必须能在产物里定位');
+  assert.ok(sliderSrc.includes('opts.numberEdit !== false && !preformatted'),
+    '滑杆数值框默认开启（#255⑤：右侧数字只能看不能改是用户报障那条）');
+  assert.ok(!sliderSrc.includes('Boolean(opts.numberEdit)'), '旧的 opt-in 默认已被移除');
+  const iInput = sliderSrc.indexOf('.we-picker__value-input');
+  const iOut = sliderSrc.indexOf('.we-picker__value"');
+  assert.ok(iInput >= 0 && iOut > iInput && sliderSrc.includes('input.value = String(el.value)'),
+    'numberEdit 行拖动期必须先认输入框并只改 input.value（写 textContent 会抹掉 React 输入框子树）');
+}
 // A3 之后客户端产物不再只有主 bundle 一份：packages/{fx,parallax}/lib/client.*.js 各自在
 // 同一个 loader 上注册一份 bundle（id = 子包真实包名）。所以这里收**数组**，主 bundle = 第一份。
 const cap = { handoffs: [] };
@@ -371,6 +386,21 @@ const requireMock = (spec) => {
   throw new Error('unexpected require: ' + spec);
 };
 const exportsObj = factory(requireMock);
+// #255⑤ 起滑杆右侧默认是可输入的 NumberValueInput（数值 input + 单位 span）⇒ 回显判据按子树
+// 拼接：数值取 input 的 props.value、单位取文本子节点（只读回显行则直接是文本）。
+const readoutTextOf = (node) => {
+  if (typeof node === 'string' || typeof node === 'number') return String(node);
+  if (!node || typeof node !== 'object') return '';
+  let out = node.props && node.props.value !== undefined ? String(node.props.value) : '';
+  for (const child of node.children || []) out += readoutTextOf(child);
+  return out;
+};
+const readoutOfSlider = (row) => {
+  if (!row) return null;
+  const hits = (row.children || []).filter((c) =>
+    typeof c?.props?.className === 'string' && c.props.className.includes('we-picker__value'));
+  return hits.length === 1 ? readoutTextOf(hits[0]) : null;
+};
 // ── A3：fx/parallax 的扩展模块描述符住在各自子包里 ─────────────────────────────
 // 「扩展」页签的三张卡现在来自三个 bundle：avatar（本 bundle 模块作用域注册）、fx、parallax。
 // 子包产物只在 loader 上注册自己那份 bundle，真正的注册动作发生在它们各自的 factory：
@@ -1077,13 +1107,7 @@ setTimeout(async () => {
         assert.equal(sliderMin(findSliderRow(avTree, '圆角强度')), '0', '圆角强度下限必须是 0%');
         assert.equal(sliderMax(findSliderRow(avTree, '圆角强度')), '100', '圆角强度上限必须是 100%');
         // 默认回显：40px / 100%（默认正圆是用户口径的一部分 —— 改默认值即改观感）。
-        const avReadoutOf = (labelText) => {
-          const row = findSliderRow(avTree, labelText);
-          if (!row) return null;
-          const hits = (row.children || []).filter((c) =>
-            typeof c?.props?.className === 'string' && c.props.className.includes('we-picker__value'));
-          return hits.length === 1 ? String((hits[0].children || [])[0] ?? '') : null;
-        };
+        const avReadoutOf = (labelText) => readoutOfSlider(findSliderRow(avTree, labelText));
         assert.equal(avReadoutOf('头像大小'), '40px', '头像大小默认必须是 40px');
         assert.equal(avReadoutOf('圆角强度'), '100%', '圆角强度默认必须是 100%（正圆）');
         // 两方各一个「导入图片…」（没设置过图片时不该出现「清除」按钮）。
@@ -1149,13 +1173,7 @@ setTimeout(async () => {
         assert.equal(sliderMin(findSliderRow(fxTree, '不透明度')), '10', '不透明度下限必须是 10%');
         assert.equal(sliderMax(findSliderRow(fxTree, '不透明度')), '100', '不透明度上限必须是 100%');
         // 单位回显：ms 是本轮新增的第三种后缀（px / % / s 之外）—— 回显漏了它就会显示成裸数字。
-        const fxReadoutOf = (labelText) => {
-          const row = findSliderRow(fxTree, labelText);
-          if (!row) return null;
-          const hits = (row.children || []).filter((c) =>
-            typeof c?.props?.className === 'string' && c.props.className.includes('we-picker__value'));
-          return hits.length === 1 ? String((hits[0].children || [])[0] ?? '') : null;
-        };
+        const fxReadoutOf = (labelText) => readoutOfSlider(findSliderRow(fxTree, labelText));
         assert.equal(fxReadoutOf('半径'), '140px', '半径回显带 px 单位（默认 140）');
         assert.equal(fxReadoutOf('拖尾时长'), '420ms', '拖尾时长回显带 ms 单位（默认 420）');
         assert.equal(fxReadoutOf('不透明度'), '85%', '不透明度回显带 % 单位（默认 85）');
@@ -1274,13 +1292,7 @@ setTimeout(async () => {
         assert.equal(sliderMin(findSliderRow(parTree, '缓动平滑')), '0', '缓动平滑下限必须是 0%');
         assert.equal(sliderMax(findSliderRow(parTree, '缓动平滑')), '98', '缓动平滑上限必须是 98%');
         // 默认回显：背景是 1%（用户口径里写明的默认值 —— 改大了就是"一开就很晃"）。
-        const parReadoutOf = (labelText, tree) => {
-          const row = findSliderRow(tree || parTree, labelText);
-          if (!row) return null;
-          const hits = (row.children || []).filter((c) =>
-            typeof c?.props?.className === 'string' && c.props.className.includes('we-picker__value'));
-          return hits.length === 1 ? String((hits[0].children || [])[0] ?? '') : null;
-        };
+        const parReadoutOf = (labelText, tree) => readoutOfSlider(findSliderRow(tree || parTree, labelText));
         assert.equal(parReadoutOf('背景缓动距离'), '1%', '背景缓动距离默认必须是 1%');
         assert.equal(parReadoutOf('缓动平滑'), '85%', '缓动平滑默认必须是 85%');
         // 吉祥物子开关默认**开**（用户口径第 4 条："如果可以，让吉祥物也参与"）：它只管
