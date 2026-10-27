@@ -849,6 +849,60 @@ function main() {
     'lightOnly=' + JSON.stringify(lightOnly) + ' · darkOnly=' + JSON.stringify(darkOnly)
       + ' · light=' + aliasTokens(false).size + ' dark=' + aliasTokens(true).size + ' (floor 12)');
 
+  // ── G9: 主题成对令牌的深色块不得复用浅色标量（#239）─────────────────────────
+  // 宿主里 link / label-deep-diving / state-business-primary 是浅/深成对的；插件若把
+  // 深色孪生块写成与浅色块**逐字相同**的单一标量，用户 accent 选暗色时深色壁纸上
+  // 这三处（链接 / 深度求索状态行 / 输入光标）对比度掉到 ~1.1:1。G8 只管"集合同形"，
+  // 管不到"值是否做了主题分叉" —— 本条补的就是那个缺口。
+  const aliasDecls = (wantDark) => {
+    const map = new Map();
+    let from = 0;
+    for (;;) {
+      const at = CSS.indexOf('data-we-glass-page', from);
+      if (at < 0) break;
+      from = at + 1;
+      const open = CSS.indexOf('{', at);
+      if (open < 0) break;
+      const headerFrom = Math.max(CSS.lastIndexOf('}', open - 1), CSS.lastIndexOf('{', open - 1)) + 1;
+      const header = CSS.slice(headerFrom, open);
+      if (!header.includes('data-we-glass-page')) continue;
+      const parts = header.split(',').map((p) => p.trim()).filter(Boolean);
+      const bodyLevel = parts.length > 0 && parts.every((p) => /^body(\[[^\]]*\])+(?: :where\(\[data-chat-flow\]\))?$/.test(p));
+      if (!bodyLevel) continue;
+      const hasDark = parts.some((p) => p.includes('data-ds-dark-theme'));
+      if (wantDark ? !hasDark : hasDark) continue;
+      let depth = 0, end = -1;
+      for (let i = open; i < CSS.length; i++) {
+        if (CSS[i] === '{') depth++;
+        else if (CSS[i] === '}') { depth--; if (depth === 0) { end = i; break; } }
+      }
+      if (end < 0) break;
+      for (const m of CSS.slice(open + 1, end).matchAll(/(--dsw-alias-[a-z0-9-]+)\s*:\s*([^;]+);/g)) map.set(m[1], m[2].trim());
+      from = end;
+    }
+    return map;
+  };
+  const lightDecls = aliasDecls(false);
+  const darkDecls = aliasDecls(true);
+  const pairedTokens = ['--dsw-alias-link', '--dsw-alias-label-deep-diving', '--dsw-alias-state-business-primary'];
+  /** 同一份判据：浅/深两表里**值逐字相同**的主题成对令牌（负数 = 漂移）。 */
+  const sameScalarOf = (lightMap, darkMap) => pairedTokens.filter((t) => {
+    const l = lightMap.get(t);
+    const d = darkMap.get(t);
+    return Boolean(l) && Boolean(d) && l === d;
+  });
+  const sameScalar = sameScalarOf(lightDecls, darkDecls);
+  check('G9 theme-paired UI tokens are theme-conditioned in the dark block (issue #239: no single scalar reused)',
+    sameScalar.length === 0,
+    'same=' + JSON.stringify(sameScalar) + ' · dark=' + JSON.stringify(pairedTokens.map((t) => darkDecls.get(t) || null)));
+  // 负对照：把深色表换成"复制浅色值"的合成表 ⇒ 同一条判据必须点名三项（证明判据有牙）。
+  const fakeDark = new Map(darkDecls);
+  for (const t of pairedTokens) if (lightDecls.get(t)) fakeDark.set(t, lightDecls.get(t));
+  const fakeSame = sameScalarOf(lightDecls, fakeDark);
+  check('G9 negative control: dark block repeating the light scalar ⇒ flagged',
+    fakeSame.length === pairedTokens.filter((t) => lightDecls.get(t) && darkDecls.get(t)).length,
+    'flagged=' + JSON.stringify(fakeSame));
+
   const failed = results.filter((r) => !r.ok);
   console.log('\n' + (failed.length === 0
     ? 'ALL GLASS COMPOSITING CHECKS PASSED'

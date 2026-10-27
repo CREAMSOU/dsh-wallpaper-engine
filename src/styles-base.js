@@ -554,16 +554,17 @@ const CSS_BASE = `
     --dsw-alias-label-deep-diving-shimmer: color-mix(in srgb, var(--we-ui-deep-diving, #4f8cff) 62%, #ffffff);
     --dsw-alias-state-business-primary: var(--we-ui-tab, #4f8cff);
   }
-  /* 全局 UI 配色的**深色孪生块**：本组映射其实**与主题无关**（四个值全部来自 --we-ui-*，
-     浅深两档取值逐字相同），单独写一份是**本仓约定**而非主题分叉 ——
-     verify-glass-compositing 的 G8 要求「任何 alias 接管都必须在浅 / 深两个 body 级块里
-     各出现一次」，它防的是"只改浅色、漏了深色孪生"那类漂移。缺了这一块 G8 会判红，
-     而那个红是对的牙 —— 不为自己的功能把守卫放松。 */
+  /* 全局 UI 配色的**深色孪生块**：这一族在宿主里本来是**浅/深成对**的
+     （link / label-deep-diving = 浅 #4176e6 / 深 #7aaaff，光标走 state-business-primary）。
+     #239：早先这里与浅色块**逐字相同**（都直接吃 --we-ui-* 单一标量）⇒ 用户 accent 选暗色时，
+     深色壁纸上这三处对比度掉到 ~1.1:1（链接文字 / 「深度求索中…」/ 插入光标几乎不可见）。
+     现在按主题把**同一个用户色往白里提一档**：仍是用户配色（不是硬编码回宿主蓝），但保证深色底可读。
+     守卫：verify-glass-compositing 的 G8（两主题接管集合同形）+ G9（这三项禁止复用浅色标量）。 */
   body[data-ds-dark-theme][data-we-glass-page] {
-    --dsw-alias-link: var(--we-ui-link, #4f8cff);
-    --dsw-alias-label-deep-diving: var(--we-ui-deep-diving, #4f8cff);
-    --dsw-alias-label-deep-diving-shimmer: color-mix(in srgb, var(--we-ui-deep-diving, #4f8cff) 62%, #ffffff);
-    --dsw-alias-state-business-primary: var(--we-ui-tab, #4f8cff);
+    --dsw-alias-link: color-mix(in srgb, var(--we-ui-link, #4f8cff) 45%, #ffffff);
+    --dsw-alias-label-deep-diving: color-mix(in srgb, var(--we-ui-deep-diving, #4f8cff) 45%, #ffffff);
+    --dsw-alias-label-deep-diving-shimmer: color-mix(in srgb, var(--we-ui-deep-diving, #4f8cff) 70%, #ffffff);
+    --dsw-alias-state-business-primary: color-mix(in srgb, var(--we-ui-tab, #4f8cff) 45%, #ffffff);
   }
   /* 发送键：填充 + 悬停（悬停往黑压一档，与宿主原来的 fill→hover 明暗关系同向）。
      ⚠️ 作用域用 data-composer-seat（输入**座位**，宿主自带锚点）而**不是**

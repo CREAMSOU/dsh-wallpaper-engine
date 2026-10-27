@@ -64,8 +64,8 @@
 | `--dsw-alias-button-floating-fill` | 3 | 玻璃(3) | src/styles-base.js:288, src/styles-base.js:438, src/styles-shell.js:377 |  |
 | `--dsw-alias-button-floating-hover` | 1 | 玻璃(1) | src/styles-shell.js:378 |  |
 | `--dsw-alias-button-ghost-active-fill` | 2 | 玻璃(2) | src/styles-base.js:291, src/styles-base.js:441 |  |
-| `--dsw-alias-button-info-fill` | 1 | 玻璃(1) | src/styles-base.js:577 |  |
-| `--dsw-alias-button-info-hover` | 1 | 玻璃(1) | src/styles-base.js:578 |  |
+| `--dsw-alias-button-info-fill` | 1 | 玻璃(1) | src/styles-base.js:578 |  |
+| `--dsw-alias-button-info-hover` | 1 | 玻璃(1) | src/styles-base.js:579 |  |
 | `--dsw-alias-button-primary-dimmed` | 1 | 玻璃(1) | src/styles-chrome.js:116 |  |
 | `--dsw-alias-button-primary-fill` | 1 | 玻璃(1) | src/styles-chrome.js:114 |  |
 | `--dsw-alias-button-primary-hover` | 1 | 玻璃(1) | src/styles-chrome.js:115 |  |
@@ -75,15 +75,15 @@
 | `--dsw-alias-interactive-bg-hover-accent` | 3 | 玻璃(3) | src/styles-sidebar.js:66, src/styles-sidebar.js:230, src/styles-chrome.js:106 |  |
 | `--dsw-alias-interactive-bg-hover-solid` | 2 | 玻璃(2) | src/styles-base.js:300, src/styles-base.js:450 |  |
 | `--dsw-alias-label-caption` | 1 | 壁纸(1) | src/styles-base.js:517 |  |
-| `--dsw-alias-label-deep-diving` | 2 | 玻璃(2) | src/styles-base.js:552, src/styles-base.js:564 |  |
-| `--dsw-alias-label-deep-diving-shimmer` | 2 | 玻璃(2) | src/styles-base.js:554, src/styles-base.js:565 |  |
+| `--dsw-alias-label-deep-diving` | 2 | 玻璃(2) | src/styles-base.js:552, src/styles-base.js:565 |  |
+| `--dsw-alias-label-deep-diving-shimmer` | 2 | 玻璃(2) | src/styles-base.js:554, src/styles-base.js:566 |  |
 | `--dsw-alias-label-dimmed` | 1 | 壁纸(1) | src/styles-base.js:518 |  |
 | `--dsw-alias-label-primary` | 1 | 壁纸(1) | src/styles-base.js:513 | 正文灰阶（壁纸激活时压暗提对比） |
 | `--dsw-alias-label-primary-dimmed` | 1 | 壁纸(1) | src/styles-base.js:514 |  |
 | `--dsw-alias-label-primary-foreground` | 1 | 玻璃(1) | src/styles-chrome.js:123 |  |
 | `--dsw-alias-label-secondary` | 1 | 壁纸(1) | src/styles-base.js:515 | 次要文字灰阶 |
 | `--dsw-alias-label-tertiary` | 1 | 壁纸(1) | src/styles-base.js:516 |  |
-| `--dsw-alias-link` | 3 | 玻璃(3) | src/styles-base.js:551, src/styles-base.js:563, src/styles-base.js:583 |  |
+| `--dsw-alias-link` | 3 | 玻璃(3) | src/styles-base.js:551, src/styles-base.js:564, src/styles-base.js:584 |  |
 | `--dsw-alias-markdown-citation` | 4 | 玻璃(2) + 无门控(2) | src/styles-base.js:303, src/styles-base.js:453, src/styles-shell.js:551, src/styles-shell.js:565 |  |
 | `--dsw-alias-markdown-code-block` | 6 | 玻璃(4) + 无门控(2) | src/styles-base.js:321, src/styles-base.js:463, src/styles-shell.js:411, src/styles-shell.js:545, src/styles-shell.js:559, src/styles-chrome.js:220 | markdown 代码块底 |
 | `--dsw-alias-markdown-code-block-banner` | 6 | 玻璃(4) + 无门控(2) | src/styles-base.js:324, src/styles-base.js:466, src/styles-shell.js:412, src/styles-shell.js:546, src/styles-shell.js:560, src/styles-chrome.js:221 | markdown 代码条幅底 |
@@ -96,7 +96,7 @@
 | `--dsw-alias-scrollbar-bg-l2` | 2 | 玻璃(2) | src/styles-shell.js:95, src/styles-shell.js:106 |  |
 | `--dsw-alias-scrollbar-hover-l1` | 2 | 玻璃(2) | src/styles-shell.js:96, src/styles-shell.js:107 |  |
 | `--dsw-alias-scrollbar-hover-l2` | 2 | 玻璃(2) | src/styles-shell.js:97, src/styles-shell.js:108 |  |
-| `--dsw-alias-state-business-primary` | 5 | 玻璃(5) | src/styles-base.js:555, src/styles-base.js:566, src/styles-sidebar.js:67, src/styles-sidebar.js:231, src/styles-chrome.js:117 |  |
+| `--dsw-alias-state-business-primary` | 5 | 玻璃(5) | src/styles-base.js:555, src/styles-base.js:567, src/styles-sidebar.js:67, src/styles-sidebar.js:231, src/styles-chrome.js:117 |  |
 | `--dsw-alias-turn-trigger-bg` | 3 | 玻璃(3) | src/styles-shell.js:199, src/styles-shell.js:209, src/styles-ext.js:120 |  |
 | `--dsw-alias-turn-trigger-bg-hover` | 3 | 玻璃(3) | src/styles-shell.js:202, src/styles-shell.js:212, src/styles-ext.js:121 |  |
 | `--dsw-mask-blur` | 1 | 玻璃(1) | src/styles-shell.js:81 |  |
