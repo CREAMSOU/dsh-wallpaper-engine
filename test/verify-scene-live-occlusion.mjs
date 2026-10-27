@@ -102,7 +102,7 @@ const dispose = apply(mockCtx);
 // S5c 刀2：`/scene-live` 归 `wallpaper` 组件行（scene-serve 族随包出户）⇒ 夹具连组件一起 boot。
 // 这不是放宽判据：判据仍要求 `/scene-live` 真挂在 mock webServer 上（同 verify-scene-live 做法）。
 if (typeof hostMod.applyComponent === 'function') {
-  for (const comp of ['wallpaper']) {
+  for (const comp of ['media-bridge']) {
     try { hostMod.applyComponent(mockCtx, {}, comp); } catch (err) {
       console.log('  · 组件行 boot 失败（' + comp + '）：' + String(err && err.message));
     }

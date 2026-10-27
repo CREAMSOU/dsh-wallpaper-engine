@@ -93,7 +93,7 @@ const ZERO_COVERAGE_WHY = {
   //    ⇒ 旧的那条例外登记随之删除（登记了反而会被判"例外表空转"）。
   [M('packages', 'pet-link', 'src', 'client.js')]: '桌宠联动浏览器半边入口（收口成一般形态后自出 packages/pet-link/lib/client.pet-link.js）：注入键契约由 verify-subpackage-client-half 隔产物断言（dsh.client / exports["./client"] / 产物 id / 构建期 require 主包），宿主键集与包间纯度由 verify-subpackage-purity 动态扫 packages/*/src 覆盖，行为面由 test/verify-pet-*.mjs 那组离线回归与 verify-scene-live 的真求值覆盖，本工具只认字面量路径 ⇒ 按口径算零覆盖',
   // ── P-D S3a（2026-10-18）：壁纸子包自出浏览器半边（「自定义壁纸」节搬出主 bundle）──
-  [M('packages', 'wallpaper', 'src', 'client.js')]: '壁纸子包浏览器半边入口（P-D S3a 起自出 packages/wallpaper/lib/client.wallpaper.js）：缺键自检与 library 节登记由 verify-scene-live（按包内源文件真 import + installExtensionRegistry 登记）与 verify-client（在同一 vm 里真求值产物）覆盖，注入键契约由 verify-subpackage-client-half 隔产物断言（含 D-7「申报键 ⊆ hostBridgeKeys」反向对账），宿主键集与包间纯度由 verify-subpackage-purity 动态扫 packages/*/src 覆盖；本工具只认字面量路径 ⇒ 按口径算零覆盖',
+  [M('packages', 'media-bridge', 'src', 'client.js')]: '壁纸子包浏览器半边入口（P-D S3a 起自出 packages/media-bridge/lib/client.media-bridge.js）：缺键自检与 library 节登记由 verify-scene-live（按包内源文件真 import + installExtensionRegistry 登记）与 verify-client（在同一 vm 里真求值产物）覆盖，注入键契约由 verify-subpackage-client-half 隔产物断言（含 D-7「申报键 ⊆ hostBridgeKeys」反向对账），宿主键集与包间纯度由 verify-subpackage-purity 动态扫 packages/*/src 覆盖；本工具只认字面量路径 ⇒ 按口径算零覆盖',
 };
 
 /**
@@ -106,6 +106,8 @@ const ZERO_COVERAGE_WHY = {
  * 允许**第三类**的守卫 —— **可枚举 + 每条有理由**。
  */
 const NO_MODULE_TARGET_WHY = {
+  'verify-issue-claim-policy.mjs': '验证 GitHub Actions 的事前受理审批、权限豁免与可信工作流接线；目标是 .github 下的仓库治理脚本，不属于 lib/src 运行时模块',
+  'verify-deployment.mjs': '验证源码安装器与发布集构建器的行为、持久依赖和显式目标安全边界；目标是 scripts 下的部署流程，不属于本映射枚举的 lib/src 运行时模块',
   'verify-dead-declarations.mjs': '管的是**声明孤儿**（跨全部独立脚本面），不针对某个模块',
   'verify-route-families.mjs': '管的是**路由族触发线**（枚举口径经 `test/tools/host-route-index.mjs` 的 `buildIndex()` 重算）',
   'compat-harness-live.mjs': '真 harness 安装/启动探活（不读源文件）',
@@ -123,6 +125,14 @@ const NO_MODULE_TARGET_WHY = {
   'verify-eol.mjs': '管的是**行尾契约**（`.gitattributes` 的 `* text=auto eol=lf`）：扫 `git ls-files` 的全部入库文件，判"文本文件字节里零 `0x0D`"，目标是"整棵入库树必须是 LF"，不针对某个模块',
   // PR #5：可选桌宠联动离线回归的**聚合入口**（逐个 spawn 上面那批 `verify-pet-*.mjs`，自身不读源文件）。
   'verify-pet-link.mjs': '管的是**可选桌宠联动离线回归的整组**（聚合入口：按清单 spawn `test/verify-pet-*.mjs`，自身不直读任何源模块）；组内每条各自在链上，入口只是手动/包内便利入口',
+  // CI 阶段一：ci-routing CLI 的**隔离 git 库端到端**（`os.tmpdir()` 现造一次性仓库驱动
+  // `scripts/ci-routing.mjs` 的真实管道：staged/unstaged/untracked 三通道、docs 于 full 差异
+  // exit 3 拒绝、judgeResult 汇总核验），目标是 CLI 行为与分类器的 fail-closed 语义，不读 lib/src 源模块。
+  'verify-ci-routing.mjs': '管的是 **ci-routing CLI 的端到端行为**（隔离 git 库：staged/unstaged/untracked 三通道、full 误调 docs ⇒ exit 3、judgeResult 汇总），读的是 `scripts/ci-routing.mjs` 与临时仓库，不针对某个 lib/src 模块',
+  // 侧栏网格与玻璃的**浏览器用例模块**：导出 `verifyPetSidebarGlassBrowser()` 供
+  // `verify-glass-runtime-browser.mjs` import（后者才是链上的守卫，也是真读源文件的那个），
+  // 自己既不被单独 spawn、也不直接读源文件 —— 目标全在宿主传入的 `bundle`/`runtime` 里。
+  'verify-pet-sidebar-glass-browser-case.mjs': '是 `verify-glass-runtime-browser.mjs` 的**用例模块**（导出函数被 import，由宿主守卫传入已构建的 bundle 与 runtime），自身不 spawn、不读源文件',
 };
 
 const map = buildMap(ROOT);

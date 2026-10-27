@@ -506,7 +506,7 @@ async function udFreshInstance(tag) {
   // 必须跟着这份实例一起收，否则脚本跑完进程不退出。
   let componentDispose = null;
   if (typeof mod.applyComponent === 'function') {
-    try { componentDispose = mod.applyComponent(ctx, {}, 'wallpaper'); } catch (err) {
+    try { componentDispose = mod.applyComponent(ctx, {}, 'media-bridge'); } catch (err) {
       console.log('  · 组件行 boot 失败（wallpaper）：' + String(err && err.message));
     }
   }

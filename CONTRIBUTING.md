@@ -4,7 +4,29 @@ Thanks for helping improve `dsh-wallpaper-engine`. Please keep each pull request
 
 感谢你参与改进 `dsh-wallpaper-engine`。请让每个 Pull Request 聚焦一个明确问题，并在说明中写清适用平台和验证结果。
 
-> 问题如何分诊（标签）与认领（`/assign`）：见 [`docs/TRIAGE.md`](docs/TRIAGE.md)。
+> Issue triage and claim approval / 问题分诊、认领申请与审批：见 [`docs/TRIAGE.md`](docs/TRIAGE.md)。
+
+## Approval before opening a PR / 先批准认领，再开 PR
+
+**External contributors must request an issue and receive maintainer approval before creating a PR. Direct PRs, including drafts, are not allowed.** Only the repository owner and collaborators whose current GitHub API permission is `write`, `maintain` or `admin` are exempt from this issue-claim gate. Permissions are checked live on every evaluation; a `contributor` badge, `author_association`, past contributions, or `read` / `triage` access is not an exemption. There is no `claim:exempt` or other label-based exemption. This exemption does not bypass code CI.
+
+- Wait for a maintainer to accept an open issue with `status:accepted` and remove `status:needs-triage` / `status:declined`. Comment `/assign` on that issue yourself: this is a request, **not immediate assignment**. Wait for a maintainer to comment `/approve @login` on the same issue and for the bot to assign you. A maintainer may instead assign you through GitHub UI, but only with your prior valid `/assign` record in that issue. Acceptance alone is not claim approval.
+- Your own `/unassign` cancels a pending request or releases your claim. Maintainers may use `/unassign @login` to cancel/release for that person, or `/unassign` without arguments to release all current assignees.
+- Put at least one standalone `Fixes #123` or `Refs #123` line in the PR body, one issue per line; multiple lines are supported. Full same-repository issue URLs (for example `Fixes https://github.com/elysia395/dsh-wallpaper-engine/issues/123`) and qualified references (`Refs elysia395/dsh-wallpaper-engine#123`) are also accepted. Bare `#123`, inline text such as `Issue: Fixes #123`, other repositories, titles and PR comments do not satisfy this requirement.
+- Every referenced issue must currently be open, have `status:accepted`, have neither `status:needs-triage` nor `status:declined`, and list the PR author as an assignee. Trusted acceptance, your request, maintainer approval and actual assignment must all be strictly earlier than `PR.created_at`, with the request preceding approval/assignment. The gate verifies GitHub comment/timeline evidence, not just current labels or self-reported permission. Late acceptance, claiming or approval cannot qualify the original PR; editing it, marking it ready or reopening it does not reset creation time. Complete the process, then open a new PR.
+- The trusted `pull_request_target` gate must explain and close confirmed noncompliant PRs, including drafts and reopened PRs, and fail the fixed-name `issue-claim-policy` Check Run on the PR's head SHA. Compliant or permission-exempt PRs pass that check. API failures that prevent reliable permission or history retrieval fail the check without automatically closing the PR; a complete history confirming no prior approval is a policy violation, not an API error. The trusted workflow must not check out or execute PR head code with write privileges.
+- Issue state, acceptance-label or assignment changes revalidate all linked open PRs. Bot `/approve` and `/unassign` actions must explicitly refresh linked PRs in the same run instead of relying on bot-generated events to trigger another workflow.
+- This is the required automation contract, not a claim that documentation deploys it. The approval and PR-gate workflows must land on default branch `main`; maintainers must preserve the existing Required checks and append `issue-claim-policy`, without replacing or migrating code CI check names here. Merge requires **existing code CI + `issue-claim-policy`**. GitHub cannot prevent access to the PR creation page, so enforcement is post-creation closure plus a required check.
+
+**外部贡献者必须先在 issue 申请，获得维护者批准并成为 assignee，才能创建 PR；不能直接开 PR，draft 也不例外。** 只有仓库 owner，以及 GitHub API 实时确认具有 `write` / `maintain` / `admin` 权限的协作者，豁免这一 issue 认领门禁。每次校验都实时查权限；`contributor` 徽章、`author_association`、历史贡献或 `read` / `triage` 权限不算豁免。不设 `claim:exempt` 或其他标签例外，认领豁免也不豁免代码 CI。
+
+- 等维护者在 open issue 添加 `status:accepted`，并移除 `status:needs-triage` / `status:declined`。本人在该 issue 评论 `/assign`，这只是申请，**不会立刻分配**。等维护者在同一 issue 评论 `/approve @login` 并由机器人完成指派；也可由维护者通过 GitHub UI 手动指派，但同一 issue 必须已有本人事前的有效 `/assign` 记录。受理不等于批准认领。
+- 本人 `/unassign` 取消待批申请或释放自己的认领。维护者可 `/unassign @login` 取消指定申请或释放指定认领，无参 `/unassign` 则释放当前所有 assignee。
+- PR 正文至少填写一条独立行 `Fixes #123` 或 `Refs #123`，每个 issue 一行，支持多条；也支持同仓库完整 issues URL（如 `Fixes https://github.com/elysia395/dsh-wallpaper-engine/issues/123`）或限定仓库引用（如 `Refs elysia395/dsh-wallpaper-engine#123`）。裸 `#123`、`关联 issue：Fixes #123` 这样的行内文字、其他仓库引用、标题或 PR 评论都不算。
+- 每个关联 issue 当前都必须 open、带 `status:accepted`、无 `status:needs-triage` / `status:declined`，且 PR 作者是 assignee。可信受理、本人申请、维护者批准及实际分配必须全部严格早于 `PR.created_at`，申请须先于审批/分配。校验依 GitHub 评论与时间线证据，不只看当前标签或正文自报的授权。事后补受理、认领或审批不能让原 PR 合格；编辑、转为 ready 或重新打开都不重置创建时间。补齐流程后需重新创建 PR。
+- 可信 `pull_request_target` 门禁须对已确认不合规的 PR 自动解释并关闭，包括 draft 和 reopened，并在 PR 的 head SHA 写入固定名 `issue-claim-policy` Check Run `failure`；合规或实时权限豁免时该检查通过。API 故障导致无法可靠取得权限或历史数据时仅判失败，不自动误关；完整历史确认没有事前批准的，仍是违规，不是 API 故障。可信工作流不能带写权限检出或执行 PR head 代码。
+- issue 开闭、受理相关标签或分配变化时，重验所有关联开放 PR；机器人 `/approve` / `/unassign` 必须在当前运行中主动刷新，不能依赖机器人产生的事件再触发工作流。
+- 上述是必须落实的自动化契约，不代表修改文档就已部署。审批及 PR 门禁工作流必须先合入默认分支 `main`；维护者须保留现有 Required checks 并追加 `issue-claim-policy`，不在此流程中替换或迁移代码 CI 检查名。合并要求为**现有代码 CI + `issue-claim-policy`**。GitHub 无法预先禁用 PR 创建页，因此采用创建后自动关闭与必过检查阻断合并。
 
 ## Choose the target branch / 选择目标分支
 
@@ -12,57 +34,27 @@ All changes target `main`. The plugin is **one natively cross-platform tree** (W
 
 所有改动都提交到 `main`。本插件是**一份原生跨平台代码**（Windows / WSL / macOS / Linux），没有平台分支 —— 平台专属改动不得让其它平台回退。
 
-## Repository layout and subpackages / 仓库结构与子包
-
-This repository is a **multi-package tree**: the main package (`lib/` host half, `src/` browser half, root `cordis.patch.yml`) plus subpackages under `packages/`:
-
-- `packages/{fx,parallax,fonts}` — independent subpackages; each carries its own host half and browser half (`packages/<pkg>/src/` → built `packages/<pkg>/lib/client.<pkg>.js`);
-- `packages/{about-notice,mascot-avatar,wallpaper}` — component rows; their host half is the row's routes plus the view the row consumes (`wallpaper` also ships a browser half, `packages/wallpaper/lib/client.wallpaper.js`, which mounts its panel sections back into the main package);
-- `packages/pet-link` — optional pet integration.
-
-The root `cordis.patch.yml` is the **single source of truth for the row set**: one row for the main package, one per component row, one per subpackage row. A row `name` is the **real package name** (never a subpath of the main package), so development and release share one patch (`adr/0014` §S4). A subpackage's host half talks to the main package **only** through the Cordis service `wallpaperEngineHost` (frozen seven keys, read-only); its `inject` is the only connection and its code carries **no main-package specifier** (`test/verify-subpackage-purity.mjs`).
-
-本仓是**多包形态**：主包（`lib/` 宿主半边、`src/` 浏览器半边、根 `cordis.patch.yml`）＋ `packages/` 下的子包：
-
-- `packages/{fx,parallax,fonts}` —— 独立子包，各自带宿主半边与浏览器半边（`packages/<pkg>/src/` → 构建出 `packages/<pkg>/lib/client.<pkg>.js`）；
-- `packages/{about-notice,mascot-avatar,wallpaper}` —— 组件行：宿主半边 = 该行的路由族 + 该行消费的视图（`wallpaper` 另带浏览器半边 `packages/wallpaper/lib/client.wallpaper.js`，把它的面板节挂回主包）；
-- `packages/pet-link` —— 可选桌宠联动。
-
-根 `cordis.patch.yml` 是**行集的唯一真源**：主包一行、每个组件行一行、每个子包行一行。行的 `name` 一律是**子包真名**（不是主包子路径），开发期与发布期因此共用同一份 patch（`adr/0014` §S4）。子包宿主半边与主包之间**只有** Cordis 服务 `wallpaperEngineHost`（冻结七键、只读）这一条通道：`inject` 是唯一接线，代码里**零主包说明符**（`test/verify-subpackage-purity.mjs`）。
-
-### Subpackage development / 子包开发
-
-- `devDependencies` uses `file:packages/*` for every subpackage — no publish step and no registry access is needed to resolve them locally.
-- A `link:` install does **not** install the main package's dependencies into the profile, so the subpackage rows would never resolve. `scripts/dev-link-subpackages.mjs` creates the missing directory junctions in the profile's `node_modules` (and in this repo's `node_modules`, which the host-side startup self-check resolves against). It is idempotent — re-run it after any `pnpm install` in a profile.
-- `npm run build` generates the browser half of every subpackage from its in-package recipe (`packages/<pkg>/client.build.json`) into `packages/<pkg>/lib/client.<pkg>.js`. These artifacts are **not tracked in git**, and the only external specifier a subpackage artifact may carry is `require("<main package real name>")`.
-- A subpackage that declares `dsh.client` must have that artifact on disk, otherwise its browser half silently does not load (`test/verify-subpackage-client-half.mjs`). The full registration checklist for a new subpackage is `adr/0014` §S10.
-
-- `devDependencies` 用 `file:packages/*` 接上每个子包 —— 本地解析不需要发布、也不需要 registry。
-- `link:` 安装**不会**把主包的依赖装进 profile，子包行因此永远解析不到。`scripts/dev-link-subpackages.mjs` 负责在 profile 的 `node_modules`（以及本仓的 `node_modules`，宿主侧启动自检就是在那儿 resolve）补建目录 junction；它幂等 —— profile 里跑过 `pnpm install` 之后重跑一次即可。
-- `npm run build` 按各包自带的配方（`packages/<pkg>/client.build.json`）生成子包浏览器半边 `packages/<pkg>/lib/client.<pkg>.js`。这些产物**不入库**；子包产物允许的唯一外部说明符是 `require("<主包真名>")`。
-- 声明了 `dsh.client` 的子包必须真的产出该产物，否则它的浏览器半边会**静默不加载**（`test/verify-subpackage-client-half.mjs`）。新增一个子包要登记的各个点见 `adr/0014` §S10。
-
 ## Build from the canonical source / 从唯一源码构建
 
 - `src/client.js` is the canonical browser source. Edit it, then run `npm run build` to regenerate `lib/client.js`.
 - `lib/client.js` is generated at build time and **not tracked in git** (v1.4): `npm run build` produces it locally; `prepack` produces it inside npm / Release tarballs. Do not edit it by hand.
 - Host-side changes live directly in `lib/index.js` and the other `lib/*.js` host modules.
 - Restart DSH after host-side edits: `lib/*.js` is loaded at startup and is never hot-updated in a running instance.
-- Install a local dev build with the application **fully closed** (`dsh plugin --profile desktop add link:<path>`), then start it. Installing while the app is running leaves the plugin in `startup-unconfirmed`, which the recovery state rolls back on the next start.
+- Install a local dev build with the application **fully closed**, using the complete source installer below. Linking only the main package is insufficient.
 - Use the Node.js version your DSH profile requires; this repository declares `engines.node` in `package.json`.
 
 - `src/client.js` 是浏览器端唯一源码。修改后运行 `npm run build` 重新生成 `lib/client.js`。
 - `lib/client.js` 是构建期产物、**不入库**（v1.4 起）：本地跑 `npm run build` 生成；npm 包与 Release tgz 里由 `prepack` 在打包时现场构建。请勿手改。
 - 宿主端代码直接位于 `lib/index.js` 和其他 `lib/*.js` 模块中。
 - 改完宿主端代码需**重启 DSH**：`lib/*.js` 在启动时加载，运行中的实例不会热更新。
-- 安装本地 dev 构建请**先完全关闭应用**（`dsh plugin --profile desktop add link:<path>`）再启动；应用运行期间安装会停在 `startup-unconfirmed`，恢复状态会在下次启动时自动回滚。
+- 安装本地 dev 构建请**先完全关闭应用**，使用下文的完整源码安装器；只链接主包不能部署完整套件。
 - 请使用你的 DSH profile 要求的 Node.js 版本；本仓在 `package.json` 的 `engines.node` 里声明。
 
 ### What `lib/client.js` actually is / `lib/client.js` 到底是什么
 
 - **Anatomy**: `lib/client.js` = the `src/client.js` body **+ every module listed in `INLINE_MODULES`** (`scripts/build-client.mjs`), all inlined into a single `factory(require)` scope. `npm run build` prints that inlined list — **read the count off that list, never from prose here** (a hardcoded number in this file has already gone stale once). Most of the file's lines therefore come from `src/**`, not from `client.js` itself — it *looks* like a monolith but is a flattened repository slice.
 - **Why inlining**: the browser half has **no local-module resolver** — the loader's `require` resolves only external packages, so `import './panel-tabs.js'` cannot work at runtime. Everything split out of `src/client.js` for readability is inlined back as a prelude in the same scope. Each entry declares `markers`, and a missing marker is a **hard build failure** — that is what stops the split from silently going empty. The output must also parse (`new Script(...)`) before it is written.
-- **Its role**: `package.json` exposes it as `exports["./client"]` with `dsh.client.immediately: true`; the DSH client loader fetches it from package metadata (no host route serves it). It is **built, never tracked** (v1.4): npm / Release tarballs get it from `prepack` at packaging time, and a `link:` dev checkout gets it from `npm run build`. The supported install paths are therefore the npm package name and the Release tarball — a raw `github:` install does not build it and is **not supported**.
+- **Its role**: `package.json` exposes it as `exports["./client"]` with `dsh.client.immediately: true`; the DSH client loader fetches it from package metadata (no host route serves it). It is **built, never tracked** (v1.4): npm / Release tarballs get it from `prepack` at packaging time, and a `link:` dev checkout gets it from `npm run build`. The supported paths are the complete source installer below and, after all packages are published, the npm package name or complete Release set. A raw `github:` install does not build the clients or register all subpackages and is **not supported**.
 - **Rule 1 — rebuild before verifying**: any `src/**` change requires `npm run build` before `verify` / packaging (there is no committed artifact left to forget). CI rebuilds and then asserts the artifact is **not tracked**; the **local chain asserts freshness** via `test/verify-client-sync.mjs`: it rebuilds, compares byte-for-byte, and restores the file — so a stale artifact fails **before you push**.
 - **Rule 2**: never hand-edit `lib/client.js`; the next build overwrites it.
 - **Rule 3 — the artifact is a contract**: several guards test the **built** file (`verify-readability`, `verify-softrender`, `verify-client`), and some extract the stylesheet from it by a line-leading anchor. That is why `src/styles.js` forbids backticks and literal copies of its own declaration in its comments — one stray backtick once made `verify-host-paint-scope` report "bare backticks: 489".
@@ -71,7 +63,7 @@ The root `cordis.patch.yml` is the **single source of truth for the row set**: o
 
 - **构成**：`lib/client.js` = `src/client.js` 正文 **+ `INLINE_MODULES` 里的每一个模块**（见 `scripts/build-client.mjs`），全部内联进**同一个** `factory(require)` 作用域。`npm run build` 会把内联清单打印出来 —— **条数只许从那份清单现读，不要写进本文件**（这里写死过一次，已经漂了）。**它的大部分行来自 `src/**` 而不是 `client.js` 自己**（占比同样按那份清单复算，勿记死数）—— 看着像巨石，实为"压平的仓库切片"。
 - **为什么必须内联**：浏览器半边**没有本地模块解析器** —— loader 的 `require` 只解析外部包，`import './panel-tabs.js'` 在运行时根本不成立。凡为可读性拆出去的代码，都在构建期作为 prelude 内联回同一作用域。每项都带 `markers`，**缺任何一个都构建硬失败** —— 这正是"拆分不会悄悄变空"的保证；产物还必须能通过 `new Script(...)` 解析才会被写出。
-- **它的身份**：`package.json` 用 `exports["./client"]` + `dsh.client.immediately: true` 暴露它，DSH 客户端加载器按**包元数据**取（宿主侧没有任何路由发它）。它**构建、但不入库**（v1.4 起）：npm 包与 Release tgz 由 `prepack` 在打包时生成；`link:` 开发检出由 `npm run build` 生成。支持的安装路径因此是 **npm 包名 / Release tgz**；裸 `github:` 直装不构建产物，**不再支持**。
+- **它的身份**：`package.json` 用 `exports["./client"]` + `dsh.client.immediately: true` 暴露它，DSH 客户端加载器按**包元数据**取（宿主侧没有任何路由发它）。它**构建、但不入库**（v1.4 起）：npm 包与 Release tgz 由 `prepack` 在打包时生成；`link:` 开发检出由 `npm run build` 生成。支持下文的**完整源码安装器**；整套包正式发布后也支持 **npm 包名 / 完整 Release 集合**。裸 `github:` 直装不构建客户端，也不会登记全部子包，**不支持**。
 - **铁律一 —— 先重建再验证**：改任何 `src/**` 都要在 `verify` / 打包前 `npm run build`（已无"产物忘了提交"这回事）。CI 重建后判**产物不入库**；**本地链同样判新鲜度**：`test/verify-client-sync.mjs` 会重建、逐字节比对、并把文件**还原**（守卫不改工作树）⇒ 产物过期会在 **push 之前**就红。
 - **铁律二**：绝不手改 `lib/client.js`，下一次构建会抹掉。
 - **铁律三 —— 产物即契约**：多个守卫跑的是**产物**（`verify-readability`、`verify-softrender`、`verify-client`），另有一些**按行首锚点从产物里**取样式表。这就是 `src/styles.js` 禁止在自己注释里写反引号、也禁止复述那条声明语句的原因（实测踩到过：`verify-host-paint-scope` 报"裸反引号 489"）。
@@ -79,6 +71,10 @@ The root `cordis.patch.yml` is the **single source of truth for the row set**: o
 - **不要把它当巨石来"治理"**：它的体积就是 `src/**` 的体积，杠杆在源文件。
 
 ## Install a local dev build / 从本地源码安装（开发者）
+
+> **Gray-test checkouts:** when a change has not reached upstream, download the current gray-test repository and branch, not the upstream `main` shown in the clone examples below.
+>
+> **灰测源码**：未合入上游的改动，请从当前灰测仓库及分支下载，不要用下面示例中的上游 `main` 代替灰测源码。
 
 ### 1. Get the code (`checkout`) / 取得源码
 
@@ -98,39 +94,45 @@ The root `cordis.patch.yml` is the **single source of truth for the row set**: o
 >
 > 完成后你会得到一个包含 `package.json`、`lib/`、`src/`、`cordis.patch.yml` 的文件夹。下文把这个文件夹称作**插件文件夹**。
 
-### 2. Install it using its folder path (`link:`) / 用文件夹路径安装（`link:`）
+### 2. Install the complete source set / 安装完整源码套件
 
-> `link:` tells `dsh` (which forwards the command to `pnpm`) to make a *link* to your local plugin folder instead of downloading a package from the internet — so edits + `npm run build` take effect without reinstalling.
->
-> `link:` 表示：告诉 `dsh`（它会把命令转发给 pnpm）去**连接你本地那个插件文件夹**，而不是从网上下载一个包。好处是改完代码并重新构建后，改动能直接生效，不用反复重装。
+Requires Node.js >=22.12.0, DSH 0.2 (including 0.2.0-rc.1/rc.2), and pnpm. Enter the checkout directory and completely close the target application. Use the target host's actual DSH data directory, not an assumed `~/.dsh`.
 
-Replace `<插件文件夹绝对路径>` with the **full path of your plugin folder** (the "address bar" path you see when you open that folder in Explorer / your file manager):
-
-把命令里的 `<插件文件夹绝对路径>` **替换成你插件文件夹的完整路径**（就是资源管理器地址栏里显示的那串路径）：
+要求 Node.js >=22.12.0、DSH 0.2 内核（包括 0.2.0-rc.1/rc.2）和 pnpm。进入插件目录，先完全退出目标宿主，并确认该宿主实际使用的 DSH 数据目录。
 
 ```sh
-dsh plugin --profile web add link:<插件文件夹绝对路径>
+node scripts/install-source.mjs --profile desktop --dsh-home "<目标 DSH 数据目录>" --app-closed
 ```
 
-**Concrete example** —假设你的插件文件夹路径像 `D:\dev\dsh-wallpaper-engine` 这样：
+Use `web` for the web profile. Add `--dry-run` to inspect the target without changing it. Desktop profiles require the carrier CLI installed by the desktop host; the standalone npm CLI rejects `desktop`. For web profiles without `dsh` on PATH, pass `--dsh-cli "<DSH CLI lib/bin.js>"`.
+
+网页宿主使用 `--profile web`。先加 `--dry-run` 可只核对目标。桌面 profile 必须使用桌面宿主安装的 carrier CLI；独立 npm CLI 不允许管理 `desktop`。网页版找不到 `dsh` 命令时，可传入 `--dsh-cli "<DSH CLI 的 lib/bin.js 路径>"`。
+
+The installer runs `npm ci`, builds the clients, and registers all eight packages as persistent `link:` dependencies. Only the main bundle remains selected; it owns the complete patch, so selecting the child bundles as well duplicates their rows. Other bundle selections and row-level settings remain unchanged.
+
+脚本安装仓库依赖、构建客户端，通过 DSH 将主包和 7 个子包登记为持久 `link:` 依赖。只保留主包 bundle 选择，避免子包 patch 重复插入行；其他 bundle 选择和现有行级开关不变。不要只链接主包，也不要把临时 junction 工具当成正式安装流程。
+
+For an update, close the host, update the entire checkout, and rerun the same command. Keep the source directory in place while installed.
+
+更新时先关闭宿主，更新整个源码目录，再重跑同一命令。安装后不要移动或删除源码目录。
+
+### Release set / 发布集
 
 ```sh
-dsh plugin --profile web add link:D:\dev\dsh-wallpaper-engine
+npm run pack:release
 ```
 
-You can also use a relative path if your shell is already in the folder's parent / 如果你已经 `cd` 到了插件文件夹的上一级，也可以用相对路径：
+This builds clients and creates eight tarballs plus `release-set.json` under a unique `.test-cache/release/set-*` directory. The staged main manifest lists each of the seven child packages at its exact real version, with no pet or Electron dependency. Publish children first and the main package last, following `publishOrder`. This command never publishes anything. A raw root `npm pack` uses the development manifest, not the complete release set. Do not publish a test version without explicit approval.
 
-```sh
-dsh plugin --profile web add link:./dsh-wallpaper-engine
-```
+该命令构建客户端，在独立的 `.test-cache/release/set-*` 目录生成八个 tarball 和 `release-set.json`。发布形态主包将七个子包的真实精确版本列为运行依赖，不包含 pet 或 Electron。正式发布按 `publishOrder` 先子包、后主包。此命令不执行发布；源码根目录直接 `npm pack` 仍是开发清单，不能当成完整发布集。灰测阶段未经明确批准，不要发布 npm。
 
-> **Which exact path to fill in?** It must be the **folder that contains `package.json`** — not the path to `package.json` itself, and not any file inside. It is the same value you would paste into Explorer's address bar.
->
-> **该填哪个确切的路径？** 必须是**包含 `package.json` 的那个文件夹**——不是 `package.json` 文件本身的路径，也不是它里面任何单个文件的路径。
+The full procedure — npm channel, GitHub Release assets, post-publish self-checks, mirror sync and rollback — is in [`docs/RELEASING.md`](docs/RELEASING.md). Two rules are not negotiable: every child package must be on the registry at the same version before the main package is usable (`pnpm add` resolves the seven exact versions from the registry, so a main-only release fails with `ERR_PNPM_FETCH_404`), and a GitHub Release must carry all eight tarballs plus `release-set.json` — a main-only Release is an uninstallable package. For the offline release set use `npm run install:release -- --set <dir> --profile <name> --dsh-home <dir> --app-closed`, which pins the seven children to the sibling tarballs through profile `overrides`; never hand the desktop installer a single main tarball.
 
-> Why prefer `link:` over `file:`? `link:` creates a live link to your source folder, so edits to `src/client.js` + `npm run build` take effect without reinstalling; `file:` packs a static snapshot, which needs a re-add after every change. Both work for a first install.
->
-> 为什么推荐 `link:` 而不用 `file:`？`link:` 是和你的源码文件夹**建立实时连接**，改完 `src/client.js` 并 `npm run build` 后直接生效，无需重装；`file:` 则是打包成一份静态快照，每次改动都要重新 add。首次安装两者都可以。
+完整发布流程（npm 通道、GitHub Release 资产、发布后自证、镜像同步与回滚）见 [`docs/RELEASING.md`](docs/RELEASING.md)。两条规则不可让：主包可用的前提是七个子包已在同一版本上公开（主包把七个**精确版本**声明为运行依赖，只发主包会让用户的 `pnpm add` 以 `ERR_PNPM_FETCH_404` 失败）；GitHub Release 必须挂**八个 tarball + `release-set.json`**，只挂主包的 Release 是一个装不上的包。离线安装发布集用 `npm run install:release -- --set <目录> --profile <name> --dsh-home <目录> --app-closed`（它把七个子包钉到同目录 tarball 的 `overrides` 写进 profile），不要把单个主包 tarball 交给桌面安装器。
+
+On Windows, use a current patched Node.js release for packaging. A minimal directory-copy test with a Chinese path exits unexpectedly on Node.js 24.14.0; the same test and the release-set build succeed on 24.21.0. Ensure npm uses the same Node.js runtime.
+
+Windows 打包建议使用已更新补丁版本的 Node.js。本机对照中，24.14.0 复制中文路径目录时直接退出；同一样本及发布集构建在 24.21.0 通过。请同时确认 npm 使用同一套 Node.js 运行时。
 
 ### 3. Restart / 重启确认
 
@@ -140,17 +142,26 @@ Then restart `dsh web`. The host plugin becomes a bundle layer and the client pl
 
 If Steam is installed in a non-standard location, the host auto-detects it via `libraryfolders.vdf` — nothing further is required. / 如果 Steam 装在非标准位置，host 会通过 `libraryfolders.vdf` 自动探测，无需额外配置。
 
-> **注意 profile 与「应用必须先关闭」**：上面的示例用 `--profile web`；若目标是桌面端 profile，请改成 `--profile desktop`，并务必**先完全关闭应用**再安装（应用运行期间安装会停在 `startup-unconfirmed`，恢复状态会在下次启动时自动回滚，见上文「从唯一源码构建」）。
+> **注意 profile 与「应用必须先关闭」**：上面的示例用 `--profile desktop`，需要桌面宿主的 carrier CLI；若目标是网页端，请改成 `--profile web`。安装前务必**先完全关闭目标应用**（应用运行期间安装会停在 `startup-unconfirmed`，恢复状态会在下次启动时自动回滚）。
 
 ## Verify before opening a PR / 提交 PR 前验证
 
+先按本次 PR 的**完整差异**选择验证路径，不只看最后一笔提交：
+
+- **纯文档（`docs`）**：README、贡献指南和明确白名单内的普通 Markdown，运行轻量文档检查。不安装产品依赖，不构建，不跑全仓静态检查或运行时测试。
+- **文档展示素材（`docs-assets`）**：仅文档使用的图片和排版源稿，增加图片与引用检查；影响排版时补桌面 / 手机预览。运行时素材不属于此类。
+- **完整验证（`full`）**：任意代码、schema、依赖、包清单、测试、CI、生成契约文档或未知路径。与文档混改仍选此路径；无法完整取得差异时全量或阻断，不能默认文档。
+
+For documentation-only changes, use the dedicated lightweight document check. Mixed code, dependencies, CI, generated contracts and unknown paths retain full verification. `verify:docs` is repository housekeeping, **not** the documentation fast path.
+
+完整路径继续执行：
+
 ```sh
-npm ci              # 本地取工具链（CI 不装依赖，见下）
+npm ci              # 本地安装工具链；CI 使用受控安装参数
 npm run verify:all  # = build + verify（硬档）+ verify:docs（软档）+ smoke
 ```
 
-`npm run verify:static`（独立静态棘轮）与 `npm run verify:e2e`（真浏览器端到端）**不在**上面这条链里，按需单独跑；
-`verify:all` 的组成（build + verify + docs + smoke）以 `test/run-guards.mjs` 的 `MANIFEST` 为准。
+`verify:all` 的含义不变。分类不会豁免代码改动，也不把此前门禁失败或未执行项变为通过。
 
 **提交前必须全绿的是硬档**（`npm run verify`：真机行为 / 发布面 / 平台契约 / 打包面）。
 软档（`npm run verify:docs`：仓库内务 —— 模块布局 / 可达性 / 退役线 / 声明孤儿）
@@ -159,12 +170,11 @@ npm run verify:all  # = build + verify（硬档）+ verify:docs（软档）+ smo
 > **两档各含哪些守卫、分档判据是什么，只在 [`docs/DEV-GUIDE.md`](docs/DEV-GUIDE.md) §4.2 定义一处**
 > —— 这里刻意不列清单（此前抄过一份，删掉两条守卫后就过时了，正说明为什么不该抄）。
 
-`.github/workflows/verify.yml` 在每次 push / PR 上跑同一套，并额外断言两件事：产物不入库（`git ls-files -- lib/client.js docs/images` 必须为空；新鲜度由本地链首条 `test/verify-client-sync.mjs` 真跑构建逐字节判），
-以及 `git diff --check` 无尾随空白 / 冲突标记。
+`.github/workflows/verify.yml` 三个阶段：`changes` 作业用 `node scripts/ci-routing.mjs check` 分类——PR 事件取 merge-base 完整 PR 差异（`--base-mode merge-base`），push 事件取 `before → after` 原样差异（`--base-mode exact`：force-push 后 before 不一定是 after 的祖先，merge-base 会漏算 before 独有的代码删除），workflow_dispatch 无事件边界 ⇒ `github.sha → github.sha` 空差异 ⇒ 分类器保守完整验证；差异取不全 ⇒ fail-closed 全量，绝不误判文档。纯文档路径由 `docs` 作业对**同一差异、同一模式档**再跑一次 `node scripts/ci-routing.mjs docs`（文档引用 / 冲突标记 / 素材类型检查；差异里混入代码或未知路径 ⇒ 退出码 3 明确拒绝，不以假成功放行；其 checkout 显式指向 head 提交，保证被审计的树就是被分类的树）。完整路径保留 Windows / Ubuntu 两个平台、静态门禁、构建、运行守卫、媒体桥与冒烟。固定 `ci/result` 汇总在 `if: always()` 下核验所选作业确实成功：取消、失败、缺结果或意外跳过不能放行。此名称仅描述当前分支的代码 CI 汇总，不表示远程 Required checks 已迁移；维护者须保留当前代码 CI 的必过检查并追加 `issue-claim-policy`，任何 CI 检查名称迁移另行确认。
 
-> CI **故意不执行 `npm ci`**：build / verify / smoke 只用 `node:` 内置模块与相对路径，
-> 整条链对 registry 与 peer 解析完全免疫 —— 这条不变量由 `test/verify-package-files.mjs`
-> 的 P5 断言钉住。本地开发仍需 `npm ci` 取工具链。
+完整路径还检查产物不入库（`git ls-files -- lib/client.js docs/images` 必须为空），并扫描被跟踪文件的尾随空白与冲突标记。产物同步仍由 `test/verify-client-sync.mjs` 真跑构建逐字节检查。
+
+CI 完整路径使用 `npm ci --omit=peer --ignore-scripts --no-audit --no-fund` 安装依赖，随后运行静态检查。build / verify / smoke 仍只直接引用 `node:` 内置模块及仓库相对路径，P5 的零裸依赖判据不变。文档快通道无需这一步安装。
 
 ### Harness compatibility CI / harness 适配 CI（基线制）
 
@@ -236,6 +246,8 @@ UI 改动还应说明实际测试过的 DSH 界面、浏览器或 DSH Desktop �
 ## Pull request checklist / PR 检查清单
 
 - The PR targets `main`.
+- External contributors completed issue acceptance, their own `/assign`, maintainer approval and assignment before PR creation; every linked issue remains eligible, and the body uses standalone `Fixes` / `Refs` lines. Only live owner / `write` / `maintain` / `admin` permission exempts this gate.
+- Existing code CI and `issue-claim-policy` are green; late claiming requires a new PR, not reopening the original.
 - `src/client.js` changes were rebuilt (`npm run build`) before running verification (the artifact is not tracked).
 - Existing platform behavior is preserved or the intentional change is explained.
 - Build and verification commands pass.
@@ -249,6 +261,8 @@ UI 改动还应说明实际测试过的 DSH 界面、浏览器或 DSH Desktop �
   informational text to stdout (see **Release** for why each one matters).
 
 - PR 目标分支为 `main`。
+- 外部贡献者已在 PR 创建前完成 issue 受理、本人 `/assign`、维护者批准及指派；每个关联 issue 仍合规，正文使用独立行 `Fixes` / `Refs`。仅实时 owner / `write` / `maintain` / `admin` 权限豁免此门禁。
+- 现有代码 CI 与 `issue-claim-policy` 均通过；事后补认领需新开 PR，不能重新打开原 PR。
 - 修改 `src/client.js` 时已先 `npm run build` 重建（产物不入库，无需提交）。
 - 现有平台行为已保留，或正文已解释有意变更。
 - 构建与验证命令全部通过。

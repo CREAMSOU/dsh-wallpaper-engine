@@ -48,7 +48,8 @@
  *  · mock 宿主逐字照抄出货 `dsh-host-webserver` 的 register 判重顺序；`tapIndex()`、升级路由
  *    （`registerUpgrade`）与 `registerFallback` 不在 `apply()` 的注册面上，未建模。
  */
-import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cp } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { functionBodyOf, stripComments } from './tools/js-text.mjs';
@@ -58,7 +59,7 @@ const TARGET = join(ROOT, 'lib', 'index.js');
 const SCRATCH = join(ROOT, '.test-cache', 'host-teardown');
 
 // 注册面地板：apply() 在 mock 宿主上的真实注册条数至少这么多。
-// 历史：2026-02 实测 32（全部 15 族都在门面）。S5c 刀2 把 9 族 21 条搬进 `packages/wallpaper`
+// 历史：2026-02 实测 32（全部 15 族都在门面）。S5c 刀2 把 9 族 21 条搬进 `packages/media-bridge`
 // （组件行 `applyComponent` 装载，不经门面 `apply()` 的注册面）⇒ 门面自己的注册面收缩到
 // 5 族 9 条；S5d 刀3 又把 occlusion 族 1 条随 hub 搬进包内 ⇒ 门面只剩 4 族 8 条
 // （diag 4 / presets 1 / settings 1 / cache-dir 2）；包内 22 条由 `test/verify-scene-live.mjs`
@@ -399,9 +400,12 @@ check('判据②前置：场景成立（真的注册到一半被判重抛错、e
     if (oldSrc !== null) {
       rmSync(mirrorDir, { recursive: true, force: true });
       mkdirSync(mirrorDir, { recursive: true });
-      cpSync(join(ROOT, 'lib'), join(mirrorDir, 'lib'), { recursive: true });
-      cpSync(join(ROOT, 'package.json'), join(mirrorDir, 'package.json'));
-      cpSync(join(ROOT, 'cordis.patch.yml'), join(mirrorDir, 'cordis.patch.yml'));
+      // 镜像构建用标准异步 cp（t9 修订 2，captain 获批 C2 对照 pwsh-7 后授权）：
+      // 同源（lib/、package.json、cordis.patch.yml）同目标（old-order/）同递归选项，
+      // 仅 API 形态 sync → await；清单复制为逐文件非递归，await cp 同样适用。
+      await cp(join(ROOT, 'lib'), join(mirrorDir, 'lib'), { recursive: true });
+      await cp(join(ROOT, 'package.json'), join(mirrorDir, 'package.json'));
+      await cp(join(ROOT, 'cordis.patch.yml'), join(mirrorDir, 'cordis.patch.yml'));
       writeFileSync(join(mirrorDir, 'lib', 'index.js'), oldSrc);
       mirrorBuilt = true;
       const oldMod = await import(pathToFileURL(join(mirrorDir, 'lib', 'index.js')).href);

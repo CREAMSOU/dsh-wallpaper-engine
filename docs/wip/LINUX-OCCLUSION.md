@@ -116,7 +116,7 @@ bundle 是压缩产物，符号名（`me`/`Qb` 等）会随上游同步变化。
 ## 4. 宿主路由（`lib/routes/occlusion.js`）
 
 - `GET /wallpaper-engine/occlusion` → 快照 JSON（鉴权、JSON 响应族沿
-  [`packages/wallpaper/lib/routes/now-playing.js`](../../packages/wallpaper/lib/routes/now-playing.js)
+  [`packages/media-bridge/lib/routes/now-playing.js`](../../packages/media-bridge/lib/routes/now-playing.js)
   （P-D 阶段1 前该包目录名是 `media-bridge`）
   等同族路由先例；
   `lib/json-response.js` 工具）；

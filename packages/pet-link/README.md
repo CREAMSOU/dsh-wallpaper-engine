@@ -1,62 +1,36 @@
 # 桌宠联动子包
 
-本目录是完整的 `dsh-plugin-wallpaper-engine-pet-link` 子包：包含能力路由、浏览器排播、维护面板、桥接安装器、九段联动动画、五张气泡配图及回归测试。浏览器入口由 wallpaper 的构建器内联，吉祥物入口仍由 wallpaper 持有，避免重复挂载。
+本包只包含官方 pet 桥接、四条演出排播、调参面板、九段定制动画及五张配图。不包含 pet 渲染器、Electron、完整基础素材或第三方补丁安装器。
 
-**不声明或自动安装 `dsh-pet` 依赖。** 未安装桌宠、桥接未准备、桌宠未在当前网页显示或联动关闭时，吉祥物保留 wallpaper 的原生点击、拖动及键盘行为。`Ctrl+Shift+D` 维护面板仍可查看、修改、重置和导出参数；没有运行资格时禁止试跑。
+## 使用
 
-## 体验步骤
+1. 按仓库的完整源码部署步骤安装 Wallpaper 的主包和七个子包。
+2. 自行安装并启用官方 [dsh-pet](https://github.com/PC2005-cloud/dsh-pet)，将目标设为网页显示。官方需提供同页 `petApi7340.pose/progress` 和 `/dsh-pet-7340/` 下的 config、lock、anim、position、throw 接口。审计基线为官方提交 `7440b963ab7fb962cb7694e094aa0c9c7a438a7b`；同为 `0.3.7` 的旧构建不一定有这些接口。
+3. 将 Wallpaper 吉祥物设为官方侧栏模式，按 `Ctrl+Shift+D` 打开面板，刷新并选择目标 petId，再分别试跑四条逻辑。
 
-1. 在仓库根目录运行 `npm install` 和 `npm run build`。开发链接安装请按仓库现有方法运行 `node scripts/dev-link-subpackages.mjs --profile <当前profile>`，确保主包和本子包都能由该 profile 解析。
-2. 仅在需要真实桌宠联动时，自行安装并启用受支持的 `dsh-pet@0.3.6`。本子包不会安装、升级、启用或替换未知版本的桌宠。
-3. 显式指定当前 DSH 数据目录和桌宠包目录，先检查再安装：
+没有官方 pet、服务缺失、目标隐藏或联动关闭时，只停用联动，吉祥物原生侧栏操作继续可用。不会自动安装、启用或修改官方 pet。目标缺失不会自动改控另一只宠物。
 
-```sh
-node packages/pet-link/tools/install-bridge.mjs --dsh-home "<DSH_HOME>" --pet-package "<当前profile>/node_modules/dsh-pet" --check
-node packages/pet-link/tools/install-bridge.mjs --dsh-home "<DSH_HOME>" --pet-package "<当前profile>/node_modules/dsh-pet"
-```
+## 控制边界
 
-**第二条命令会修改该桌宠的客户端与宿主代码，并写入联动资源和安装凭据。** 安装器先检查版本、严格代码指纹和全套资源，再备份、事务写入并校验；任何失败回滚本次已写文件，不覆盖并发的外部修改。未知构建拒绝写入。备份保存在 `<DSH_HOME>/dsh-pet/pet-link-backups/`。
+- 宿主按 petId 协调页面，保管官方锁凭证并顺序下发白名单指令；短租约、失锁和旧响应清理不会强占新运行。
+- 官方同一 pet 的动作会同步到其他显示端。`surface` 不是单页定向，本包不承诺跨端隔离。
+- 发起页面自绘气泡并读取官方 pose 跟随。动作结束释放官方唯一锁后，气泡可以继续存在；不调用官方 broadcast 或 bubble/clear，也不注入桌面透明窗。
+- 侧栏、抓绳、踢腿弹飞、哈气四条排播使用同页 playbackId 与实际视频进度触发节点。位置和抛掷交给官方 `position/throw`；不查询宠物 DOM、不改 React 私有字段、不逐帧发 HTTP。
+- 官方直线位移按墙钟推进，不能保证视频缓冲时的逐帧贴边同步。旧私有运动面的精度不作为当前接口已实现的能力。
 
-4. 首次准备完成后，重新加载对应插件和网页，使补丁代码真正进入运行时。这与运行中的热插拔是两件事。请先导出维护面板中尚未保存的参数。
-5. 把主桌宠设为网页显示，并将 wallpaper 吉祥物的侧栏模式设为官方侧栏；默认抽屉模式保留上游原有预览和拖动，不接管。按 `Ctrl+Shift+D` 打开维护面板，分别试跑逻辑一、逻辑二、彩蛋一、彩蛋二。
+## 参数与验证
 
-运行中的资格每 500ms 复核，租约上限 1500ms。桌宠隐藏、桥接退出、联动关闭或运行实例更换时撤销演出，归还动作、气泡、位移、侧栏临时样式及特效；恢复条件后重新探测。它不是“任意依赖变动在同一毫秒生效”的保证。
-
-可通过独立的 `wallpaper-engine-pet-link` 宿主行启停本子包，或将该行配置设为 `linkEnabled: false`。不会因此关闭 wallpaper 的其他能力。
-
-## 四条逻辑与维护
-
-- 逻辑一：走到侧栏、准备、后拉并跟随侧栏边缘。
-- 逻辑二：左侧螃蟹步走到吉祥物下方，使用素材自身跳跃抓绳、脱手与下落。
-- 彩蛋一：踢侧栏、首次接触时调用桌宠原生抛掷物理，侧栏缩回后二次展开，落定后恢复。
-- 彩蛋二：原地哈气，抖动默认从视频 1750ms 的张嘴帧开始，侧栏按真实视频进度展开，实际 `ended` 才完整到位。
-
-每页参数及气泡节点独立，彩蛋一有两条固定气泡。支持当前页重置、全部重置和 JSON 导出。参数是运行时覆盖，刷新恢复默认，不写用户永久配置。
-
-## 验证
-
-无需桌宠即可运行：
+面板提供目标选择、四逻辑参数、运行、停止、重置和 JSON 导出。五张气泡各有出现与隐藏的动作、开始/结束锚点及毫秒偏移；重置当前逻辑同时清除该逻辑的气泡节点。参数是当前页运行时覆盖，刷新前请导出。
 
 ```sh
 npm run build
 npm run verify:pet-link
 ```
 
-完整安装测试需要从 npm 官方 `dsh-pet@0.3.6` 包准备只读测试夹具，不要拿自己的活动安装做故障注入。解包目录通过参数传入：
+回归覆盖协议协调、真实本地 HTTP、素材 Range、独立气泡生命周期、四条排播、缺席回退和卸载竞态。`npm run verify:pet-link:integration` 检查真实 Cordis 配置更新与启停；`npm run verify:pet-link:browser` 检查独立浏览器中的自有气泡、配图加载及调参面板。浏览器夹具不等于官方完整 React 宠物或桌面窗口的视觉验收；不能把接口单测当成所有动画均已真机验收。
 
-```sh
-node packages/pet-link/test/verify-pet-install-transaction.mjs "<原版解包目录>"
-node packages/pet-link/test/verify-pet-runtime-owner.mjs "<原版解包目录>/lib/client.js"
-```
+## 从旧版本迁移
 
-集成测试通过 `PET_TEST_UPSTREAM` 指定原版目录，`PET_TEST_CORDIS_MODULE` 可指定真实 Cordis 的模块入口，再运行 `npm run verify:pet-link:integration`。测试会在仓库 `.artifacts/` 创建隔离 profile，验证真实 Cordis 的配置更新和十轮启停，不使用真实用户配置。
+内置 pet 和修改第三方文件的安装器已退役。旧 profile 里的派生依赖、bundle 选择、数据及曾经安装的外部补丁不会自动清除。关闭宿主后先停用旧内置 bundle，再更新 Wallpaper；外部补丁应通过其原备份恢复或重装官方包，不对活动安装做故障注入。
 
-完整 React 浏览器测试还需要 Node.js 22+、Edge/Chromium、React 18 和 ReactDOM 18 的测试资源。设置 `PET_TEST_APP_ROOT` 指向 DSH 安装根目录，`PET_TEST_BROWSER` 指向浏览器可执行文件；按测试入口的资源路径准备 ReactDOM 后运行 `npm run verify:pet-link:browser`。测试使用独立浏览器 profile，不打开或刷新用户主窗口。缺少环境是测试失败，不冒充通过。
-
-## 兼容边界
-
-这是供两边作者共同体验和评审的联动实现，不是 `dsh-pet` 的官方控制 API。当前首次注入仅支持严格匹配的 0.3.6 构建；上游代码变化时应拒绝安装并重新适配。长期宜由桌宠公开版本化的动作播放回执、独立动作与气泡占用、位置交还和原生抛掷接口，替代文件指纹补丁。
-
-补丁载体派生自 [PC2005-cloud/dsh-pet](https://github.com/PC2005-cloud/dsh-pet) 的 0.3.6 MIT 授权代码，随包保留 [原作者许可](tools/patch-data/LICENSE.dsh-pet)。本仓的代码许可证不自动替代素材各自的授权。
-
-仅包含联动所需的定制动画及气泡图，不包含桌宠原版完整分发包、FFmpeg、个人配置、测试下载物或凭据。合并及发布前仍请维护者审查素材分发授权和包发布策略。
+本包保留联动定制素材，不包含官方完整资源、字体及个人数据。代码许可证不替代素材授权；素材分发与商用范围须分别确认。本轮不发布 npm。

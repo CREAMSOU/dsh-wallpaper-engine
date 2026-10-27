@@ -359,16 +359,28 @@ async function main() {
     // `-hotplug-host` / `-hotplug-client` / `-rope-entry` / `-tuner` / `-bubble-timing` / `-mascot-motion` /
     // `-egg1-motion` / `-egg1-rebound` / `-sidebar-rebound` / `-egg2-motion` / `-follow`，见 run-guards.mjs
     // 的 VERIFY_STEPS 清单）。合并时按实测重取：原 PR 基于 P-F 批 1c 之前的树，写的是 84/97。
-    //  再：verify 85→86 / all 98→99 —— 新增 `test/verify-layer-ownership.mjs`（P-D S4：壁纸层的
-    // 单例声明 / id 赋值点 / body 挂载白名单 / fiber cleanup 拆卸零残留 / iframe 父链。硬档依据 =
-    // 层所有权一旦裂成两份，用户侧后果是"壁纸停在上一张、关掉插件层不撤、双倍暗化"—— 同 ⑧ 的
-    // 发布面口径：它坏的时候没有别的判据会红）。
-    //  再：verify 86→87 / all 99→100 —— 新增 `test/verify-token-domain.mjs`（P-D S5c 刀2 / R1：
-    // token 域单主权。9 族整簇同侧 + 只经 `...keys` 的 apply 面取实例 + 键表实例与服务面 `apply`
-    // 同一引用 + 门面 applyView 键集恰好 15 键。硬档依据 = 铸造面与消费面分居两包时，`/media`、
-    // `/props`、`/scene-*` 对 `/inventory` 签发的 token 全部静默 404 —— 用户侧只看到"壁纸黑屏"，
-    // 没有别的判据会红。见 run-guards.mjs 的 VERIFY_STEPS）。
-    const CHAIN_FLOOR = { verify: 87, docs: 6, smoke: 6, all: 100 };
+    // 统一表面层新增策略、生命周期与真实浏览器三项硬档回归。
+    //  再：verify 88→90 / all 101→103 —— CI 分流第一阶段挂两硬档：`test/tools/ci-routing-red.mjs`
+    //（⑩ 固定 ci/result + 真跑 scripts/ci-routing.mjs 的最小接线守卫）与 `test/verify-ci-routing.mjs`
+    //（⑪ 隔离 git 库端到端：staged/unstaged/untracked 三通道、full 误调 docs exit 3、judgeResult 汇总）。
+    //  再：verify 90→91 / all 103→104 —— P1 内置桌宠挂一硬档 `test/verify-pet-builtin.mjs`
+    //（⑫ 内置 provider 装配/消费链与阶段诊断）。它的静态兼容姊妹 `test/verify-pet-eslint-compat.mjs`
+    // 有意脱链（`import { ESLint } from 'eslint'` ⇒ 违反本段 P5 的零裸依赖口径），理由在
+    // `test/tools/guard-chain.mjs` 的 OFF_CHAIN_WHY 里，与 `verify-static.mjs` 同族。
+    //  再：verify 91→92 / all 104→105 —— 移植上游 PR#1 ① 挂一硬档
+    // `test/verify-avatar-interval-and-rotation.mjs`（助手头像间隔旋钮 / 轮播间隔取值域与
+    // 「视频播完就换」档 / 壁纸库缩略图链路）。地板按**本树**实测重取：上游那棵树写 89/102，
+    // 因为它没有前两批的 ⑩⑪⑫；照抄会把地板调低三步，删一步就不再变红。
+    // 补齐表情广播、侧栏诊断与玻璃几何三条离线硬门禁。
+    // 完整源码部署与发布清单回归新增一条硬门禁。
+    // 官方桥接取代内置与私有运动面：退役八步、新增正式排播一步，净减七步。
+    // 公告快通道守卫（verify-notice-routing）+ 预设弹窗浏览器实测各加一步：verify 90 → 91，all 103 → 104。
+    // 事前认领审批门禁增加一条硬档；推广弹窗下线时其浏览器实测同步删除（净回到 91 / 104）。
+    // 发布集**字节**守卫（`test/verify-release-set.mjs`）加一步：verify 91 → 92，all 104 → 105。
+    // 2026-10-27：合流 upstream v1.4.0（sync/upstream-1.4.0）后按**本树**实测重取 —— 上游步骤集
+    // （桌宠/发布/治理/浏览器等）与本地 P-D 的两条（verify-layer-ownership / verify-token-domain）
+    // 并存：verify 92→94、all 105→107（docs / smoke 仍各 6）。地板只许抬、不许降。
+    const CHAIN_FLOOR = { verify: 94, docs: 6, smoke: 6, all: 107 };
     /** 地板表与 GROUPS 的对齐体检：键名必须与**组名**逐一对齐（纯函数 ⇒ 负对照可直接喂）。 */
     const floorGaps = (groups, floors) => groups.map(([, g]) => g).filter((g) => !Number.isInteger(floors[g]));
     const problems = floorGaps(GROUPS, CHAIN_FLOOR).map((g) => '地板表缺组 ' + g

@@ -63,7 +63,7 @@ function weComponentVisibleOf(components, name) {
   function renderWallpaperTab(ctx) {
     const { } = ctx;
     // 四节（current / 切换过场 / 自动轮播 / 自定义壁纸）在 P-D S3a–S3c 起全部搬进
-    // packages/wallpaper 的浏览器半边 ⇒ 本页签**只画注册节**，屏上顺序全由描述符的
+    // packages/media-bridge 的浏览器半边 ⇒ 本页签**只画注册节**，屏上顺序全由描述符的
     // order 决定（current=10 / transition=20 / rotation=30 / uploads=40；顺序判据见
     // verify-scene-live 的节顺序一节），**不**靠求值顺序。
     // ⚠️ 注册表为空 = 该子包没装 / 被关：本页签为空，**不**崩、不整页消失

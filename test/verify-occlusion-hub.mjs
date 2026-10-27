@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * verify-occlusion-hub.mjs — Linux 遮挡生产端（packages/wallpaper/lib/occlusion/ +
- * packages/wallpaper/lib/routes/occlusion.js；S5d 刀3 起整族随壁纸子包出户）
+ * verify-occlusion-hub.mjs — Linux 遮挡生产端（packages/media-bridge/lib/occlusion/ +
+ * packages/media-bridge/lib/routes/occlusion.js；S5d 刀3 起整族随壁纸子包出户）
  * 的结构与行为守卫。**不依赖真实 X11**：适配器用注入的假件，纯函数直接喂用例。
  *
  * ── 为什么需要它 ────────────────────────────────────────────────────────────
@@ -25,7 +25,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 import { clipRect, cleanOccluders, rectsArea } from '../lib/occlusion/rects.js';
-import { createOcclusionHub } from '../packages/wallpaper/lib/occlusion/index.js';
+import { createOcclusionHub } from '../packages/media-bridge/lib/occlusion/index.js';
 // ↑ hub 已随壁纸子包出户（S5d 刀3）；平台适配器/会话判定仍归主包（`lib/occlusion/{x11,rects}.js`
 // —— x11 只是取数适配器、不是省电判据本身），构造时**注入**（见下 hubFor）。
 import { isX11CandidateEnv } from '../lib/occlusion/x11.js';
@@ -246,8 +246,8 @@ check('C3 无 DISPLAY / 非 linux 禁走（负对照×2）', () => {
   assert.equal(isX11CandidateEnv({ DISPLAY: ':1' }, 'darwin'), false);
 });
 
-// ── D. 路由族与包入口接线（静态；S5d 刀3 起落点 = `packages/wallpaper/`）──────────
-const PKG_ROOT = join(ROOT, 'packages', 'wallpaper');
+// ── D. 路由族与包入口接线（静态；S5d 刀3 起落点 = `packages/media-bridge/`）──────────
+const PKG_ROOT = join(ROOT, 'packages', 'media-bridge');
 const routeSrc = readFileSync(join(PKG_ROOT, 'lib', 'routes', 'occlusion.js'), 'utf8');
 check('D1 exact 路径模板与 c 解构形态', () => {
   assert.match(routeSrc, /kind: 'exact'/);
@@ -270,7 +270,7 @@ check('D2 GET-only + 405 + sendJson 单一实现（经 c.http 面）', () => {
 /**
  * D3/D4 判据本体：包入口的遮挡接线是否合法（正判据与全部负对照调**同一个**函数）。
  *
- * S5d 刀3 把 hub 的构造与注册从主包 `lib/index.js` 搬到 `packages/wallpaper/lib/index.js`；
+ * S5d 刀3 把 hub 的构造与注册从主包 `lib/index.js` 搬到 `packages/media-bridge/lib/index.js`；
  * 判据随落点搬家而**强度不降**：
  *   · 唯一 hub 构造点（`createOcclusionHub` 在包入口恰好 1 处）+ 四个必需注入逐键给到；
  *   · dispose 推进**本组件会话**的 `disposers`（S7.1 行级开关的物理前提）；
@@ -333,7 +333,7 @@ check('D5 hub 出户后的必需注入：缺 isX11CandidateEnv / createX11Adapte
 });
 
 // ── E. 路由 handler 运行时行为（真实执行 handler，不只文本棘轮）──────────────
-const { registerOcclusionRoutes } = await import('../packages/wallpaper/lib/routes/occlusion.js');
+const { registerOcclusionRoutes } = await import('../packages/media-bridge/lib/routes/occlusion.js');
 function fakeWebServer() {
   const routes = [];
   return { routes, register: (r) => { routes.push(r); return () => {}; } };

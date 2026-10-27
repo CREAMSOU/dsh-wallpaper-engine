@@ -231,11 +231,11 @@ function noticeSuccessSilent(src) {
 // ── N5 热路径零提示 ─────────────────────────────────────────────────────────
 {
   // 逐请求 / 逐帧的代码段（"热路径"在这里是可定位的代码，不是一句形容）：
-  //   ① `packages/wallpaper/lib/routes/scene-serve.js` 整个文件（每条语句都在请求路径上；S5c 刀2 出户）；
+  //   ① `packages/media-bridge/lib/routes/scene-serve.js` 整个文件（每条语句都在请求路径上；S5c 刀2 出户）；
   //   ② `src/live-layer.js` 整个文件（客户端半边：成功提示只能经 /client-diag 上行）；
   //   ③ `lib/serve.js` 的 handleSceneFiles 函数体（每个壁纸子资源请求都过它）。
   const hot = [
-    ['packages/wallpaper/lib/routes/scene-serve.js', read('packages/wallpaper/lib/routes/scene-serve.js')],
+    ['packages/media-bridge/lib/routes/scene-serve.js', read('packages/media-bridge/lib/routes/scene-serve.js')],
     ['src/live-layer.js', liveText()],
     ['lib/serve.js:handleSceneFiles', functionBody(read('lib/serve.js'), 'function handleSceneFiles(req, res, mount)')],
   ];
@@ -318,7 +318,7 @@ function prefixAlignment(hostSrc, routeSrc, clientSrc, pageSrc) {
   // 'N7③ 三者对齐'判据报"抠不到 BASE"。**判据的不变量不变**（仍是三者前缀必须一致），
   // 只是把"BASE 从哪读"指向真源。
   host: read('lib/index.js') + read('lib/host-boot.js') + read('lib/kernel/host-kernel.js'),
-    route: read('packages/wallpaper/lib/routes/scene-serve.js'),
+    route: read('packages/media-bridge/lib/routes/scene-serve.js'),
     client: liveText(),
     page: read('lib/webwallgl/index.html') + '\n' + read('lib/webwallgl/renderer.js'),
   };

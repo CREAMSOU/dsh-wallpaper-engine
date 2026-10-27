@@ -54,13 +54,13 @@
     # the media integration (user-visible), so the row ships enabled and the user
     # turns it off per-row if they do not want it.
     # P-F (2026-10-16) moved this component out to its own package; P-D phase 1
-    # (2026-10-18) renamed that package `media-bridge` → `wallpaper`, so the row
-    # `id` and `name` moved with it (BUNDLE-SPLIT §14 D-15 exception: S4.3 forces
-    # id = wallpaper-engine-<dir>, and the row was never published). `name` stays
-    # the real package name (resolved through <profile>/node_modules, same as the
-    # fx / parallax / fonts rows below).
-    - id: wallpaper-engine-wallpaper
-      name: 'dsh-plugin-wallpaper-engine-wallpaper'
+    # (2026-10-18) added the wallpaper domain (host route families + browser half)
+    # to that package but KEPT its name `media-bridge` (upstream 1.4.0 already
+    # published it under that name; S4.3 id = wallpaper-engine-<dir> still holds).
+    # `name` is the real package name (resolved through <profile>/node_modules,
+    # same as the fx / parallax / fonts rows below).
+    - id: wallpaper-engine-media-bridge
+      name: 'dsh-plugin-wallpaper-engine-media-bridge'
       # webServer is a hard dependency (`inject = ['webServer']` in lib/index.js):
       # the Loader waits for the HTTP server to mount, so a headless/TUI profile
       # without one does not load this bundle at all.
@@ -85,3 +85,9 @@
     # 消毒与持久化仍在主包 lib/settings-schema.js（FONTSET_KEYS）与 fontsets/<id>.json。
     - id: wallpaper-engine-fonts
       name: 'dsh-plugin-wallpaper-engine-fonts'
+    # ── 内置桌宠本体：已解耦（2026-10-20）────────────────────────────────────────
+    # `packages/pet`（`dsh-we-pet-builtin`）与它的 `wallpaper-engine-pet` 行**已从本包移除**：
+    # 它把 `electron`（optional）带进安装树，而 electron 42+ 在缺少 `dist/` 时会在
+    # `require('electron')` 里**同步**下载约 140MB 二进制 ⇒ 宿主启动被堵到 60 秒超时，
+    # 整个 profile 起不来。桌宠本体的正式接入等上游 dsh-pet 提供联动接口后，由 pet-link 对接
+    # **外部** provider；在那之前 pet-link 的就绪面如实返回 unavailable（不静默假装可用）。

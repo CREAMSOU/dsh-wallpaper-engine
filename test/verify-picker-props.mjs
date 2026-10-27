@@ -386,16 +386,16 @@ const requireMock = (spec) => {
   throw new Error('unexpected require: ' + spec);
 };
 const exportsObj = factory(requireMock);
-// P-D S3c：「壁纸库」页签四节已全部搬进 packages/wallpaper 的浏览器半边 ⇒ 抽屉里的
+// P-D S3c：「壁纸库」页签四节已全部搬进 packages/media-bridge 的浏览器半边 ⇒ 抽屉里的
 // 「选择壁纸」/壁纸属性/播放控制等节点只在该产物登记 library 节之后才出现。与真实
 // loader 同形，在 apply() **之前**求值该产物（它的 factory 用主 bundle 的显式键集登记四节）。
 {
   const wallpaperArtifact = readFileSync(
-    new URL('../packages/wallpaper/lib/client.wallpaper.js', import.meta.url), 'utf8');
+    new URL('../packages/media-bridge/lib/client.media-bridge.js', import.meta.url), 'utf8');
   const subHandoffs = [];
   const savedLoader = sandbox.window.__ModuleLoader__;
   sandbox.window.__ModuleLoader__ = { load: (h) => { subHandoffs.push(h); } };
-  new vm.Script(wallpaperArtifact, { filename: 'client.wallpaper.js' }).runInContext(sandbox);
+  new vm.Script(wallpaperArtifact, { filename: 'client.media-bridge.js' }).runInContext(sandbox);
   sandbox.window.__ModuleLoader__ = savedLoader;
   if (subHandoffs.length !== 1) {
     throw new Error('wallpaper 浏览器半边必须恰好注册一份 bundle（实际 ' + subHandoffs.length + ' 份）');

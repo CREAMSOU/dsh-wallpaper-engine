@@ -34,7 +34,7 @@ HTML 里注入 WE API shim（运行期从 `webwallgl` 包的 `webwallgl.mjs` 中
   **首帧确实没出来时还要分因**：账本说"传过但没传完"⇒ 只记**会话内**软失败（不写所有窗口共用的
   失败记忆），冷却后自动重试且次数有上限（两个值都是 `src/live-layer.js` 的常量
   `LIVE_TRANSFER_RETRY_DELAY_MS` / `LIVE_TRANSFER_RETRY_LIMIT`）；只有渲染页真的不出帧 / 运行期失联才落盘记忆。
-- **出图来源（唯一权威顺序，代码在 `packages/wallpaper/lib/routes/scene-frame.js` —— 2026-10-18 P-D S5c 从主包 `lib/routes/` 出户）**：
+- **出图来源（唯一权威顺序，代码在 `packages/media-bridge/lib/routes/scene-frame.js` —— 2026-10-18 P-D S5c 从主包 `lib/routes/` 出户）**：
   ① 实时渲染 iframe → ② 场景**作者内嵌 MP4**（`sceneVideo`，硬件解码 `<video>`）→ ③ **实时抓帧**
   （`<key>_gpu.png`，live 渲染页首帧确认后由客户端回填）→ ④ **自定义画面**（用户导入的截屏）
   → ⑤ **空态**（404 + 可判定原因）。

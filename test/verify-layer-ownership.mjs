@@ -6,7 +6,7 @@
  *   壁纸层是**进程内单例 DOM 节点**，靠固定 id 相互引用：
  *     `#dsh-wallpaper-engine-layer`（src/client.js:63 `LAYER_ID`，壁纸层，含 iframe/video/img 子树）、
  *     `#dsh-wallpaper-engine-scrim`（src/client.js:64 `SCRIM_ID`，可读性暗化层）。
- *   P-D 要把渲染半边搬进 `packages/wallpaper`，最大的结构性风险不是"搬不动"，而是**搬出第二份
+ *   P-D 要把渲染半边搬进 `packages/media-bridge`，最大的结构性风险不是"搬不动"，而是**搬出第二份
  *   层生命周期**：两个半边各建一次层 = 同 id 两节点、各自退役 = 一个半边拆的层另一个还在引用；
  *   这正是 BUNDLE-SPLIT §13 风险 9（层/iframe 单例 id 撞车）写下的后果。S4 的口径（task-12）：
  *   **层所有权 = 主包渲染内核独占，子包不得建层/退层/持层引用；零行为改动，只钉判据与注释。**
@@ -198,7 +198,6 @@ const BODY_MOUNT_WHITELIST = Object.freeze({
   'src/client-audio-playback.js': { count: 1, owner: 'scene-audio' },
   'src/client.js': { count: 3, owner: 'transient-input|download-anchor|rope-dock' },
   'packages/fx/src/fx-layer.js': { count: 1, owner: 'pkg-own-host(fx overlay)' },
-  'packages/pet-link/src/pet-link-tuner.js': { count: 1, owner: 'pkg-own-host(tuner panel)' },
 });
 
 /** @returns {{rel:string,line:number}[]} */

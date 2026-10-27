@@ -114,12 +114,12 @@ graph TB
   配置与数据目录（`config.js` / `data-dir.js`）。
 - **路由族**（一文件一族）：`lib/routes/<族>.js` 是**主包自己**的族（P-D S5 把壁纸域族出户后只剩
   `settings` / `presets` / `diag` / `cache-dir`）；壁纸域（场景 / 媒体 / 上传 / 遮挡 / 现在播放 / `we-assets` /
-  token 簇）随组件出户后住 `packages/wallpaper/lib/routes/<族>.js`，其余组件行的私有族各自在
+  token 簇）随组件出户后住 `packages/media-bridge/lib/routes/<族>.js`，其余组件行的私有族各自在
   `packages/<组件>/lib/routes/`。无论住哪，各族都拿一个显式 context 对象、各自注册自己的路由。族的成员是
   **派生量**，本文不列：路由枚举的真源是 `test/tools/host-route-index.mjs` 的 `buildIndex()`（它按调用点把每个族
   放回所属行），路由级视图是生成物 `docs/ROUTE-INDEX.md`（`verify-route-index` 重算并逐字节比对）。
   `verify-route-families` 另按账本 §7-6 的触发线盯「某族长到 ≥3 条 ⇒ 拆族或改线」。
-- **组件行**（**组件包** `packages/<组件>/lib/` —— P-F 组件行统一，旧落点 `lib/components/<组件>/` 已不存在，`packages/about-notice/`、`packages/mascot-avatar/`、`packages/wallpaper/`，2026-10-16）—— 一个 bundle 多行（[`adr/0013`](./adr/0013-bundle-multi-component-rows.md)）：
+- **组件行**（**组件包** `packages/<组件>/lib/` —— P-F 组件行统一，旧落点 `lib/components/<组件>/` 已不存在，`packages/about-notice/`、`packages/mascot-avatar/`、`packages/media-bridge/`，2026-10-16）—— 一个 bundle 多行（[`adr/0013`](./adr/0013-bundle-multi-component-rows.md)）：
   组件入口 `index.js` + 它自己的路由族实现 + 该行消费的组件视图。行的开关是宿主的
   （`cordis.patch.yml`）；"哪个实现属于哪一行"由 `test/verify-route-ownership.mjs` 钉住，
   行的装载形态由 `test/verify-bundle-rows.mjs` 钉住。
@@ -559,7 +559,7 @@ graph LR
 | **相对说明符必须解析到真实文件**：搬动代码后相对路径按新位置重解析（动态 `import()` 的失败是运行期、且常被吞成业务错误 ⇒ 必须静态判定） | ✅ 同守卫 ④『相对说明符必须解析到真实文件』（Node 式解析 + 负对照）・**软档** | — |
 | **类型面与代码同源**：`lib/types/*.d.ts` 必须与实现一致 | ✅ `test/verify-types.mjs`：`.d.ts` 的**声明集 == 手工钉住的必需字段集**，且每个字段在实现里确有生产者 | — |
 | **收 body 的路由必须有上限，且收完只解码一次**：逐块累加而不比较长度 ⇒ 宿主堆无界增长；逐块 `toString()` ⇒ 跨 TCP 分片的多字节码点被切成 U+FFFD（用户可见字符串被静默写坏） | ✅ `test/verify-body-caps.mjs`（**从磁盘枚举**每个 `req.on('data')` 站点，8 条正/负对照 + 覆盖面地板；"裸标识符回调"是**结构性**豁免，不是名单）・**硬档** | —（P4-13 已收敛：共享读体器在 `lib/http-body.js`，两条棘轮钉住"内联收集器 ≤2 处流式豁免 / 共享读体器调用点 ≥9"） |
-| **路由族触发线**：某个路径首段族达到 ≥3 条路由 ⇒ 回来裁决（按族拆出 `lib/routes/<族>.js`；壁纸域的族拆到 `packages/wallpaper/lib/routes/<族>.js`） | ✅ `test/verify-route-families.mjs`（枚举口径 = `host-route-index` 的 `buildIndex()`；归族规则与 `analyze-host-apply.mjs` ② 组逐字相同；带正/负对照与覆盖面地板）・**硬档** | — |
+| **路由族触发线**：某个路径首段族达到 ≥3 条路由 ⇒ 回来裁决（按族拆出 `lib/routes/<族>.js`；壁纸域的族拆到 `packages/media-bridge/lib/routes/<族>.js`） | ✅ `test/verify-route-families.mjs`（枚举口径 = `host-route-index` 的 `buildIndex()`；归族规则与 `analyze-host-apply.mjs` ② 组逐字相同；带正/负对照与覆盖面地板）・**硬档** | — |
 
 **已从本表撤除**（各自的原因写在对应 ADR 里）：
 

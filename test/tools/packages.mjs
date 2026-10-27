@@ -51,7 +51,7 @@ export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '
  * 浏览器半边产物 6 份：主包（src/client.js）、fx、parallax、fonts、pet-link、wallpaper
  * （pet-link 收口前源码由主包构建内联、无自有产物；2026-10-15 收口成一般形态后自出
  * packages/pet-link/lib/client.pet-link.js，地板随之 4→5；P-D S3a 2026-10-18 壁纸子包
- * 出 packages/wallpaper/lib/client.wallpaper.js，地板 5→6）。
+ * 出 packages/media-bridge/lib/client.media-bridge.js，地板 5→6）。
  * ⚠️ `clientArtifacts` 与 `test/verify-client-sync.mjs` 的产物面地板**共用这一个常量**（那边 import 它）
  * ⇒ 抬地板是**一处改动**，两边的正/负对照自动同批跟着走（原先两处各写一个数字、必须手动同批抬的隐患已消）。
  */
@@ -616,7 +616,7 @@ function runSelftest() {
   //    pet-link 收口（PR #5，2026-10-17）再 4→5（+ packages/pet-link/lib/client.pet-link.js），
   //    且 `test/verify-client-sync.mjs` 的产物地板**直接 import 同一个常量** ⇒ 两处不会再一高一低
   //    （它那边的"地板 − 1 份 ⇒ 不达标"负对照也自动跟着走）。
-  //    P-D S3a（2026-10-18）再 5→6（+ packages/wallpaper/lib/client.wallpaper.js：
+  //    P-D S3a（2026-10-18）再 5→6（+ packages/media-bridge/lib/client.media-bridge.js：
   //    壁纸子包浏览器半边「自定义壁纸」节的产物）。
   {
     const m = clone(base);

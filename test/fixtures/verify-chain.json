@@ -193,6 +193,30 @@
         {
           "kind": "guard",
           "npm": null,
+          "file": "test/verify-glass-compat.mjs",
+          "args": [],
+          "tier": "hard",
+          "probe": false
+        },
+        {
+          "kind": "guard",
+          "npm": null,
+          "file": "test/verify-glass-runtime.mjs",
+          "args": [],
+          "tier": "hard",
+          "probe": false
+        },
+        {
+          "kind": "guard",
+          "npm": null,
+          "file": "test/verify-glass-runtime-browser.mjs",
+          "args": [],
+          "tier": "hard",
+          "probe": false
+        },
+        {
+          "kind": "guard",
+          "npm": null,
           "file": "test/verify-extra-glass.mjs",
           "args": [],
           "tier": "hard",
@@ -210,6 +234,22 @@
           "kind": "guard",
           "npm": null,
           "file": "test/verify-package-publish.mjs",
+          "args": [],
+          "tier": "hard",
+          "probe": false
+        },
+        {
+          "kind": "guard",
+          "npm": null,
+          "file": "test/verify-deployment.mjs",
+          "args": [],
+          "tier": "hard",
+          "probe": false
+        },
+        {
+          "kind": "guard",
+          "npm": null,
+          "file": "test/verify-release-set.mjs",
           "args": [],
           "tier": "hard",
           "probe": false
@@ -378,6 +418,14 @@
           "kind": "guard",
           "npm": null,
           "file": "test/verify-fontset.mjs",
+          "args": [],
+          "tier": "hard",
+          "probe": false
+        },
+        {
+          "kind": "guard",
+          "npm": null,
+          "file": "test/verify-avatar-interval-and-rotation.mjs",
           "args": [],
           "tier": "hard",
           "probe": false
@@ -617,31 +665,7 @@
         {
           "kind": "guard",
           "npm": null,
-          "file": "test/verify-pet-bubble-timing.mjs",
-          "args": [],
-          "tier": "hard",
-          "probe": false
-        },
-        {
-          "kind": "guard",
-          "npm": null,
-          "file": "test/verify-pet-mascot-motion.mjs",
-          "args": [],
-          "tier": "hard",
-          "probe": false
-        },
-        {
-          "kind": "guard",
-          "npm": null,
-          "file": "test/verify-pet-egg1-motion.mjs",
-          "args": [],
-          "tier": "hard",
-          "probe": false
-        },
-        {
-          "kind": "guard",
-          "npm": null,
-          "file": "test/verify-pet-egg1-rebound.mjs",
+          "file": "test/verify-pet-official.mjs",
           "args": [],
           "tier": "hard",
           "probe": false
@@ -657,7 +681,7 @@
         {
           "kind": "guard",
           "npm": null,
-          "file": "test/verify-pet-egg2-motion.mjs",
+          "file": "test/verify-pet-sidebar-diag.mjs",
           "args": [],
           "tier": "hard",
           "probe": false
@@ -665,7 +689,7 @@
         {
           "kind": "guard",
           "npm": null,
-          "file": "test/verify-pet-follow.mjs",
+          "file": "test/verify-pet-sidebar-glass.mjs",
           "args": [],
           "tier": "hard",
           "probe": false
@@ -702,6 +726,38 @@
           "kind": "guard",
           "npm": null,
           "file": "test/verify-ci-steps.mjs",
+          "args": [],
+          "tier": "hard",
+          "probe": false
+        },
+        {
+          "kind": "guard",
+          "npm": null,
+          "file": "test/tools/ci-routing-red.mjs",
+          "args": [],
+          "tier": "hard",
+          "probe": false
+        },
+        {
+          "kind": "guard",
+          "npm": null,
+          "file": "test/verify-ci-routing.mjs",
+          "args": [],
+          "tier": "hard",
+          "probe": false
+        },
+        {
+          "kind": "guard",
+          "npm": null,
+          "file": "test/verify-notice-routing.mjs",
+          "args": [],
+          "tier": "hard",
+          "probe": false
+        },
+        {
+          "kind": "guard",
+          "npm": null,
+          "file": "test/verify-issue-claim-policy.mjs",
           "args": [],
           "tier": "hard",
           "probe": false
@@ -1014,6 +1070,30 @@
         {
           "kind": "guard",
           "npm": null,
+          "file": "test/verify-glass-compat.mjs",
+          "args": [],
+          "tier": "hard",
+          "probe": false
+        },
+        {
+          "kind": "guard",
+          "npm": null,
+          "file": "test/verify-glass-runtime.mjs",
+          "args": [],
+          "tier": "hard",
+          "probe": false
+        },
+        {
+          "kind": "guard",
+          "npm": null,
+          "file": "test/verify-glass-runtime-browser.mjs",
+          "args": [],
+          "tier": "hard",
+          "probe": false
+        },
+        {
+          "kind": "guard",
+          "npm": null,
           "file": "test/verify-extra-glass.mjs",
           "args": [],
           "tier": "hard",
@@ -1031,6 +1111,22 @@
           "kind": "guard",
           "npm": null,
           "file": "test/verify-package-publish.mjs",
+          "args": [],
+          "tier": "hard",
+          "probe": false
+        },
+        {
+          "kind": "guard",
+          "npm": null,
+          "file": "test/verify-deployment.mjs",
+          "args": [],
+          "tier": "hard",
+          "probe": false
+        },
+        {
+          "kind": "guard",
+          "npm": null,
+          "file": "test/verify-release-set.mjs",
           "args": [],
           "tier": "hard",
           "probe": false
@@ -1199,6 +1295,14 @@
           "kind": "guard",
           "npm": null,
           "file": "test/verify-fontset.mjs",
+          "args": [],
+          "tier": "hard",
+          "probe": false
+        },
+        {
+          "kind": "guard",
+          "npm": null,
+          "file": "test/verify-avatar-interval-and-rotation.mjs",
           "args": [],
           "tier": "hard",
           "probe": false
@@ -1438,31 +1542,7 @@
         {
           "kind": "guard",
           "npm": null,
-          "file": "test/verify-pet-bubble-timing.mjs",
-          "args": [],
-          "tier": "hard",
-          "probe": false
-        },
-        {
-          "kind": "guard",
-          "npm": null,
-          "file": "test/verify-pet-mascot-motion.mjs",
-          "args": [],
-          "tier": "hard",
-          "probe": false
-        },
-        {
-          "kind": "guard",
-          "npm": null,
-          "file": "test/verify-pet-egg1-motion.mjs",
-          "args": [],
-          "tier": "hard",
-          "probe": false
-        },
-        {
-          "kind": "guard",
-          "npm": null,
-          "file": "test/verify-pet-egg1-rebound.mjs",
+          "file": "test/verify-pet-official.mjs",
           "args": [],
           "tier": "hard",
           "probe": false
@@ -1478,7 +1558,7 @@
         {
           "kind": "guard",
           "npm": null,
-          "file": "test/verify-pet-egg2-motion.mjs",
+          "file": "test/verify-pet-sidebar-diag.mjs",
           "args": [],
           "tier": "hard",
           "probe": false
@@ -1486,7 +1566,7 @@
         {
           "kind": "guard",
           "npm": null,
-          "file": "test/verify-pet-follow.mjs",
+          "file": "test/verify-pet-sidebar-glass.mjs",
           "args": [],
           "tier": "hard",
           "probe": false
@@ -1523,6 +1603,38 @@
           "kind": "guard",
           "npm": null,
           "file": "test/verify-ci-steps.mjs",
+          "args": [],
+          "tier": "hard",
+          "probe": false
+        },
+        {
+          "kind": "guard",
+          "npm": null,
+          "file": "test/tools/ci-routing-red.mjs",
+          "args": [],
+          "tier": "hard",
+          "probe": false
+        },
+        {
+          "kind": "guard",
+          "npm": null,
+          "file": "test/verify-ci-routing.mjs",
+          "args": [],
+          "tier": "hard",
+          "probe": false
+        },
+        {
+          "kind": "guard",
+          "npm": null,
+          "file": "test/verify-notice-routing.mjs",
+          "args": [],
+          "tier": "hard",
+          "probe": false
+        },
+        {
+          "kind": "guard",
+          "npm": null,
+          "file": "test/verify-issue-claim-policy.mjs",
           "args": [],
           "tier": "hard",
           "probe": false

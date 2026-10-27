@@ -115,7 +115,7 @@ async function inventoryFor(steamRoots) {
   // S5c 刀2：`/inventory` 归 `wallpaper` 组件行（实现入包）⇒ 每次 apply 后把该组件一起 boot；
   // 判据判什么没变（同 verify-scene-live 的既有做法）。
   if (typeof hostMod.applyComponent === 'function') {
-    try { hostMod.applyComponent(mockCtx, {}, 'wallpaper'); } catch (err) {
+    try { hostMod.applyComponent(mockCtx, {}, 'media-bridge'); } catch (err) {
       console.log('  · 组件行 boot 失败（wallpaper）：' + String(err && err.message));
     }
   }

@@ -233,7 +233,7 @@ function freshApply() {
   };
   const dispose = apply(ctx);
   if (typeof hostMod.applyComponent === 'function') {
-    try { hostMod.applyComponent(ctx, {}, 'wallpaper'); } catch (err) {
+    try { hostMod.applyComponent(ctx, {}, 'media-bridge'); } catch (err) {
       console.log('  · 组件行 boot 失败（wallpaper）：' + String(err && err.message));
     }
   }

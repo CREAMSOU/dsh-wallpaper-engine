@@ -28,6 +28,8 @@ import { dirname, join, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { stripComments, functionBodyOf } from './tools/js-text.mjs';
 import { buildIndex } from './tools/host-route-index.mjs';
+import { upstreamForkByName } from './tools/subpackage-shapes.mjs';
+
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const MUT_HELPER = '__weMutNoHandoff';
@@ -115,8 +117,15 @@ const makeFiber = (webServer) => {
   const collected = [];
   let handoffs = 0;
   const provided = [];
+  const resources = new Set();
+  const registerResource = (value) => {
+    resources.add(value);
+    return () => resources.delete(value);
+  };
   const ctx = {
     webServer,
+    commands: { register: registerResource },
+    on(event, callback) { return registerResource({ event, callback }); },
     // 跨包服务面（§5.1 ①）：子包宿主半边只经 ctx.<服务名> 取面，这里给**真值**
     // （主包 createSubpackageHost() / 一次真主包 apply 捕获的 provide 值）——手搓 stub 等于把
     // "服务面名字/键集"从本判据里挖掉，那一面由 test/verify-subpackage-boot.mjs 逐键对账，
@@ -125,7 +134,7 @@ const makeFiber = (webServer) => {
     // 真宿主的 provide：主包 apply() 第一件事就是 provideSubpackageHost(ctx)（服务随 fiber 撤销、
     // 子包 inject 级联的物理基础）。真 cordis 里 provide 之后 ctx.<服务名> 就解析到该值 —— mock 也
     // 把 provided 值写回 ctx（并记成后续 fiber 的默认面），否则「主包先 provide、子包后 inject」这条腿
-    // 在 mock 里永远走不到：S5c 刀2 起 wallpaper 组件行的 apply 视图（`apply:` 源型）只存在于这个值上。
+    // 在 mock 里永远走不到：S5c 刀2 起壁纸组件行的 apply 视图（`apply:` 源型）只存在于这个值上。
     provide(name, value) {
       provided.push([name, value]);
       if (name === HOST_SERVICE_NAME) { ctx[HOST_SERVICE_NAME] = value; HOST_SERVICE = value; }
@@ -133,6 +142,7 @@ const makeFiber = (webServer) => {
     effect(cb) { handoffs++; const d = cb(); if (typeof d === 'function') collected.push(d); return d; },
   };
   return {
+    resources,
     // handoffs = 该行**交给 fiber 的 teardown 数目**（§7.6④ 的第二个观测面：路由之外唯一能看出
     // "拆卸有没有真交接"的量；纯浏览器空壳行宿主侧零路由，只有这一面能分辨真源码与变异体）。
     ctx,
@@ -364,10 +374,13 @@ const plugins = [];
 for (const r of rows) {
   if (!r.rel || !isFile(join(ROOT, r.rel))) continue;
   try {
+    const fork = upstreamForkByName(r.name);
+    const independent = fork !== null && !fork.hostServiceConsumer;
+    if (independent) throw new Error('独立 fork 尚无宿主夹具：' + fork.dir);
     const mod = await importEntry(join(ROOT, r.rel));
     const applyFn = mod.apply || (mod.default && mod.default.apply);
     if (typeof applyFn !== 'function') { check('行 ' + r.name + ' 的入口导出 apply', false, r.rel + ' 没有导出 apply'); continue; }
-    plugins.push({ label: r.name, apply: applyFn, row: r });
+    plugins.push({ label: r.name, apply: applyFn, row: r, independent });
   } catch (e) { check('行 ' + r.name + ' 的入口可装载', false, r.rel + '：' + String(e.message || e).split('\n')[0]); }
 }
 check('所有行入口都装载成功', plugins.length === rows.filter((r) => r.rel && isFile(join(ROOT, r.rel))).length,
@@ -406,7 +419,7 @@ check('所有行入口都装载成功', plugins.length === rows.filter((r) => r.
 // 那"零主包说明符"就成了纸面文章。放在零残留探针之前跑，避免把它的残留算到后面头上。
 {
   const noServiceOk = [];
-  for (const p of plugins.filter((q) => q.row.kind === 'subpackage')) {
+  for (const p of plugins.filter((q) => q.row.kind === 'subpackage' && !q.independent)) {
     const t = makeTable();
     const f = makeFiber(t.webServer);
     delete f.ctx[HOST_SERVICE_NAME];
@@ -414,7 +427,7 @@ check('所有行入口都装载成功', plugins.length === rows.filter((r) => r.
     catch { /* 预期：抛错 */ }
     try { f.unload(); } catch { /* 装载已抛错，收尾尽力而为 */ }
   }
-  check('负对照：mock ctx 不带服务面 ⇒ 每个子包宿主半边都在装载期抛错（证明它真经 ctx.' + HOST_SERVICE_NAME + ' 取面）',
+  check('负对照：mock ctx 不带服务面 ⇒ 壁纸服务型子包都在装载期抛错（独立 fork 另验）',
     noServiceOk.length === 0, noServiceOk.join('；'));
 }
 
@@ -522,8 +535,8 @@ if (plugins.length > 0) {
   const listenerDelta = EVENTS.map((ev) => ev + ':' + (process.listenerCount(ev) - listenerBase[ev])).filter((s) => !/:0$/.test(s));
   const handlesNow = (typeof process._getActiveHandles === 'function' ? process._getActiveHandles().length : -1);
   check('整族关掉后路由表清空 + 零残留（无遗留定时器 / 进程监听 / 活动句柄）',
-    leftover === 0 && pendingTimers === 0 && listenerDelta.length === 0 && (handlesBase < 0 || handlesNow <= handlesBase),
-    '残留路由 ' + leftover + ' · 停用后仍挂的定时器 ' + pendingTimers + ' · 监听增量 ' + (listenerDelta.join(',') || '无')
+    leftover === 0 && fAll.resources.size === 0 && pendingTimers === 0 && listenerDelta.length === 0 && (handlesBase < 0 || handlesNow <= handlesBase),
+    '残留命令/事件 ' + fAll.resources.size + ' · 残留路由 ' + leftover + ' · 停用后仍挂的定时器 ' + pendingTimers + ' · 监听增量 ' + (listenerDelta.join(',') || '无')
       + ' · 活动句柄 ' + handlesBase + ' -> ' + handlesNow + (timerRows.length ? ' · 逐行：' + timerRows.join(' / ') : ''));
   globalThis.setTimeout = oST; globalThis.setInterval = oSI; globalThis.clearTimeout = oCT; globalThis.clearInterval = oCI;
 
@@ -598,11 +611,11 @@ if (plugins.length > 0) {
   for (const p of plugins) {
     if (ownSets.get(p.label).size === 0) continue;
     const src = read(p.row.rel);
-    const body = functionBodyOf(stripComments(src), 'export function apply(');
-    if (body === null) textIssues.push(p.label + '（' + p.row.rel + '）定位不到 export function apply( 的函数体');
-    else if (!HANDOFF_SRC_RE.test(body)) textIssues.push(p.label + '（' + p.row.rel + '）apply 体里没有交接调用（handOffTeardown( / <receiver>.handOff(）');
+    const body = functionBodyOf(stripComments(src), p.independent ? 'function apply(' : 'export function apply(');
+    if (body === null) textIssues.push(p.label + '（' + p.row.rel + '）定位不到 apply 函数体');
+    else if (!(p.independent ? /\bctx\.effect\s*\(/ : HANDOFF_SRC_RE).test(body)) textIssues.push(p.label + '（' + p.row.rel + '）apply 体里没有 teardown 交接调用');
   }
-  check('注册了路由的行：apply 体里都有交接调用（handOffTeardown( / <receiver>.handOff(）', textIssues.length === 0, textIssues.join('；'));
+  check('注册了路由的行：apply 体里都有交接调用（handOff 或独立 fork 的 ctx.effect）', textIssues.length === 0, textIssues.join('；'));
 }
 
 // ── P-C 字体实例（task-8 第 3 条）：关掉 `wallpaper-engine-fonts` 行 ⇒

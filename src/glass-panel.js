@@ -395,6 +395,26 @@ function panelGlassPair(sel) {
   return { light, dark };
 }
 
+function renderGlassSurfaceControls(ctx) {
+  const surfaces = [
+    ["left-sidebar", weT("左侧栏")], ["right-sidebar", weT("右侧栏")],
+    ["settings-window", weT("设置窗口")], ["content", weT("编辑与终端")],
+    ["declared", weT("声明式表面")], ["extra", weT("额外选择器")],
+  ];
+  return React.createElement("details", { className: "we-picker__surface-policy" },
+    React.createElement("summary", null, weT("玻璃兼容")),
+    ...surfaces.map(([id, label]) => React.createElement("label", { className: "we-picker__ctl", key: id },
+      React.createElement("span", null, label),
+      React.createElement("select", { className: "we-picker__select", "data-we-policy": id,
+        value: ctx.sel.glassSurfacePolicy?.[id] || "auto",
+        onChange: event => ctx.onGlassSurfacePolicy(id, event.target.value) },
+      React.createElement("option", { value: "auto" }, weT("自动适配")),
+      React.createElement("option", { value: "native" }, weT("保留原生"))))),
+    React.createElement("ul", null, ...(ctx.surfaceStatus || []).map(({ id, mode, reason }, index) =>
+      React.createElement("li", { key: id + index }, id + ": " + mode + " · " + reason))),
+  );
+}
+
 function renderAppearanceGlassSection(ctx) {
   const {
     onBlur, onGlassAlpha, onGlassChildParam, onGlassColor, onGlassDarkSeparate, onExtraGlassSelectors, onGlassFidelity,
@@ -625,34 +645,50 @@ function renderAppearanceGlassSection(ctx) {
           advRows.push(swatchRow(weT("侧栏玻璃颜色"), GLASS_COLOR_PRESETS, sel.sidebarColor, onSidebarColor, { key: "sb-color" }));
         }
       }
-      // 内容面（编辑器 / 终端，即 dsh-better-sidebar 面板内的内容区）近不透明玻璃底。
-      // 它与跟随全局无关 ⇒ 不受上面那道门影响。
-      advRows.push(switchRow(weT("内容面玻璃·独立配置"),
-        !!(childIndependentOn && childIndependentOn("sidebarContent")),
-        (e) => onToggleChildIndependent("sidebarContent", e.target.checked), {
-          key: "content-independent",
-          hint: weT("用这一项自己的釉层参数覆盖全局"),
-          tooltip: weT("打开后**紧接在本行下方**出现这一项自己的独立配置，**完全覆盖**上面的全局配置；关闭则回到继承全局"),
-        }));
-      if (childIndependentOn && childIndependentOn("sidebarContent")) {
-        advRows.push(SliderRow(weT("内容面透明度"), 0, 100, 5, sel.sidebarContentAlpha, onSidebarContentAlpha, sel.sidebarContentAlpha + "%", "content-alpha"));
-        advRows.push(swatchRow(weT("内容面底色"), GLASS_COLOR_PRESETS, sel.sidebarContentColor, onSidebarContentColor, {
-          key: "content-color",
-          auto: React.createElement("button", {
-            key: "auto",
-            className: "we-picker__swatch we-picker__swatch--auto" + (sel.sidebarContentColor === "" ? " we-picker__swatch--active" : ""),
-            type: "button",
-            title: weT("跟随主题面板色"),
-            onClick: () => onSidebarContentColor(""),
-            "aria-label": weT("内容面底色 跟随主题"),
-          }, weT("主题")),
-          colorValue: sel.sidebarContentColor || "#1e1f26",
-        }));
-      }
     }
     // ── 子 UI 独立配置：这一节只有**一层** —— 每个子面一个「独立配置」开关（开 = 用
     //    自己那套参数覆盖全局）。⚠️ 这里**没有**「要不要玻璃」的开关：所有子面恒吃玻璃。
     advRows.push(...childRows);
+  }
+  // ── 内容面（阅读文件页 / 编辑器 / 终端）的底色与透明度 ──────────────────────
+  //    **不在 `detailOpen` 块里**：用户口径「侧边栏阅读文件页面的背景底色的设置被删除了，
+  //    需要找回」—— 它此前只在侧栏「详细玻璃调节」展开 + 「内容面玻璃·独立配置」打开后
+  //    才可达，设置页一行都不画，于是在两条路径上都像"没了"。这一面看的是正文（阅读
+  //    文件页 / 编辑器 / 终端），调整期望远高于其余独立配置 ⇒ 提到本节常规行，两档都画。
+  //    仍保留「独立配置」开关（`glassMode.sidebarContent`）而不是直接摊两个旋钮：
+  //    `applyGlass` 的 `glassValue()` 只在 mode='custom' 时读这两个键，mode 停在 inherit
+  //    时写进去的值**不会被消费** —— 直接摊旋钮就是一对死旋钮（本仓专门防这一类）。
+  //    ⚠️ **门只有 `sidebarGlass`，不含 `sidebarPresent`**（2026-10-18 用户实测修正）：
+  //    `sidebarPresent` 是"装没装 dsh-better-sidebar"，而这一面真正作用的对象是
+  //    **宿主原生右栏**（`[data-sidebar-right-panel]`，阅读文件页就长在那里）——
+  //    没装 better-sidebar 的机器上它同样存在、同样吃 `data-we-sidebar-glass` 那张底板。
+  //    挂上 `sidebarPresent` 的后果实测过一次：没装该插件的用户整组行一行都不画。
+  //    CSS 侧的门也是 `data-we-sidebar-glass`（由 `sidebarGlass` 写，默认开）⇒ 与本门同源。
+  if (open && sel.sidebarGlass === true) {
+    advRows.push(switchRow(weT("内容面玻璃·独立配置"),
+      !!(childIndependentOn && childIndependentOn("sidebarContent")),
+      (e) => onToggleChildIndependent("sidebarContent", e.target.checked), {
+        key: "content-independent",
+        hint: weT("阅读文件页 / 编辑器 / 终端的底色"),
+        tooltip: weT("打开后**紧接在本行下方**出现内容面自己的两项（透明度 / 底色），**完全覆盖**全局玻璃配置；关闭则回到继承全局"),
+      }));
+    if (childIndependentOn && childIndependentOn("sidebarContent")) {
+      advRows.push(SliderRow(weT("内容面透明度"), 0, 100, 5, sel.sidebarContentAlpha, onSidebarContentAlpha, sel.sidebarContentAlpha + "%", "content-alpha",
+        { tooltip: weT("阅读文件页、编辑器与终端的底板不透明度（0 = 接近全透、100 = 最实）。越大越透，与玻璃透明度同语义。") }));
+      advRows.push(swatchRow(weT("内容面底色"), GLASS_COLOR_PRESETS, sel.sidebarContentColor, onSidebarContentColor, {
+        key: "content-color",
+        tooltip: weT("阅读文件页、编辑器与终端的底板色相；「主题」= 跟随主题面板色"),
+        auto: React.createElement("button", {
+          key: "auto",
+          className: "we-picker__swatch we-picker__swatch--auto" + (sel.sidebarContentColor === "" ? " we-picker__swatch--active" : ""),
+          type: "button",
+          title: weT("跟随主题面板色"),
+          onClick: () => onSidebarContentColor(""),
+          "aria-label": weT("内容面底色 跟随主题"),
+        }, weT("主题")),
+        colorValue: sel.sidebarContentColor || "#1e1f26",
+      }));
+    }
   }
   // ── 主题预设：**独立节**（ADR-0011 后预设是整机快照，不再是玻璃子集 ⇒ 不住「玻璃 UI」
   //    分栏，升为自己的栏目且排在玻璃节之前）。只在设置页画（!sidebarSurface 门不变）；
@@ -687,6 +723,7 @@ function renderAppearanceGlassSection(ctx) {
     //    ⚠️ 包一层 Fragment 是刻意的：本节约有 80 个并列 children，逐个挂门既啰嗦又容易漏；
     //    而 React 的 Fragment 不产生 DOM 节点 ⇒ 观感与无障碍树都没有多出来的层级。
     open && React.createElement(React.Fragment, null,
+      !sidebarSurface && typeof ctx.onGlassSurfacePolicy === "function" && renderGlassSurfaceControls(ctx),
       // ── 全局四件套 ──
       // 玻璃颜色: the settings-window glass BASE tint. Defaults keep the stock
       // look (white light / deep navy dark); picking any preset or a custom
@@ -727,7 +764,7 @@ function renderAppearanceGlassSection(ctx) {
       React.createElement("div", { className: "we-picker__ctl we-picker__ctl--wrap", key: "extra-glass-selectors" },
         ctlText(weT("额外补雾化的选择器"),
           weT("给第三方插件自己的面板补上毛玻璃（它们自身没有模糊，全局「雾化」对它们无效）"),
-          weT("写这些面板的 CSS 选择器，逗号或换行分隔，最多 8 条、每条最多 120 字；超长的单条或超出 8 条的整条丢弃（不是截断，存活下来的前 8 条全量生效）。目标元素要自己已定位（fixed / absolute）；载体挂在它的 ::before 上，所以不会影响它内部的定位弹层。留空 = 关。")),
+          weT("写这些面板的 CSS 选择器，逗号或换行分隔，最多 8 条、每条最多 120 字；超长的单条或超出 8 条的整条丢弃（不是截断，存活下来的前 8 条全量生效）。目标需已有定位和非 auto 层级，且 ::before 空闲；无法安全接管时保留原生。留空 = 关。")),
         React.createElement("input", {
           className: "we-picker__text", type: "text",
           value: sel.extraGlassSelectors || "",
@@ -824,4 +861,4 @@ function renderAppearanceGlassSection(ctx) {
   );
 }
 
-export { renderAppearanceGlassSection };
+export { renderAppearanceGlassSection, renderGlassSurfaceControls };

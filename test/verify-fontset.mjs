@@ -1100,8 +1100,8 @@ section('⑧ 面板渲染回归（配色区在总开关打开时必须渲染得�
   });
   // P-D S3d：播放页（renderEffectsTab）的「倍速 / 适配」两节随壁纸包搬出页签族 ⇒ 同一条理由，
   // 按真入口同形登记进共享注册表（否则 renderEffectsTab 里的 wePanelSectionsOf('playback') 为空）。
-  const playbackRateMod = await import(pathToFileURL(join(root, 'packages', 'wallpaper', 'src', 'playback-rate-section.js')).href);
-  const fitSectionMod = await import(pathToFileURL(join(root, 'packages', 'wallpaper', 'src', 'wallpaper-fit-section.js')).href);
+  const playbackRateMod = await import(pathToFileURL(join(root, 'packages', 'media-bridge', 'src', 'playback-rate-section.js')).href);
+  const fitSectionMod = await import(pathToFileURL(join(root, 'packages', 'media-bridge', 'src', 'wallpaper-fit-section.js')).href);
   regMod.weRegisterPanelSection('playback', 'wallpaper-playback-rate', {
     id: 'wallpaper-playback-rate',
     order: 60,

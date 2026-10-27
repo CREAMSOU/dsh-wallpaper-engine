@@ -173,7 +173,7 @@ function check(name, ok, detail) {
 }
 
 // ── 真实扫描：`lib/**` + **每个子包 `packages/<pkg>/lib/**`** 的每个 kill / spawn 站点 ──
-// ⚠️ P-F 起媒体桥的 spawn/kill 站点出户到 `packages/wallpaper/lib/**`（子包 `lib/` 不在主包
+// ⚠️ P-F 起媒体桥的 spawn/kill 站点出户到 `packages/media-bridge/lib/**`（子包 `lib/` 不在主包
 //    `lib/` 下）⇒ 只扫主包会让覆盖面地板静默塌陷（kill 8→4、spawn 4→1），判据却仍然绿。
 {
   const files = [...listLib(), ...listSubpackageLib()];
@@ -204,7 +204,7 @@ function check(name, ok, detail) {
 
 // ── 变异对照：把真源码里的守卫/监听删掉，同一条判据必须报红 ──────────────────
 // ⚠️ 读点按**真源**（本分支搬家后）：转码套件住 lib/media/transcode.js（上游在 lib/transcode.js）、
-//    媒体桥内置实现住 packages/wallpaper/lib/legacy.js（上游在 lib/media/legacy.js）。
+//    媒体桥内置实现住 packages/media-bridge/lib/legacy.js（上游在 lib/media/legacy.js）。
 //    变异对照必须打在**跑起来的那份**上，否则"删掉守卫"删的是没人引用的副本 —— 判据会失去牙。
 const readFirst = (...rels) => {
   for (const rel of rels) {
@@ -230,7 +230,7 @@ const readRepoFirst = (...rels) => {
     '报出=' + JSON.stringify(unguardedKills(mutated).bad.map((b) => b.line + ':' + b.recv)));
 }
 {
-  const { rel, code: real } = readRepoFirst('packages/wallpaper/lib/legacy.js',
+  const { rel, code: real } = readRepoFirst('packages/media-bridge/lib/legacy.js',
     'lib/components/media-bridge/legacy.js', 'lib/media/legacy.js');
   // 把两处 'error' 监听改名（保持语法合法、括号平衡），模拟"删掉监听"。
   const mutated = real.split(".on('error'").join(".on('errorDisarmed'");
@@ -239,6 +239,12 @@ const readRepoFirst = (...rels) => {
     bad.length >= 2 && sites >= 2,
     '报出=' + JSON.stringify(bad.map((b) => 'lib/' + rel + ':' + b.line + ' ' + b.recv)));
 }
+
+// 内置桌宠副本（packages/pet）已解耦 ⇒ 它的 `HelperProcess.stopAndWait` 不在本仓了。
+// 这条判据随 provider 一起休眠：等上游 dsh-pet 提供联动接口、重新登记 provider 后，
+// 把同样的"无 pid 不发信号 / 有 pid 保留 SIGTERM+SIGKILL 升级 / 移除守卫必须判红"
+// 三向断言挂回新入口即可（判据口径不变，别放宽）。
+
 
 const failed = results.filter((r) => !r.ok);
 console.log('\n' + (failed.length === 0 ? 'ALL CHILD-KILL CHECKS PASSED' : failed.length + ' CHECK(S) FAILED'));

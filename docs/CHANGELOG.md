@@ -5,7 +5,7 @@
 > 本文件承接原先堆在 README 首页的**版本公告与功能清单**。门面（`../README.md` / `../README.en.md`）
 > 只保留与版本无关的亮点；带版本号、issue 号、性能数字的内容一律记在这里。
 >
-> **当前发布版本：`v1.3.2`**；下一版 `v1.3.3` 开发中（`package.json` 的 `version`）。
+> **当前发布版本：`v1.3.3`**（npm 与 GitHub Release 已发，2026-10-15）；下一版开发中（`package.json` 的 `version`）。
 > **`### v1.3.2（未发布）`** 一节收拢的是 **1.3.1 之后**的全部内容；**`### v1.3.0（2026-10-06）`**
 > 一节收拢的是 **1.2.0 之后至 1.3.0** 的全部内容；`### v1.3.0-r2` 与 `### v1.3.1`（都标「未发布」）记的是 **v1.3.0 之后**的增量；**`### v1.2.0`** 一节收拢的是 **1.1.0 之后至 1.2.0**
 > 的全部内容（侧栏工作台：外观 / 播放进侧栏与「壁纸属性」；玻璃染色地板与「左侧栏覆盖」；前置基线切换到官方桌面端 ≥ 0.2.0-rc.1）；
@@ -16,28 +16,71 @@
 > 完整逐提交历史见 GitHub Commits / Releases；升级前置条件见 [`UPGRADING.md`](./UPGRADING.md)。
 > `test/verify-scene-live.mjs` 这一类判据条数**只记该条写作当时的实测总数**（如 466 / 465），不是现在的总数 —— 后续条目会往上加（现为 502）；照原文保留，好让它与当次提交对得上。
 
-### v1.3.3（未发布）
+### v1.3.3（2026-10-15 · npm 已发布）
 
 - **公告追加一条 + 版本号升级（本仓迭代，用户口径）**：更新公告在四条 callout 之后新增第五条**加粗**提示 —— **「在设置中启用深色模式 + 「作者自用」预设，为本插件最佳效果之一！」**（沿用 16pt callout 样式，`<strong>` 加粗与❗前缀同其余四条）；`package.json` 版本号 `1.3.2` → `1.3.3`，`NOTICE_VERSION` 哨兵同步 `1.3.3`（看过 1.3.2 公告的机器重弹一次）。英文词表同步新增一条（`src/i18n-copy-ext.js`）。**纯客户端改动 ⇒ 刷新页面即可生效。**
 - **回退「点个星喵⭐」侧栏星链按钮（本仓迭代，用户口径）**：撤销 v1.3.2 批次里加在快捷面板壁纸卡片播放控制行的仓库求星按钮（`src/quick-panel.js`），求星入口保留在「设置 → 壁纸引擎 → 关于」页。更新公告同步换血：callout ③「新增「点个星喵⭐」按钮」整条删除，④⑤ 重排为 ③④，标题「一键点星」字样改为「省电与外观提示」；相关英文词条与守卫钉判据（`test/verify-scene-live.mjs` 星链两判据）一并移除。
 
-- **重构：组件行统一成独立子包（P-F 批）—— 主包 + 7 子包 / 8 条 patch 行 / 6 份浏览器产物**。
-  **根因**：ADR-0013 `D14`（实现归属唯一）与 ADR-0014 要求「一个组件行 = 一个自包含目录 + 一份自产产物 + 一格开关」，同时安装面必须仍是**唯一一次安装**、组件之间只经显式注入面通讯。拆分前：组件实现混在主包 `lib/components/` 与 `lib/routes/`，组件行的文件构成、开关粒度、产物归属都只能靠文档说明；浏览器半边共用主包一份 `lib/client.js` ⇒ 任一组件的构建期依赖都会牵动主包产物字节。
-  **修法**：① 五个组件行 + 字体系统行迁出成 `packages/`（`about-notice` / `fonts` / `fx` / `mascot-avatar` / `parallax` / `pet-link`，加壁纸行共 **7 子包**），每包补齐 ADR-0014 `S2.1` 六件（`package.json` / `cordis.patch.yml` / `icon.png` / `locale/{en,zh}.json` / `lib/` 入口 / 自产产物）；② 根 `cordis.patch.yml` **8 行**（主包行 + 7 子包行），子包自带 patch 行与根行逐字一致；③ 有浏览器半边的包各自出产物（`packages/{fx,parallax,fonts,pet-link,wallpaper}/lib/client.<pkg>.js`），构建期只发一条 `require("<主包真名>")`，浏览器产物共 **6 份**；④ 跨包通道收敛为两条：宿主平面的服务面（`wallpaperEngineHost`，值 = `createSubpackageHost()` 的冻结键视图）+ `lib/subpackage-boot.js` 的 `SUBPACKAGE_KEY_TABLE`（按行 id 声明可消费键与源型，键集双向对账；子包侧一律只读消费，`inject` 只声明 `webServer` 与 `wallpaperEngineHost`，宿主半边零主包说明符）；⑤ 守卫重定基：`verify-subpackage-purity` / `verify-subpackage-client-half` / `verify-subpackage-manifests` / `verify-route-ownership`（M10 = 0）+ 产物地板 `FLOORS = { packages: 7, clientArtifacts: 6, rows: 8 }`。
-  **判据**：`node test/run-guards.mjs all` 100 步 rc0；`node test/tools/packages.mjs` = 7 包 / 6 产物 / 8 行且 `violations = []`；`verify-route-ownership` **M10 = 0** 且 `lib/routes/` 无孤儿；`verify-subpackage-manifests` 逐包六件 + 行 ⇄ 清单双向对账；`verify-subpackage-purity` / `verify-subpackage-client-half` 零主包说明符（唯一例外是构建期那一条 `require`）；`verify-inject-contracts` M8=100%（23/23 族）。
-  **影响面**：安装面不变（仍是唯一一次安装，细节见 `docs/archive/wip/BUNDLE-SPLIT.md` §7.5 与 `docs/SUBPACKAGE-GRAPH.md`）；`D17` 的「每个组件一格**客户端**开关」仍**不做**（理由：子包粒度 ≠ 组件行粒度），组件开关仍只在 patch 行行级（S7.1）；宿主侧改动需**重启** `dsh web`；`packages/*` 走 `file:` 链接（发布形态 S8 **未执行**）。
+### v1.4.0（2026-10-22 · npm 已发布）
 
-- **重构：P-D 壁纸子插件阶段1 —— 六个面板节渲染器 + 宿主半边 12 族搬入 `packages/wallpaper`，44 条路由路径不变**。
-  **根因**：① 产品语义要把「WE 壁纸与自定义导入壁纸的渲染、壁纸库 + 播放/画面里的配置项、声音、省电」归到壁纸子插件，而它当时只是一条组件行（5 条 now-playing 路由 + 媒体后端）；② ADR-0013 `D12①` / `D14` 要求实现归属唯一、注入面收窄，但浏览器侧「渲染内核 **16 文件**」（`src/live-layer*.js` / `video-layer.js` / `layer-core.js` / `media-prep.js` / `client-media-frame.js` 等，≈66 键 + 8 个模块级可变 cell）与 `LAYER_ID` / `SCRIM_ID` / iframe 三个单例是热路径与层所有权所在，整族搬包会同时破 `D12①` 与层所有权判据；③ 宿主侧真正的耦合不是「后端 / supervisor / provision / legacy」（这四件早在 P-F 批 1c 就随行出户），而是**媒体 token 域**：token 的铸造面（清单构建 + 上传响应）与消费面（`/media`、`/preview`、`/scene-*`、`/live-frame`、`/props`、`/transcoded`）必须共享同一个 `mediaMap` 与同一个 loopback 媒体源，拆到两侧就是全部 `/media/<token>` 404。
-  **修法**：① S1 身份并入（`packages/media-bridge` → `packages/wallpaper`，行 `id` = `wallpaper-engine-wallpaper`，ADR-0014 `S4.3` 的唯一例外：该行从未发布 ⇒ 零迁移）；② S3 浏览器半边只搬六个**纯渲染面板节**（壁纸库四节 order 10/20/30/40 + 播放/画面两节 order 60/70），包自出产物 `packages/wallpaper/lib/client.wallpaper.js`，`HOST_BRIDGE_BINDINGS` 34 → 57；③ S5 宿主半边大改：主包 `lib/routes/` 从 **15 族 32 条**收到 **4 族 8 条**（settings / presets / diag / cache-dir），壁纸包持 **12 族 29 条**（now-playing 5 + we-assets 2 + token 簇 9 族 21 条 + occlusion 1），**44 条路由路径逐条不变**，只换归属文件；④ 跨包通道 = 服务面从六键扩到**七键**（+ `apply` = 每次 `apply()` 现建的冻结视图，15 键：`mediaMap` / `tokenFor` / `serveFile` / `serveLayout` / `faststartVariant` / `pinnedFaststartVariant` / `trackStream` / `handleSceneFiles` / `mediaOriginInfo` / `payloadProgress` / `transcodeCached` / `SCENE_VIDEO_INFLIGHT` / `buildInventory` / `componentsProbe` / `mediaOriginApi`），`SUBPACKAGE_KEY_TABLE['wallpaper']` 8 → **79 键**（新增源型 `apply:`；构成 = 8 既有源 + 47 `kernel:` + 15 `apply:` + 8 `schema:` + 1 `log`；纯符号走 `schema:` 视图的 13 键 / `http:` 视图的 3 键），门面用惰性 `provideSubpackageHost(ctx, { applyView: () => applyView })` 交出**同一个**会话实例；⑤ 渲染内核 16 文件与 `LAYER_ID` / `SCRIM_ID` 单例**留主包**（S2 定案；S4 的四条层所有权判据把「浏览器半边不得建层 / 退层 / 持 `#layer` 引用」钉住）；声音族（now-playing / `audio-tap.swift`）与省电判据族（occlusion hub + supervisor/backend 策略）随包，声音 / 省电的**设置键**留主包 `lib/settings-schema.js`，`lib/occlusion/{x11,rects}.js` 留主包经 `schema:` 注入（x11 外迁留 S8）；⑥ D-6(b)：`visiblePickerTabs()` 按面板节注册表现存性 gate「壁纸库」页签（注册表空 ⇒ 六页签变五、存档页签回落第一个可见），`TAB_SECTION_OWNER` 只写「页签 id → 注册表 id」，`resolvePickerTab()` 兜住回落。
-  **判据**：全链 `node test/run-guards.mjs all` **100 步 rc0**（`CHAIN_FLOOR = { verify: 87, docs: 6, smoke: 6, all: 100 }`）；`node test/tools/host-route-index.mjs` = **44 条**且路径**多重集不变**（主包 8 / 壁纸包 29 / 其它包 7）；新增 `test/verify-token-domain.mjs`（`applyView` 键集恰 15 且全部来自同一次会话解构、出现 `createComponentSession` 即红；负对照「复制一份 `mediaMap`」判红）；`verify-subpackage-boot` 钉七键冻结 + `apply` 惰性，`verify-subpackage-toggle-roundtrip` 钉行级开关往返；`verify-occlusion-hub`（hub 只在包入口现建、三实参内联）；`verify-layer-ownership` 四条判据（建层点仍只有主包）；`verify-host-teardown` 注册面 **32 条 → 8 条**（`ROUTE_FLOOR` 9 → 8，回滚残留 0 条）；`verify-inject-contracts` M8=100%（23/23 族 · 声明键 229）；`verify-client` 的 D-6(b) 组 24 条断言 + 变异体判红。
-  **影响面**：宿主侧大搬移、**零 URL 变化**（浏览器半边的调用点全部照旧，消费方仍在主包 `src/**`）；渲染内核 / 层所有权 / 引擎依赖（npm `webwallgl`，主包持有）未动；各阶段提交全程本地未推送（提交清单见 git 历史）；`packages/*` 仍 `file:` 开发形态（S8 发布形态**未执行**）；**宿主侧改动需重启 `dsh web`**；浏览器侧刷新即可（产物由 `node scripts/build-client.mjs` 生成）。
+> 首个按**八包发布集**形态发布的版本：主包 + 七个子包同版本、同批上架；主包把七个子包声明为
+> **精确版本运行依赖**（`1.4.0` 不带范围），所以用户只需装 `dsh-plugin-wallpaper-engine`
+> 一个包名，npm / pnpm 就会把全部八包解析下来。
+> `package.json` 版本号 `1.3.3` → `1.4.0`（minor：拆包后的首个正式版）。
+> **宿主半边有改动 ⇒ 升级后要重启 `dsh web`；纯客户端部分刷新页面即可。**
 
-- **文档：P-E 文档收口 —— 常青文档与契约按「主包 + 7 子包」重建，两份生成物重算（零代码、零行为变化）**。
-  **根因**：P-F 的组件行子包化与 P-D 的壁纸子插件落地之后，「某个实现落在哪个文件」不再能从文档读出来 —— 常青文档仍按「单包 + `lib/components/`」描述落点，跨包通道只写在 `docs/wip/` 的计划里；ADR-0014 的 `S5` 条款仍写着六键服务面，而实现已是七键（多出 per-apply 的 `apply` 视图）⇒ 契约与实现漂移，正是 ADR-0006 说的「文档复述代码」会腐的那一类。
-  **修法**：① `docs/ARCHITECTURE-SPLIT.md` / `CODE-STRUCTURE.md` / `HOW-IT-WORKS.md` / `DEV-GUIDE.md`（含 `docs/en/` 英文镜像）按包重写落点与跨包边界：路由族与实现文件引用改到 `packages/<pkg>/lib/**`，跨包只留「服务面 + 构建期 `require("<主包真名>")`」两条通道；② ADR-0014 `S5.4` 六键 → **七键**（`ids` / `keyNames` / `keys` / `handOff` / `schema` / `http` / `apply`），`§现状偏差` 补一条 S5 落地行；③ `docs/archive/wip/BUNDLE-SPLIT.md` §7.4 追加 S5 落地账、新增 §9.5「宿主半边的现状归属」，`docs/SUBPACKAGE-GRAPH.md` 的行树 / 边表 / 登记点矩阵 / 漂移触发线按实测更新；④ 两份生成物只经工具重算、不手改：`node test/tools/host-route-index.mjs --write`（44 条路由）与 `node test/tools/guard-targets.mjs --write`（模块 174 · 守卫 110 · 零覆盖 7 · 产物 6 份）。账本类（本文件、`docs/en/CHANGELOG.md`、`docs/archive/**`）按 ADR-0006 保持原样。
-  **判据**：`node test/run-guards.mjs docs` **6/6 步 rc0**（`verify-route-index` / `verify-guard-map` 逐字对账通过 ⇒ 生成物与代码同步）；`node test/run-guards.mjs all` **100 步 rc0**；旧口径 grep 收零 —— `15 族` 0 命中、`panel-tabs-wallpaper` 只剩「已整文件删除」的历史陈述、`media-bridge` 只剩历史注解（前名 / 原路径 / 守卫文件名）；`git diff --check` 干净。
-  **影响面**：纯文档与生成物改动，代码、路由、产物字节与行为**零变化**（`lib/client.js` 未动）。
+#### 八包发布集首次上 npm（2026-10-22）
+
+- **`dsh-plugin-wallpaper-engine` + 七个子包同版本 `1.4.0` 一并发布**，这是拆包之后第一次让"一个包名装齐全部八包"在 npm 上真正成立（此前 1.3.3 及更早只有主包，子包只存在于源码里）。装法只有一个：`dsh plugin --profile <p> add dsh-plugin-wallpaper-engine`，或 `npm i dsh-plugin-wallpaper-engine`；七个子包作为**精确版本**运行依赖自动解析，用户不需要逐个装。
+- **顺序不可颠倒**：必须先七个子包、最后主包。主包先上而子包缺失时，用户的安装会在**他自己的机器上**以 `ERR_PNPM_FETCH_404 … installing the dependencies of dsh-plugin-wallpaper-engine@1.4.0` 失败并整体回滚（已实测）。发布脚本按 `release-set.json` 的 `publishOrder` 执行、失败即停。
+- **GitHub Release 必须挂八件套 + `release-set.json`**，只挂主包 tgz 是一个装不上的包；离线安装走 `npm run install:release -- --set <目录> --profile <名> --dsh-home <目录> --app-closed`（用 profile 的 `overrides` 把七个子包钉到同目录 tarball）。
+- 发布前新增硬档守卫 `test/verify-release-set.mjs`：真打一次包、解开八个 tarball 的字节，判"主包声明的七个子包 = 精确版本且在集内 / 主包不带开发面目录 / 每个子包真有自己 `exports['./client']` 的浏览器半边"。发布流程见 [`RELEASING.md`](./RELEASING.md)。
+
+#### 预设携带深浅偏好 + 新装默认「深色 + 作者自用」（2026-10-22）
+
+- **新装默认就是作者在用的那套观感**：首次安装（宿主没有存档**且**浏览器里也没有本地存档）自动套用「作者自用」预设，并把主题切到深色。升级用户、以及「宿主存档被删而本地存档还在」的用户一概不受影响；不设哨兵键 —— 套用成功即写出存档，下次启动走宿主分支，这条路径天然只触发一次。失败静默（新装用户不该一上手就看见一条红字），诊断行留给排障。主题腿还要等服务：宿主 `theme` 服务在启动早期拿不到，服务就绪后由主题层补写一次（幂等）。
+- **预设新增 `assets.theme` 段（`{"preference":"dark"|"light"}`）**：套用预设时把深浅一并发到宿主 `theme` 服务 —— 这是预设里**唯一**写在插件之外的一段；与「主题随壁纸」共用同一个服务句柄，但**不写**它的让位记账（不让"退场放回"把用户刚套用的主题还回去）。只有「作者自用」声明 `dark`，其余六套不携带（缺席 = 不动对方主题）；消毒白名单只认 `dark` / `light`，不猜 `auto` / `system`（猜错就是静默空操作）。
+- **下线「引导试用作者自用」推广弹窗**：组件、两处挂载、localStorage 哨兵、CSS、英文词条与它的浏览器实测守卫一并删除；判据改写为首装与主题腿两件事（守卫链 verify 92→91、all 105→104）。
+- **修一处静默丢段**（用户本地实测报障：浅色下套用「作者自用」，主题不变深）：宿主 `publicAssets()` 是**白名单**，只放行 font / mascot / avatar ⇒ 新增的 `assets.theme` 在宿主读预设时被整个丢掉，客户端那一腿读不到段、静默跳过、**不报错**。现原样回显该段，并补两层判据：源码级「`publicAssets` 体内必须有 `out.theme` 分支」+ 端到端「真 `GET /glass-presets/factory-author` 的响应体必须带 `assets.theme.preference = "dark"`」—— 后一条盯的正是"源码里有分支"与"请求真能拿到"之间那道缝，两条都验证过有牙（负对照判红）。`verify-presets` 226 → 227 条。
+- **已知边界（留作后续决定）**：`export` 路径按 `ASSET_SEGMENTS`（font / mascot / avatar）重建资产段，**不带走 `theme`** ⇒ 导出→导入会丢深色偏好（GET / 清单 / 新建 / 导入四条路都保）；首装补写那条腿的值写死为 `dark`，与「作者自用」当前声明一致，但属两处真源。宿主半边（`lib/routes/presets.js`）也改了 ⇒ **要重启 `dsh web`** 才完整生效（只刷新页面不够）。
+
+#### 公告首条「关掉也能再看」+ 公告面板限高滚动（2026-10-21）
+
+- 更新公告第 ① 条改为「**关掉也能再看**」：点「知道了」后不再自动弹出，想回顾就到「设置 → 壁纸引擎 → 关于」点「重新查看本版更新公告」按钮；其余条目顺延为 ②–⑥。
+- 公告面板 `max-height: min(78dvh, 720px)`，正文区 `overflow-y:auto`（`min-height:0`），配图 `flex:0 1 auto` 先让位；「知道了」按钮在滚动容器**之外**，永远不会被挤出屏幕。**纯客户端改动 ⇒ 刷新页面即可生效。**
+
+#### 外置官方 pet 正式桥接（2026-10-20）
+
+- 按用户后续明确要求删除内置派生 pet、基础素材与 Electron 依赖闭包，部署集合由九包缩为八包；不自动安装官方插件，不修改其文件、配置或动画池。
+- 正式入口直接使用官方锁、URL 动画、位置及抛掷接口，接入拉动侧栏、抓绳互动、踢开弹飞与站立哈气四条排播。按目标协调多页面租约，旧请求和清理不影响新一轮；官方缺席或接口不全时只停联动，侧栏继续原生开合。
+- 同页 `petApi7340` 读取真实播放进度与位置；桥接自绘气泡可在动作解锁后保留，出现/隐藏节点可独立调节，不操作官方气泡槽。真实浏览器已检查窄屏、亮暗主题及调参面板，尚未完成用户真实官方 pet 安装下的整套演出验收。
+- 官方 `position/throw` 保留原生墙钟运动语义，不宣称旧私有逐帧位移或 4px/80ms 精度等价。此前 `line` 隔离试验在视频缓冲时测得 150 CSS px 偏差；删除内置是用户调整方案后的决定，不代表此差异已消除。
+
+#### 上游维护修复同步（2026-10-20）
+
+- 同步上游 `pr221-2-review` 的 `52d598a` 与 `cf59d23` 维护修复。设置保存串行合并在途改动，并逐簇确认成功值，避免快速改回原值或部分失败时漏存。
+- 图片预览 URL 始终指向源图，由 `/preview` 按需选择或重建缩略图；缓存被淘汰后旧 URL 仍可用，保留 HEAD、ETag、304 与原图 Range 行为。
+- 侧栏裁剪判定增加 `0.5` CSS px 容差，避免分数 DPR 下贴边玻璃退回原生；真实裁剪仍回退。几何回归覆盖四边与负对照，浏览器夹具使用可表达的 `0.125px` 差值并覆盖 DPR 1 / 1.25 / 1.5。
+- Windows 浮动壁纸库内容避让原生标题栏；部署直接解析 npm / dsh 的 JavaScript 入口，不再隐含依赖 PowerShell 7。发布集按真实包名、版本、文件名及顺序检查。
+- 维护同步阶段暂缓了上游 `83a72f6` 的直接停用方案；随后按用户要求完成本节前述正式桥接并删除内置，不再保留九包结构。
+
+#### 本维护分支更新（2026-10-17）
+
+- **头像裁切弹窗空白 / 要再点一次导入 / 「压缩失败：w is not defined」**：根因是 `openAvatarCrop` 里 `const w` / `const h` 声明在 `try` 块内却在 `catch` 之后使用 ⇒ 运行到 `setTransient("avatarCropW", w)` 抛 `ReferenceError`。尺寸合规时异常冒泡出 `onAvatarFileChosen`、末尾 `emit()` 永远到不了（第一次选图无反应，要再点一次）；自动压缩路径被 `catch` 接住（屏上报错 + 几何恒为 0 的空白取景框）。顺带修同一窗口三处：拖动/滚轮走 live 档却没有就地更新（新增 `syncAvatarCropLive`）、拖动传「相对按下点的总位移」导致越拖越快、滚轮读过期的 zoom 值导致连滚十格只放大一步。
+- **助手侧头像几乎全被隐藏（#231）+ 出现间隔可调**：宿主把一条回复拆成思考/工具调用/回复多行且默认折叠，上一版按「连续同侧」隐藏 ⇒ 段首落在看不见的折叠行上、报告者实测 53 行里 44 行头像被隐藏。改为「回合起始一定露脸、只落在当前可见的第一条助手行」+「长回合每 N 条可见流条目再露一次」；N 由新设置键 `avatarAiRepeatRows` 驱动（扩展页签「助手头像间隔」滑块，1–30，默认 6）。观察者新增 `hidden` / `data-turn-process-hidden` / `data-chat-turn` / `data-chat-flow-kind` 订阅，展开收起过程窗口即时重算。隐藏仍只用 `visibility`，绝不摘节点（#154）。
+- **上传高分辨率图片让壁纸库卡死（#240）**：新增 `lib/media/image-preview.js` —— `/preview` 按需用 ffmpeg 缩到 320px JPEG，落 `<数据目录>/thumbs/`（刻意不放 `cache-prune` 会扫的缓存根）；缺失/失败一律回落原图；`/preview` 开 `revalidate`（ETag/304），`/media` 保持原样；清单只在缩略图已在盘上时指向它。实测 331 KB → 14.1 KB（热生成 195 ms，命中 0 ms），条件请求 304，原图字节不变。
+- **自动轮播间隔锁死 30 分钟（#230）+ 「视频播完就换」档**：`rotationInterval` 是 `DEFAULTS_ONLY`（不在 `KINDS`），处理器却用 `schemaRange("rotationInterval")` 问范围 ⇒ `[undefined, undefined]` ⇒ `clampNum` 恒回落 30。改由 schema 具名导出 `ROTATION_INTERVAL_MIN/MAX`（1–1440），宿主 `readRotationGroups` 同源。轮播列表新增 `trigger` 字段：`interval`（默认）/ `videoEnd`（当前视频 `ended` 即切下一张；该档建层关 `loop`，切档时同步已上屏层；只对视频壁纸、只认当前层、候选 ≥2）。
+- **思考块「关」挡下交付物文件卡是实心深色**：三挡语义是 关=半透明 / 液态玻璃=磨砂 / 原生=实色。气泡与输入框在「关」挡已有 `--we-chat-glass-fill`，但宿主 `[data-presented-file]` 只在液态玻璃挡被清成透明 ⇒ 「关」挡保留宿主不透明 `--deliverable-fill`。补上缺的那一档（同 chat 釉、不加霜），另两挡逐字不变。真浏览器量测：`rgba(255,255,255,.15)` / `transparent` / `rgb(250,250,250)`。
+- **侧边栏阅读文件页背景底色设置找不回**：「内容面透明度 / 内容面底色」被收进侧栏折叠块 + 独立配置开关 ⇒ 设置页一行不画；且 CSS 从未覆盖阅读页的 `[data-document-preview]`。现把它提到玻璃节常规行（两档都画，门只判 `sidebarGlass` —— 这一面作用在宿主原生右栏，与是否安装 better-sidebar 无关），并把 `[data-document-preview]` 接进同一张内容面底板（表面策略系统 + 兜底 CSS 双路）。
+- **右侧侧边栏玻璃整块退回原生不透明底**：宿主 `ui-sidebar-right` 的 `RightbarRoot` 会为**每个被保留的会话**各渲染一份 `[data-sidebar-right-panel]`（非当前会话那份在 `.session[hidden]` 里），而表面管理器要求全文档**恰好一份**面板才接管 ⇒ 用户只要开过第二个会话的右栏，玻璃就永远认领不到，面板退回 `--we-panel-color` 实色。判据改成「**在布局里的**面板恰好一份」（`hidden` 子树与零尺寸面板不参与竞争），内容面（编辑器 / 终端 / 阅读页）同步只认在布局里的右栏。另一处连带的基线回退一并修正：`styles-ext.js` 的软件光栅回退与 `glassSurfacePolicy` 逐面策略在移植时被整段覆盖掉，现已恢复。判据：`verify-glass-runtime-browser` 新增「隐藏会话的右栏面板不夺走接管资格」（10 个视口 × 主题各一条）。
+- **侧栏开合过程中左右两侧玻璃同时消失（只在动画期间）**：宿主 `ui-layout` 的 `AppFrame` 在 `.frame[data-animating]` 上做 `transition: grid-template-columns`，而 frame 是左右两侧栏**共同的祖先**；表面管理器旧判据把「祖先链上有任何 `getAnimations()`」直接当成不安全 ⇒ 那 300ms 里两侧玻璃与底板被整体撤销、动画结束才恢复（用户原话：「侧边栏弹出时会出现丢失左右两侧的玻璃效果…只出现在过程中」）。现口径：**有限**动画 / 过渡期间继续接管，并逐帧重算载体矩形（`state.moving` + rAF 跟随，静止立即停，另有帧数上限兜底）；正在做 transform 动画的元素不再算"静态 transform"；**无限**动画不触发跟随（避免常驻 rAF）；无动画的静态 transform / filter / 隔离上下文仍回退原生。判据：`verify-glass-runtime-browser` 新增「祖先有限动画期间两侧仍接管（玻璃不闪退）」「动画期间底板跟住几何」「动画结束后仍接管」「动画结束后停止续帧」（10 个视口 × 2 主题各一条）。
+- **子包自检：同名但另一个版本的 profile 不再打崩新版**：`hostRoots` 会扫所有装了同名主包的 profile，但同名≠同一份代码 —— 装 1.3.0-r2 的 profile（那个版本没有子包行）⇒ 新版自检抛错 ⇒ `apply` 中断 ⇒ 六条路由全未注册 ⇒ 面板 404。现先读对方 `package.json` 版本，版本不同则跳过；同版本与读不出身份者照常检查。
+- **媒体状态修复**：同一视频重新应用或首次探测失败后重选时，强制刷新媒体元数据；忽略已取消请求的迟到结果。预热或预备视频可以领养匹配的转码缓存，已匹配的转码元素不重复赋源。补充源码与构建产物的状态机回归。
+- **桌宠联动前向兼容**：稳定版本 `>= 0.3.6` 不再设版本上限，但仍需通过结构锚点检查；预发行版本不自动放行。局部修改双端代码，保留新版无关功能、事务备份及回滚。安装记录核对实际版本和文件摘要，升级后需重新准备。已验证官方 `0.3.6` 与 `0.3.7`，不保证未来任意版本都能适配。
+- **多桌宠隔离**：控制面按桌宠 ID 登记，联动兼容入口只绑定 `main`；附加桌宠不会覆盖主控制面，也不会消费或清除主桌宠的动作锁、气泡锁。朝向与身体框查询限于绑定根节点。重新准备可升级已知旧指纹或有效摘要的旧补丁，保留备份、回滚、幂等和篡改拒绝。官方 `0.3.6`、`0.3.7` 的隔离多实例回归通过，尚未在活动宿主中验证实际动画。
+- **玻璃与层叠重构**：统一表面所有权和可撤销生命周期，移除共享宿主祖先上的玻璃围栏及泛化清底；已知安全表面接管，未知表面保留原生背景。六类表面支持 `auto` / `native` 策略、布局与 preserve 声明；外部模态出现时，本插件的装饰浮层让路，不提高第三方窗口层级。
+- **README 与发布资源**：重做深浅主题复古首屏、四格项目资料、键帽入口及十六节横条，保留目录与赞赏码双栏。复用原图标和菲比，记录素材及字体来源；发布清单逐项登记展示图与赞赏码，不修改产品版本或依赖。
+- **验收边界**：构建、类型检查、专项守卫和隔离浏览器的 `320` 项断言已通过；README 发布面三项独立复验通过。完整验证链仍有 Windows 沙箱下的浏览器启动及宿主卸载镜像异常，不能称 `verify` / `verify:all` 全绿。隔离回归不等于活动宿主、全部第三方插件或 Linux / macOS 的实装认证，也不宣称修复原生 `0xC0000005` 崩溃。未部署，未修改活动 profile 或用户媒体。
 
 ### v1.3.2（未发布）
 
@@ -93,7 +136,7 @@
   **撞车面**：**未变大**（`pr/195` → 3 个文件；`pr/196` → 5 个文件，含 P2-7 引入的 `lib/routes/scene-serve.js`）。**影响面**：宿主侧布局 + 一处常量搬家，**零行为变化**。
 
 - **文档：P4 文档批 —— 常青文档与索引校准（「重建产物」子批明确推迟）**。
-  **做法**：`docs/CODE-STRUCTURE.md` 补**宿主三层表**（门面装配 / 内核公开面 = 稳定面 ∪ 组件视图面 / 组件目录）、mermaid 注册点改到组件入口、两个过期行号改符号引用、§4.1 加 4 行扩展点、§5.1 加 3 条新边界；`docs/HOW-IT-WORKS.md` 改 **A 语义**开关口径；`README.md` / `README.en.md` 的宿主构成补组件目录；`CONTRIBUTING.md` 的 `lib/*.js` → `lib/**`；`docs/archive/wip/BUNDLE-SPLIT.md` 把 **P4 拆两子批** —— ②「重建产物」**推迟**（每一处都改写 `lib/client.js` 字节，而它正是 #195/#196 都要改的文件 ⇒ 触发点 = 两 PR 落地合入后），并把 §10.1 台账改为只登记**冲突文件集合 + 复算命令**（不抄会漂的段数），**点名一处变大**：`lib/routes/scene-serve.js` 现为 `pr/196` 的冲突面（P2-7 给它加 `export const DEPS` 所致）。
+  **做法**：`docs/CODE-STRUCTURE.md` 补**宿主三层表**（门面装配 / 内核公开面 = 稳定面 ∪ 组件视图面 / 组件目录）、mermaid 注册点改到组件入口、两个过期行号改符号引用、§4.1 加 4 行扩展点、§5.1 加 3 条新边界；`docs/HOW-IT-WORKS.md` 改 **A 语义**开关口径；`README.md` / `README.en.md` 的宿主构成补组件目录；`CONTRIBUTING.md` 的 `lib/*.js` → `lib/**`；`docs/wip/BUNDLE-SPLIT.md` 把 **P4 拆两子批** —— ②「重建产物」**推迟**（每一处都改写 `lib/client.js` 字节，而它正是 #195/#196 都要改的文件 ⇒ 触发点 = 两 PR 落地合入后），并把 §10.1 台账改为只登记**冲突文件集合 + 复算命令**（不抄会漂的段数），**点名一处变大**：`lib/routes/scene-serve.js` 现为 `pr/196` 的冲突面（P2-7 给它加 `export const DEPS` 所致）。
   **随后收口三处时效性**：`lib/index.js` 那段"实现体一字未动"的过期注释、`docs/DEV-GUIDE.md` 的路由落点（补"组件私有的族 → 该组件目录"）、ADR-0015 里会漂的数值（改符号引用，回到"ADR 不写数值"纪律）。
   **判据**：`npm run verify:docs` **exit 0**；`lib/client.js` 逐字节未变（纯散文改动未触发守卫 ⇒ 生成物无需重算）。`docs/README.md` 与 `README.beginner.md` 核实后**无需改**。
 
@@ -109,7 +152,7 @@
   **两类旧路径故意不改（已写进 P4 残留清单）**：`lib/settings-schema.js:152,1281` 是 `INLINE_MODULES` 的**内联模块**（改它的注释就会改 `lib/client.js` 字节，实测产物变成 `c209a2e2…`）、以及 `src/**` 7 处 + `scripts/build-client.mjs:50` + 产物内 10 处 ⇒ 一律留到 **P4「重建产物」**那一批同改，以维持 P2 一路守住的「产物逐字节不变」。
   **判据**：`npm run verify:all` **exit 0**；**路由账不变量** = 42 条 / 41 个唯一 `(kind,path)` 逐条不变（搬前搬后 diff 只落在四个族的 `src` 文件列与全表行号列）；`git status --porcelain lib/client.js` 为空、SHA256 仍 `D792219F…`（**构建重跑后再次复算仍不变** ⇒ 构建确定性成立）；**独立复核**（另一名验证者，不采信交付者报告）5 项复算全过 + 4 条牙齿测试（把实现复制回 `lib/routes/`、摘掉 `files` 的组件目录条目、写坏组件入口的相对 import、改一条 path 字面量）全部「红 → 逐字节还原 → 绿」，**阻断缺陷 0 条**。
   **复核中补掉一处度量假绿**：`verify-route-ownership` 的归属映射原先是「同名实现的最后写入者赢」，导致"把实现**又复制一份**回 `lib/routes/`"时 ① 仍报 `M10 = 0`（只有 ③ 的孤儿判据红）⇒ 改成**同名实现的每一份都算被拥有**，该状态下 ① 与 ③ 同时红（实测复现 + 还原 + 复绿）。
-  **撞车面**：`git merge-tree` 与开工前基线**逐条相同**（`HEAD`+`pr/195` 3 个文件 / `HEAD`+`pr/196` 4 个文件），本轮 55 条变更与两 PR 新增文件**零路径重叠**；台账与 6 条主线纪律见 [`docs/archive/wip/BUNDLE-SPLIT.md`](./archive/wip/BUNDLE-SPLIT.md) §10.1。**本轮未推送任何远端、未提交。**
+  **撞车面**：`git merge-tree` 与开工前基线**逐条相同**（`HEAD`+`pr/195` 3 个文件 / `HEAD`+`pr/196` 4 个文件），本轮 55 条变更与两 PR 新增文件**零路径重叠**；台账与 6 条主线纪律见 [`docs/wip/BUNDLE-SPLIT.md`](./wip/BUNDLE-SPLIT.md) §10.1。**本轮未推送任何远端、未提交。**
   **影响面**：**纯宿主侧布局搬移，零行为变化**（路由条数 / 路径集合 / 产物字节全部不变）；`lib/routes/` 从此不再等同于"全部宿主路由"。**遗留观察**：新增**组件行**仍需改 `host-route-index.mjs` 的 `MAIN_MODULES` / `FACTORY_MODULES`（HEAD 既有、非本轮引入）⇒ M5「守卫硬编码不线性增长」目前只对 **route 模块**达成，对**组件行**尚未达成。
 
 - **重构：P2-7 契约收紧落地 —— 路由族注入契约声明制（M8 100%）＋ 组件具名视图面（M9 0），并顺手修掉一条上游既有崩溃缺陷**。
@@ -118,24 +161,24 @@
   **连带修掉一条上游既有缺陷（非本轮引入）**：`lib/routes/now-playing.js` 的 `POST /media-control` 引用了**未 import、未解构**的 `CONTROL_JSON_MAX_BYTES` ⇒ 每次请求必抛 `ReferenceError`（`1d0d91e` 与 `origin/main` 同缺陷，引入提交 `35e87f5`；既有 `verify-body-caps` 按文本匹配 `maxBytes:`，看不见这一类）。本轮补**一行**解构修复；探针实测：修复前正常路径与 413 路径**都抛**，修复后 `200 {"error":"media-backend-not-ready"}` / `413 {"error":"payload too large"}` 均走通。
   **一处守卫口径修订（如实记录）**：`test/verify-about.mjs` 原判据「路由模块只导出 register 函数」按 `export` 计数，与新的声明面直接冲突 ⇒ 改为「**一个 exported function + 白名单声明面**（只放行 `DEPS` / `OPTIONAL_DEPS`）」，并补一条负对照（多导一个函数 / 多导一个普通 const 都要红）。
   **判据**：`npm run verify:all` **exit 0**（build + 守卫链 + `verify:docs` + smoke）；两条新守卫均带负对照；`git status --porcelain lib/client.js` 为空、SHA256 = `D792219F…607D`（宿主侧改动，产物逐字节未变）；**路由账不变量**：42 条 / 41 个唯一 `(kind,path)` 重算前后**集合相等**（只有「来源行号」与「守卫提及」列漂移，`docs/ROUTE-INDEX.md` 已 `--write` 重算）；`docs/GUARD-MAP.md` 重算（模块 106 → 107 · 守卫 56 → 58）。
-  **撞车面（本轮硬约束）**：`git merge-tree` 实测 `HEAD`+`pr/195` 冲突 3 个文件、`HEAD`+`pr/196` 冲突 4 个文件 —— 与开工前基线**逐条相同、集合未变大**；本轮新增文件与两个 PR 的新增文件**零路径重叠**。台账与 6 条主线纪律见 [`docs/archive/wip/BUNDLE-SPLIT.md`](./archive/wip/BUNDLE-SPLIT.md) §10.1。
+  **撞车面（本轮硬约束）**：`git merge-tree` 实测 `HEAD`+`pr/195` 冲突 3 个文件、`HEAD`+`pr/196` 冲突 4 个文件 —— 与开工前基线**逐条相同、集合未变大**；本轮新增文件与两个 PR 的新增文件**零路径重叠**。台账与 6 条主线纪律见 [`docs/wip/BUNDLE-SPLIT.md`](./wip/BUNDLE-SPLIT.md) §10.1。
   **影响面**：宿主侧有一处**有意的**行为变化 —— 声明面 / 视图面**缺键即抛**（原来是 `undefined` 静默通过；今天不可达，守卫已证明视图键都落在内核上）。**本轮未推送任何远端**（全程本地、未提交）。
 
 - **变更：重构目标重锚 —— 核心目标扩为三件并列（降复杂度 / 锚定模块边界 / 解耦合），开关目标定为 A 语义（宿主行级），并把「收紧契约」与「把实现代码搬进包」列为待完成的部分（纯文档 —— 零行为变化）**。
   **起因**：用户重新给定目标 —— 核心目标不是"降复杂度"一件，而是**三件并列**；「各模块可自由开关」按 **A 语义（宿主侧行级开关）**定位（"最好可以"的次级目标，且**已由 P2 兑现**）；同时点名两件**需要完成**的事：**收紧契约**与**把实现代码搬进包**。这与 [`ADR-0013`](./archive/adr/0013-component-toggle-soft-goal-chunks.md) 刚写下的「把『关掉即不下载』升为软目标、进可选格 P3′」直接冲突 ⇒ 计划与 ADR 必须再修订一轮。
-  **做法**：新增 [`docs/adr/0014-goal-reanchor-and-contract-tightening.md`](./archive/adr/0014-goal-reanchor-and-contract-tightening.md)（该编号现由 [ADR-0014 子包契约](./adr/0014-subpackage-contract.md) 复用），按 [`docs/adr/README.md`](./adr/README.md) 的 Status 纪律**不改写** 0012 / 0013 的正文：0013 的 Status 改为 `Superseded by ADR-0014`（**仅目标档位** —— 撤销"关掉即不下载"的目标身份），0012 的 Status 补上 0014。0014 的 D1–D7：核心目标三件并列（D1）；开关目标 = A 语义，明确**不含**浏览器侧每组件一格开关，"关掉即不下载"转为**非目标 N5**（D2）；**契约收紧**（组件注入面收窄 + 每个路由族带显式声明键集并与门面调用点**双向对账** + 内核内部面不得被组件/路由族直接解构）作为阶段 **P2-7**（D3）；**实现入包**（组件自己的路由实现随组件走、与第三个组件同批）作为阶段 **P2-8**（D4）；度量口径由 M1–M7 扩为 **M1–M10**（新增 **M8** 边界可声明率 / **M9** 跨模块隐式共享面 / **M10** 实现归属唯一性），并写明"**不改善度量 ≠ 不做**"（D5）；ADR-0013 的 D2–D7 维持（D6）；撤销一个目标不等于撤销一项能力，懒块将来重启要另写 ADR（D7）。同轮修订 [`docs/archive/wip/BUNDLE-SPLIT.md`](./archive/wip/BUNDLE-SPLIT.md)：§1 目标重排（G0/G1/G2 核心 + G3/G4 护栏 + G5 次级目标（A 语义）+ **N5** 非目标）、§2 新增判据 **J7「依赖面可声明」**与"直接后果二"、§3 新增 M8–M10 并重写判据口径、§5 补一行「手工 DI 的键集只存在于调用点」、§6 把 B′ 标为已撤出主线、§8 新增 **P2-7 / P2-8** 两节并把 **P3′** 改写成"已撤出主线"、§9 补两条新判据（**#17** 注入契约对账 / **#18** 实现归属）并把两条 P3′ 判据标为不做、§10 补两条风险（契约收紧会改行为 / 守卫按路径钉死）、§11 更新 D-8 / D-9 / D-11 并新增 **D-12 / D-13**、§12 验收命令补 `npm run verify:docs`。两份索引同步：`docs/adr/README.md` 与 `docs/README.md` 的 ADR 表（0012 状态更新、0013 状态改判、新增 0014 行）。
+  **做法**：新增 [`docs/adr/0014-goal-reanchor-and-contract-tightening.md`](./archive/adr/0014-goal-reanchor-and-contract-tightening.md)（该编号现由 [ADR-0014 子包契约](./adr/0014-subpackage-contract.md) 复用），按 [`docs/adr/README.md`](./adr/README.md) 的 Status 纪律**不改写** 0012 / 0013 的正文：0013 的 Status 改为 `Superseded by ADR-0014`（**仅目标档位** —— 撤销"关掉即不下载"的目标身份），0012 的 Status 补上 0014。0014 的 D1–D7：核心目标三件并列（D1）；开关目标 = A 语义，明确**不含**浏览器侧每组件一格开关，"关掉即不下载"转为**非目标 N5**（D2）；**契约收紧**（组件注入面收窄 + 每个路由族带显式声明键集并与门面调用点**双向对账** + 内核内部面不得被组件/路由族直接解构）作为阶段 **P2-7**（D3）；**实现入包**（组件自己的路由实现随组件走、与第三个组件同批）作为阶段 **P2-8**（D4）；度量口径由 M1–M7 扩为 **M1–M10**（新增 **M8** 边界可声明率 / **M9** 跨模块隐式共享面 / **M10** 实现归属唯一性），并写明"**不改善度量 ≠ 不做**"（D5）；ADR-0013 的 D2–D7 维持（D6）；撤销一个目标不等于撤销一项能力，懒块将来重启要另写 ADR（D7）。同轮修订 [`docs/wip/BUNDLE-SPLIT.md`](./wip/BUNDLE-SPLIT.md)：§1 目标重排（G0/G1/G2 核心 + G3/G4 护栏 + G5 次级目标（A 语义）+ **N5** 非目标）、§2 新增判据 **J7「依赖面可声明」**与"直接后果二"、§3 新增 M8–M10 并重写判据口径、§5 补一行「手工 DI 的键集只存在于调用点」、§6 把 B′ 标为已撤出主线、§8 新增 **P2-7 / P2-8** 两节并把 **P3′** 改写成"已撤出主线"、§9 补两条新判据（**#17** 注入契约对账 / **#18** 实现归属）并把两条 P3′ 判据标为不做、§10 补两条风险（契约收紧会改行为 / 守卫按路径钉死）、§11 更新 D-8 / D-9 / D-11 并新增 **D-12 / D-13**、§12 验收命令补 `npm run verify:docs`。两份索引同步：`docs/adr/README.md` 与 `docs/README.md` 的 ADR 表（0012 状态更新、0013 状态改判、新增 0014 行）。
   **判据**：`npm run verify:docs` 五档全绿（新增与修订全在 `docs/**`，不在任何守卫的扫描集里）；`npm run verify:all` exit 0。
   **影响面**：零行为变化 —— 未改任何 `lib/**`、`src/**`、`test/**` 与产物（`lib/client.js` 零字节变化）。**两条新待办尚未开工**：**P2-7**（契约收紧）与 **P2-8**（实现入包）；原 **P3′**（包内懒块）**撤出待办**，机制事实与重立项触发线存档在 ADR-0013。本次修订的直接来源是一次"目标是否跑偏"的复核：P2 走完两件组件后，「锚定模块边界 / 解耦合」两项目标在代码里**没有可判据的落点**（依赖面只写在调用点、组件仍直接从整个内核对象解构）—— 这才是需要动手的部分，而"关掉即不下载"不是。
 
 - **变更：拆分计划的 G5 修订 —— 「浏览器侧可独立开关」重判为软目标，路线 = 包内懒块（纯文档 —— 零行为变化）**。
   **起因**：用户口径变更（2026-10-14）：「由于会有用户注重测试关闭子插件，「浏览器侧可独立开关」现在被重判断为『最好可以』」。这与 [`ADR-0013`](./adr/0013-bundle-multi-component-rows.md) 写下的「那是结果不是需求、可开关本身不加分」直接冲突 ⇒ 计划与 ADR 必须修订。
-  **做法**：新增 [`docs/adr/0013-component-toggle-soft-goal-chunks.md`](./archive/adr/0013-component-toggle-soft-goal-chunks.md) —— 按 [`docs/adr/README.md`](./adr/README.md) 的 Status 纪律**不改写 0012 的正文**，只把它的 Status 改成 `Amended by ADR-0013`；0013 把"浏览器侧可独立开关"拆成两个此前被混为一谈的概念：**开关粒度**（客户端每组件一个开关 —— 客户端 graph row 是**包级**的 ⇒ 只有多包能给 ⇒ **仍否**）与**加载粒度**（关掉一行后浏览器侧是否还下载该组件的代码 —— 单包内联下做不到、**包内懒块可以**）。据此定 D1–D7：G5 升为**软目标**（不是验收条件）、档位取"真独立加载"、实现 = **包内懒块**（宿主原生 `require.async` / `client.<name>.js`，**不推翻** [`ADR-0003`](./adr/0003-build-time-module-inlining.md) 的构建期内联）、状态真源 = `/wallpaper-engine/diag-log` 的 `components`（"未启用"与"启用但失败"必须可区分，不许静默降级）、软目标**不得让任何复杂度度量回退**、升到客户端行级开关要新的买方理由。同轮修订 [`docs/archive/wip/BUNDLE-SPLIT.md`](./archive/wip/BUNDLE-SPLIT.md)：新增目标 **G5**；§3 判据口径加一处例外；§4 宿主机制基线补三条懒块事实（含上游 `dsh-client-ui-sidebar-terminal` 与 `…-documentpreview` 的懒块先例）；§6 方案 B 改成 **B′ = A + 包内懒块**，并把"一条硬规则"扩成三条（开关粒度仍是包名 / 主产物不会少下载 / 块必须进 `files`）；§8 新增可选格 **P3′**（动作 / 判据 / 代价 / 放弃）；§9 补两条守卫改造（块产物同步 + "块 ↔ 组件归属"判据）；§10 补两条风险（块缓存不一致 / 首帧闪动）；§11 更新 D-8、D-9 并新增 **D-11**。两份索引同步：`docs/adr/README.md` 的 0012 状态改为 `Amended by 0013` 并补 0013 行，`docs/README.md` 的 ADR 表补 0013 行。
+  **做法**：新增 [`docs/adr/0013-component-toggle-soft-goal-chunks.md`](./archive/adr/0013-component-toggle-soft-goal-chunks.md) —— 按 [`docs/adr/README.md`](./adr/README.md) 的 Status 纪律**不改写 0012 的正文**，只把它的 Status 改成 `Amended by ADR-0013`；0013 把"浏览器侧可独立开关"拆成两个此前被混为一谈的概念：**开关粒度**（客户端每组件一个开关 —— 客户端 graph row 是**包级**的 ⇒ 只有多包能给 ⇒ **仍否**）与**加载粒度**（关掉一行后浏览器侧是否还下载该组件的代码 —— 单包内联下做不到、**包内懒块可以**）。据此定 D1–D7：G5 升为**软目标**（不是验收条件）、档位取"真独立加载"、实现 = **包内懒块**（宿主原生 `require.async` / `client.<name>.js`，**不推翻** [`ADR-0003`](./adr/0003-build-time-module-inlining.md) 的构建期内联）、状态真源 = `/wallpaper-engine/diag-log` 的 `components`（"未启用"与"启用但失败"必须可区分，不许静默降级）、软目标**不得让任何复杂度度量回退**、升到客户端行级开关要新的买方理由。同轮修订 [`docs/wip/BUNDLE-SPLIT.md`](./wip/BUNDLE-SPLIT.md)：新增目标 **G5**；§3 判据口径加一处例外；§4 宿主机制基线补三条懒块事实（含上游 `dsh-client-ui-sidebar-terminal` 与 `…-documentpreview` 的懒块先例）；§6 方案 B 改成 **B′ = A + 包内懒块**，并把"一条硬规则"扩成三条（开关粒度仍是包名 / 主产物不会少下载 / 块必须进 `files`）；§8 新增可选格 **P3′**（动作 / 判据 / 代价 / 放弃）；§9 补两条守卫改造（块产物同步 + "块 ↔ 组件归属"判据）；§10 补两条风险（块缓存不一致 / 首帧闪动）；§11 更新 D-8、D-9 并新增 **D-11**。两份索引同步：`docs/adr/README.md` 的 0012 状态改为 `Amended by 0013` 并补 0013 行，`docs/README.md` 的 ADR 表补 0013 行。
   **判据**：`npm run verify:docs` 全绿（新增与修订的都是 `docs/**`，不在任何守卫的扫描集里）；`npm run verify:all` exit 0。
   **影响面**：零行为变化 —— 未改任何 `lib/**`、`src/**`、`test/**` 与产物（`lib/client.js` 零字节变化）。**P3′ 尚未开工**：它排在 P2 收口之后、P4 之前，且是软目标（可延后 / 可裁）。
 
 - **新增：拆分计划与架构决策（纯文档 —— 零行为变化）**。
   **起因**：用户口径「当前插件正在逐渐臃肿，我希望发起一轮大重构，将插件拆分为多个插件组成的插件包」，并要求参照插件包 `dsh-ops` 的设计判定哪些功能适合独立；随后把目标口径收紧为「**「浏览器侧组件能单独关」本身不是一个需求，更像一个结果，拆包的核心目标是降复杂度**」。
-  **做法**：新增 [`docs/adr/0013-bundle-multi-component-rows.md`](./adr/0013-bundle-multi-component-rows.md) —— 终态取**一 bundle 多组件行**（单包 + 每组件一个 loader 行 + **一个**客户端半边；**不**推翻 [`ADR-0003`](./adr/0003-build-time-module-inlining.md) 的构建期内联），并把**「降低复杂度」写成 D1 核心目标**（凡不改善既定复杂度度量的拆分，一律不做）；**不做多包 monorepo**（D4：它唯一买到的是"浏览器侧独立开关"，而该能力已判非需求，代价却是发布面 ×N、踩在宿主声明"可能无预警变更"的 `dsh.client.*` 上、构建脚本与守卫大改）；组件化之前**先库化 + 内核化 + 设置分区**（D3：设置是单一扁平命名空间、`PUT /settings` 整段覆盖 ⇒ 两个组件各写一次就互相丢键，**设置可切分是真组件的先决条件**）。同轮新写 [`docs/archive/wip/BUNDLE-SPLIT.md`](./archive/wip/BUNDLE-SPLIT.md)（尚在进行的工作按 `docs/README.md` §目录的寿命规则住 `wip/`）作为实施计划：目标 / 非目标、6 条判定判据（J1–J6）、复杂度度量 M1–M7（**每项附复算命令**，文档不抄会漂的数值）、宿主机制基线（bundle 定义 / `insert` 三种语义 / 行的显示元数据与 exports 三连 / **客户端半边是包级** / 开关写入 / 热更新等）、仓库侧硬约束、三方案对比、候选拆分清单与独立化排序、阶段 P0–P4、守卫与构建改造清单 14 条、风险 8 条、待决策 D-1…D-10、验收命令、`dsh-ops` 配方附录。同轮把 ADR 索引补齐：`docs/adr/README.md` 加 0012，`docs/README.md` 的 ADR 表补上原先漏掉的 0011 与新的 0012。
+  **做法**：新增 [`docs/adr/0013-bundle-multi-component-rows.md`](./adr/0013-bundle-multi-component-rows.md) —— 终态取**一 bundle 多组件行**（单包 + 每组件一个 loader 行 + **一个**客户端半边；**不**推翻 [`ADR-0003`](./adr/0003-build-time-module-inlining.md) 的构建期内联），并把**「降低复杂度」写成 D1 核心目标**（凡不改善既定复杂度度量的拆分，一律不做）；**不做多包 monorepo**（D4：它唯一买到的是"浏览器侧独立开关"，而该能力已判非需求，代价却是发布面 ×N、踩在宿主声明"可能无预警变更"的 `dsh.client.*` 上、构建脚本与守卫大改）；组件化之前**先库化 + 内核化 + 设置分区**（D3：设置是单一扁平命名空间、`PUT /settings` 整段覆盖 ⇒ 两个组件各写一次就互相丢键，**设置可切分是真组件的先决条件**）。同轮新写 [`docs/wip/BUNDLE-SPLIT.md`](./wip/BUNDLE-SPLIT.md)（尚在进行的工作按 `docs/README.md` §目录的寿命规则住 `wip/`）作为实施计划：目标 / 非目标、6 条判定判据（J1–J6）、复杂度度量 M1–M7（**每项附复算命令**，文档不抄会漂的数值）、宿主机制基线（bundle 定义 / `insert` 三种语义 / 行的显示元数据与 exports 三连 / **客户端半边是包级** / 开关写入 / 热更新等）、仓库侧硬约束、三方案对比、候选拆分清单与独立化排序、阶段 P0–P4、守卫与构建改造清单 14 条、风险 8 条、待决策 D-1…D-10、验收命令、`dsh-ops` 配方附录。同轮把 ADR 索引补齐：`docs/adr/README.md` 加 0012，`docs/README.md` 的 ADR 表补上原先漏掉的 0011 与新的 0012。
   **判据**：`npm run verify:docs` 五档全绿（模块布局 / 可达性 / 退役线 / 死声明 / 守卫映射）—— 新增文档**不改变任何守卫的扫描面**（`docs/` 不在退役线、可达性与模块布局的扫描集里，映射表由守卫代码自己派生）。
   **影响面**：零行为变化 —— 未改任何 `lib/**`、`src/**`、`test/**` 与产物（`lib/client.js` 一个字节没动）；本轮只增加两份文档与两处索引行。**这份计划尚未执行**：P0 及之后都还没开工。
 

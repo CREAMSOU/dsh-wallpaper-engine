@@ -80,9 +80,13 @@ export default [
     // 不忽略它会把本机 lint 面从 ~260 撑到 ~1470（其中还有 `(fatal) Parsing error` 的历史探针），
     // 于是 `verify-static` 的棘轮在本机量与 CI 量之间对不上 —— 与 `repo-face.mjs` 的"脏扫描面"
     // （假绿）同一族：**扫描面必须来自 git 视角**。CI 上没有该目录 ⇒ CI 结论不变。
+    // `.artifacts/**`：`.gitignore` 里的**本地取证/实验产物**（宠物解包副本、README 预览的
+    // 浏览器 profile 快照等，git ls-files 为空）。不忽略它会把本机 lint 面撑到 ~4900 个 JS
+    // （含多份 8.5MB 扩展 bundle），实测完整扫描在 80s 后以 0xC0000005 原生崩溃 —— 与
+    // `.integration-notes/**` 同族：**扫描面必须来自 git 视角**。CI 上没有该目录 ⇒ CI 结论不变。
     ignores: [
       'lib/client.js', 'node_modules/**', '.npm-cache/**', '.test-cache/**', 'assets/**', 'lib/types/**',
-      '.integration-notes/**',
+      '.integration-notes/**', '.artifacts/**',
     ],
   },
 
@@ -223,4 +227,10 @@ export default [
     files: ['src/panel-tabs.js'],
     rules: { 'no-empty-pattern': 'off' },
   },
+  // ── 上游预构建字节的 processor 挂载：**已随 provider 解耦移除**（2026-10-20）──
+  // 原来这里按 `UPSTREAM_PREBUILT_FILES`（三份 dsh-pet@0.3.7 派生字节）挂一个窄作用域
+  // processor，把上游自带的 `@typescript-eslint/no-explicit-any` 指令在**分析期**抹成等长空白。
+  // 那三份字节已不在本仓，且 ESLint flat config 不接受空 `files` 数组 ⇒ 挂载一并删除。
+  // provider 重新接入时按原口径恢复：改字节会破坏 sha256 锚点，扩 ignores 会缩扫描面，
+  // 提基线会把假错误固化成欠账 —— 唯一正解仍是分析期等长空白。
 ];

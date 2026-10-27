@@ -210,21 +210,22 @@ function layerStillPending() {
  * 识别。`fitClass` 是调用点所在函数的局部量 ⇒ 作为参数传入。
  */
 function buildVideoMedia(sel, fitClass) {
-  // 轮换领养：就绪元素（已 canplay/预播中）直接进层，绝不重赋 src（重赋
-  // 即使同值也会触发 resource selection 重新加载 = 黑屏闪烁源）。
+  // 轮换领养：就绪元素（已 canplay/预播中）直接进层；已匹配的转码元素不重赋 src，
+  // 只有仍在原片且目标抽帧版已就绪时，才在建层阶段换源。
   const prepared = consumePreparedMedia("VIDEO", sel.url);
   // 预热元素（见 VIDEO_WARM_TTL_MS 那段）：领养它 ⇒ 建层那一刻解复用器已经在位。
   const warmed = prepared ? null : consumeWarmVideo(sel.url);
   const media = prepared || warmed || document.createElement("video");
-  if (!prepared && !warmed) {
+  const tok = String(sel.url || "").split("/").pop();
+  const rc = selection.transcodeReady;
+  const useCached = Boolean(rc && rc.url && rc.fps === selection.fpsCap && rc.token === tok);
+  if ((!prepared && !warmed)
+      || (useCached && media.dataset.weTranscoded !== String(rc.fps))) {
     // 已经转好的抽帧版（上一次在"已上屏"状态下就绪、刻意没换源的那一份）：
     // **建层时就用它当 src** —— 这样整个生命周期里一次换源都不发生（换源 = 清掉当前帧 = 纯色）。
     // 判据只看"这份抽帧版是不是当前上限的"：**不看原生可解性** —— 帧率上限的意义就是压解码
     // 占用，原生可解的源照样可能帧率超标（4K120 的 H.264），拿它当免转条件会让上限在实际
     // 在用的 mp4 上完全失效（见 capNeedsTranscode 的注释）。
-    const tok = String(sel.url || "").split("/").pop();
-    const rc = selection.transcodeReady;
-    const useCached = Boolean(rc && rc.url && rc.fps === selection.fpsCap && rc.token === tok);
     media.src = useCached ? rc.url : sel.url;
     if (useCached) {
       try { media.dataset.weTranscoded = String(rc.fps); } catch { /* ignore */ }
@@ -246,7 +247,12 @@ function buildVideoMedia(sel, fitClass) {
     if (stillPreview) media.poster = sel.previewUrl;
   }
   media.autoplay = true;
-  media.loop = true;
+  // 轮播「当前视频播完就换下一张」档（issue #230 后续）必须**关掉 loop** ——
+  // `loop` 会让元素循环播放、`ended` 永远不触发，那条轮换信号就发不出来。
+  // 其他档照旧 loop（壁纸单张循环是产品语义）。`activeRotationGroup` 在单文件 import
+  // 的沙箱里不存在 ⇒ 用 typeof 探，缺省按 loop 开（安全方向：不改变既有行为）。
+  media.loop = !(typeof activeRotationGroup === "function"
+    && (() => { const g = activeRotationGroup(); return Boolean(g) && g.trigger === "videoEnd"; })());
   // ⚠️ 必须显式 `preload="auto"`：缺省（=metadata）+ 这几张源的 moov 在文件**尾部** ⇒
   // Chromium 取完 moov 就停，真正开始取帧要等 `play()` —— 而 play() 在**更晚的一趟**
   // syncLayers 里才被调用（自动播放被策略拒绝时那一趟永远不会来）。真机日志（桌面壳）
@@ -371,7 +377,7 @@ async function refreshMediaInfo(force) {
       "/media-info/" + encodeURIComponent(token) + "?fps=" + encodeURIComponent(String(selection.fpsCap || 0)),
       { signal: ctrl ? ctrl.signal : undefined });
     const data = res.data || {};
-    if (mediaInfoToken === token) {
+    if (mediaInfoToken === token && !(ctrl && ctrl.signal.aborted)) {
       selection.mediaInfo = (data && data.info) || null;
       // 源帧率**不高于**上限 ⇒ 不需要抽帧；把在途的升级停掉。
       const mi = selection.mediaInfo;

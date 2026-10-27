@@ -32,7 +32,7 @@
    开发期与发布期的两种依赖形态（`file:` ↔ 同号精确版本）都只写在注释与计划里。
 
 > **2026-10-16 修订（P-F 组件行统一）**：上面问题 1 与问题 2 的**形态**已消解 —— 三条组件行
-> （`about-notice` / `mascot-avatar` / `media-bridge`；第三格于 P-D 阶段1（2026-10-18）机械改名 `wallpaper`）全部出户到 `packages/<pkg>/`（ADR-0013 D6/D8 的终态），
+> （`about-notice` / `mascot-avatar` / `media-bridge`；第三格于 P-D 阶段1（2026-10-18）补齐壁纸域宿主/浏览器半边，包名维持 `media-bridge`）全部出户到 `packages/<pkg>/`（ADR-0013 D6/D8 的终态），
 > 主包 patch 那一行改真名、`id` 不变，`lib/components/` 目录已删除；D3② 的可见面声明真源 `visibility.js`
 > 移到 `lib/component-visibility.js`（内容与 `lib/index.js` 的再导出位置不变）。本 ADR 的问题清单与 S1.1
 > 措辞**保留原样**，作为「为什么会有两种行」的历史记录。
@@ -151,7 +151,7 @@
   （`exports` 键序由此一并钉住）。
   跨形态的差异**不是**缺陷：字段集合取决于该包用不用某个面（例如 host-only 包没有
   `./client`/`dsh.client`，而注入宿主 `webServer` 面的包才需要那条 `peerDependencies`）—— 见 S3.5。
-- **S3.8a [机器判：verify-subpackage-manifests.mjs]** 带显式 `exports['./install']` 的包是安装器形态，不与纯宿主包混做逐字对账。保留相同顶层键序、布局、版本、依赖及入口存在性规则；其规范单行发布白名单在基础五项之后依次增加 `tools/`、`assets/`、`src/`，确保工具、资源和构建源码都可交付。缺任意一项目录白名单、去掉安装入口后仍携带安装器形态，均由同一判据的负控判红。`pet-link` 属于此形态；安装器必须显式调用，不挂自动安装脚本，也不因此给主包或子包添加 `dsh-pet`、Electron 等桌宠依赖。
+- **S3.8a [机器判：verify-subpackage-manifests.mjs]** 磁盘存在 `assets/` 的普通子包采用带素材形态：规范单行发布白名单在基础五项之后只增加 `assets/`，其余顶层键序、版本、依赖、入口与同形态逐字对账保持不变。形态由磁盘目录决定，删清单中的素材白名单仍判红。`pet-link` 现属此形态，不再有 `./install` 导出或补丁工具，也不添加 `dsh-pet`、Electron 等依赖。历史显式安装器形态的独立严格模板仍保留，不用它冒充普通资源包。
 - **S3.9 [人工]** `description` 写"能力 + 半边归属"，并**只引用稳定文档**（见 S9.1）。
 
 ### S4 行与接线

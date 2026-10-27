@@ -57,7 +57,7 @@ const PACKAGES = join(ROOT, 'packages');
 /** 扫描面排除：vendored 第三方（不归我们维护）与本半边的生成物。 */
 const EXCLUDE_DIRS = new Set(['vendor', 'webwallgl', 'node_modules']);
 const EXCLUDE_FILES = new Set(['client.js']);
-/** 出户包的浏览器半边产物（`client.wallpaper.js` 等）：生成物，不是手写路由。 */
+/** 出户包的浏览器半边产物（`client.media-bridge.js` 等）：生成物，不是手写路由。 */
 const GENERATED_CLIENT_RE = /^client(\.[\w.-]+)?\.js$/;
 
 /**
@@ -382,7 +382,7 @@ check('每个共享读体器调用点里被置位的标志，都在**它之前**
 console.log('');
 if (failed) {
   console.log(`BODY-CAP CHECKS FAILED — ${failed} 条不合格`);
-  console.log('修法：按 packages/wallpaper/lib/routes/upload.js 文件头的两条不变量改 —— 边收边计字节（size += chunk.length）、'
+  console.log('修法：按 packages/media-bridge/lib/routes/upload.js 文件头的两条不变量改 —— 边收边计字节（size += chunk.length）、'
     + '超限即 413 早退、收完只 Buffer.concat(...).toString("utf8") 解码一次。');
   process.exit(1);
 }

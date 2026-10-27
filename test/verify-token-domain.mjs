@@ -9,7 +9,7 @@
  * **必须是同一张 Map 实例**，否则 `/inventory` 签发的 token 在 `/media`、`/scene-frame` 上
  * 全部 404 —— 静默、无日志、用户只看到"壁纸黑屏"。
  *
- * S5c 刀2 把这 9 族路由搬进 `packages/wallpaper/`。危险点是：包内**也能**建自己的
+ * S5c 刀2 把这 9 族路由搬进 `packages/media-bridge/`。危险点是：包内**也能**建自己的
  * `createComponentSession()`，而它会 `new Map()` 一张**自己的** mediaMap（
  * `lib/kernel/component-session.js:192`）⇒ 包内自建会话的 `serveFile` 查不到主包签发的 token。
  * 所以单主权不是靠"记得别写错"，而是靠三条结构事实：
@@ -27,7 +27,7 @@
  *
  * ── 先红后绿的历史（判据有牙的来历）────────────────────────────────────────
  * 落地时先把 `/inventory` 一族**故意留主包**跑本文件：簇跨侧（`main` + `wallpaper`）+ 铸造/消费
- * 两面跨侧 ⇒ 红。绿态 = 整簇在 `packages/wallpaper/lib/routes/`、21 条路由、门面只余 5 族。
+ * 两面跨侧 ⇒ 红。绿态 = 整簇在 `packages/media-bridge/lib/routes/`、21 条路由、门面只余 5 族。
  *
  * ── 负对照（每条判据都配一个"能失败"的探针）──────────────────────────────
  *  a. 簇成员表里把 inventory 改回 `lib/routes/inventory.js` ⇒ `clusterViolations` 点名跨侧；
@@ -78,7 +78,7 @@ const CLUSTER_MARKER_KEYS = APPLY_TOKEN_KEYS.filter((k) => !['serveFile', 'media
 const TOKEN_FAMILY_FILES = [
   'inventory', 'upload', 'props', 'media-bytes', 'media-derived',
   'scene-frame', 'scene-serve', 'scene-media', 'live-frame',
-].map((n) => 'packages/wallpaper/lib/routes/' + n + '.js');
+].map((n) => 'packages/media-bridge/lib/routes/' + n + '.js');
 /** 不许在包入口调用点被**覆盖**的键（覆盖 = 用组件会话那份 ⇒ 第二张 mediaMap）。 */
 const NO_OVERRIDE_KEYS = ['mediaMap', 'tokenFor', 'serveFile', 'serveLayout', 'handleSceneFiles'];
 
@@ -226,7 +226,7 @@ for (const rel of routeFiles) {
   if (!deps) continue;
   mods.push({ rel, deps });
 }
-const pkgEntryRel = 'packages/wallpaper/lib/index.js';
+const pkgEntryRel = 'packages/media-bridge/lib/index.js';
 const hostSrc = code('lib/index.js');
 const pkgEntrySrc = code(pkgEntryRel);
 
@@ -235,7 +235,7 @@ const missing = [];
 for (const rel of TOKEN_FAMILY_FILES) {
   if (!mods.some((m) => m.rel === rel)) missing.push(rel);
 }
-check('S5c 刀2 的 9 族路由模块都在 `packages/wallpaper/lib/routes/` 且被认作路由族', missing.length === 0,
+check('S5c 刀2 的 9 族路由模块都在 `packages/media-bridge/lib/routes/` 且被认作路由族', missing.length === 0,
   missing.length ? '缺：' + missing.join('、') : TOKEN_FAMILY_FILES.map((r) => r.split('/').pop()).join(' · '));
 const stillInMain = TOKEN_FAMILY_FILES.map((r) => 'lib/routes/' + r.split('/').pop()).filter((rel) => mods.some((m) => m.rel === rel));
 check('这 9 族在 `lib/routes/` 里零残留', stillInMain.length === 0, stillInMain.join('、'));
@@ -255,13 +255,14 @@ check('这 9 族在 `lib/routes/` 里零残留', stillInMain.length === 0, still
   check('铸造器 `tokenFor` 住在同一份会话里（`const tokenFor = (absPath)` 在场）', /const\s+tokenFor\s*=\s*\(\s*absPath\s*\)/.test(hs));
   const ownMaps = [];
   const ownSets = [];
-  for (const rel of routeFiles) {
+  // 只看 token 簇这 9 族（合并 upstream 1.4.0 后 pet-link 的 official-pet 自有 Map 属另一条线，不在本判据范围）。
+  for (const rel of TOKEN_FAMILY_FILES) {
     const src = code(rel);
     if (/new\s+Map\s*\(/.test(src)) ownMaps.push(rel);
     if (/mediaMap\s*\.\s*set\s*\(/.test(src)) ownSets.push(rel);
   }
-  check('路由族模块里零 `new Map()`（token 表不许各族自建）', ownMaps.length === 0, ownMaps.join('、'));
-  check('路由族模块里零 `mediaMap.set(`（铸造点只在会话/清单构建器）', ownSets.length === 0, ownSets.join('、'));
+  check('token 簇 9 族路由模块里零 `new Map()`（token 表不许各族自建）', ownMaps.length === 0, ownMaps.join('、'));
+  check('token 簇 9 族路由模块里零 `mediaMap.set(`（铸造点只在会话/清单构建器）', ownSets.length === 0, ownSets.join('、'));
   check('门面不 import `createComponentSession`（applyView 不许拿组件会话那份 serveFile）', !/createComponentSession/.test(hostSrc));
 }
 
@@ -286,12 +287,12 @@ check('这 9 族在 `lib/routes/` 里零残留', stillInMain.length === 0, still
   check('门面 applyView 的键集恰好 = 服务面 `apply` 的 15 键，且全部来自同一次会话', v.length === 0, v.join('；'));
 }
 
-// ⑥ 路由账：总条目不变（44），这 9 族贡献 21 条，全部挂在包内
+// ⑥ 路由账：总条目 45（合并 upstream 1.4.0 后上游新增 1 条），这 9 族贡献 21 条，全部挂在包内
 {
   const idx = buildIndex();
   const total = idx.routes.length;
   const owned = idx.routes.filter((r) => TOKEN_FAMILY_FILES.includes(r.src));
-  check('路由索引总条目不变（44 条；只换模块不换路径集合）', total === 44, '实测 ' + total + ' 条');
+  check('路由索引总条目 = 45（上游 1.4.0 新增 1 条后；9 族仍只换模块不换路径集合）', total === 45, '实测 ' + total + ' 条');
   check('9 族的 21 条路由全部挂在包内（索引 src = packages/…）', owned.length === 21, '实测 ' + owned.length + ' 条');
 }
 
@@ -306,7 +307,7 @@ check('这 9 族在 `lib/routes/` 里零残留', stillInMain.length === 0, still
     const face = {};
     for (const k of APPLY_TOKEN_KEYS) face[k] = sentinel(k);
     let keysView = null, err = null;
-    try { keysView = boot.subpackageKeys('wallpaper', { wallpaperEngineHost: { apply: face } }); } catch (e) { err = e; }
+    try { keysView = boot.subpackageKeys('media-bridge', { wallpaperEngineHost: { apply: face } }); } catch (e) { err = e; }
     check('`subpackageKeys(\'wallpaper\', ctx)` 可解析（apply 面 15 键全在场时）', keysView !== null, err ? String(err.message).split('\n')[0] : '');
     const v = keysView ? identityViolations(keysView, face) : [];
     check('键表交出的 15 个 apply 实例与服务面是**同一引用**（token 域单实例）', keysView !== null && v.length === 0, v.join('；'));

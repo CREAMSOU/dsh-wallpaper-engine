@@ -303,7 +303,7 @@ const dispose = apply(mockCtx);
 // S5c 刀2：`/inventory` 与 `/media` 等族归 `wallpaper` 组件行（实现入包）⇒ 夹具连组件一起 boot；
 // 判据判什么没变（同 verify-scene-live 的既有做法）。
 if (typeof hostMod.applyComponent === 'function') {
-  for (const comp of ['wallpaper']) {
+  for (const comp of ['media-bridge']) {
     try { hostMod.applyComponent(mockCtx, {}, comp); } catch (err) {
       console.log('  · 组件行 boot 失败（' + comp + '）：' + String(err && err.message));
     }

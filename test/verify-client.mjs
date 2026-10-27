@@ -247,7 +247,7 @@ const fetch = (url, opts) => {
 
 // 变异测试钩子：默认读构建产物，DSH_MUT_LIB 指向变异副本时读它。
 const code = readFileSync(process.env.DSH_MUT_LIB || new URL('../lib/client.js', import.meta.url), 'utf8');
-const independentSidebarSelector = 'body[data-we-sidebar-glass] [data-dsh-better-sidebar] [class*="_panel"]';
+const independentSidebarSelector = 'body[data-we-glass-page][data-we-sidebar-glass] [data-we-surface-plate="right-sidebar"]';
 const wallpaperGatedSidebarSelector = 'body[data-we-sidebar-glass][data-we-wallpaper] [data-dsh-better-sidebar]';
 assert.ok(code.includes(independentSidebarSelector), 'sidebar glass must not require an active wallpaper');
 assert.ok(!code.includes(wallpaperGatedSidebarSelector), 'legacy wallpaper-gated sidebar selector must be removed');
@@ -264,31 +264,34 @@ const wallpaperBlock = blockBodyOf('body[data-we-wallpaper] {');
 assert.ok(pageGlassBlock && pageGlassBlock.includes('--dsw-alias-bg-layer-1')
   && pageGlassBlock.includes('--dsw-alias-markdown-code-block'),
   'page-glass token mapping must sit on body[data-we-glass-page] (glass works without a wallpaper)');
+// ⚠️ 作用域是**整页**，不是聊天流：5cabb9e1 曾把它收窄成 :where([data-chat-flow])，
+//    于是宿主自己的侧栏按钮 / 右栏页签栏 / 设置窗卡片全部退回实底（用户报障）。
+//    这条负对照把"再收窄回去"钉成红。
+assert.ok(!code.includes('body[data-we-glass-page] :where([data-chat-flow])'),
+  'page-glass token mapping must stay page-wide (host chrome outside the chat flow needs it too)');
 assert.ok(wallpaperBlock && wallpaperBlock.includes('--dsw-alias-bg-base: transparent')
   && !wallpaperBlock.includes('--dsw-alias-bg-layer-1'),
   'the page-let-the-wallpaper-through block stays wallpaper-only (no glass mapping inside)');
 assert.ok(/setAttribute\("data-we-glass-page", "on"\)/.test(code)
   && /removeAttribute\("data-we-glass-page"\)/.test(code),
   'the page-glass anchor must be mounted by glass.js and removed by clearEffects (paired)');
-assert.ok(code.includes('body[data-we-sidebar-glass] [data-dsh-better-sidebar] .cm-editor'),
-  'sidebar content surfaces must follow the sidebar master switch',
+assert.ok(code.includes('body[data-we-sidebar-glass] :where([data-we-surface-runtime="content"])'),
+  'sidebar content surfaces must follow both the sidebar switch and runtime ownership',
 );
 assert.ok(code.includes('body[data-we-wallpaper] {') && code.includes('body[data-we-wallpaper]:not([data-ds-dark-theme])'),
   'wallpaper-only effects (base let-through, light-scheme text boost) must remain wallpaper-gated');
-// ── 主容器兜底清底（原生浏览器形态）：token 清底盖不住不再消费 token 的宿主 ──────────
-// 口径：清 --dsw-alias-bg-base 只对「读该 token 的宿主构建」有效；宿主新构建的主容器
-// （[*_frame] / [*_root] / body）自带实心底 ⇒ 壁纸层被整片盖死。兜底规则必须
-// ① 三条选择器齐（body / _frame / _root）；② 双门齐（壁纸在台 + 原生浏览器 ——
-// 无壁纸时页面基色不许被清、桌面壳形态由壳层材质自理）；③ 声明 background:
-// transparent !important（要压过宿主自己的实心底）。负对照：删任一门的变异体命中不到
-// 下面的选择器字面量 ⇒ 判红。
+// 宿主清底保留双门控，但只匹配挂载点外壳；未知插件的同名类不得被命中。
 const clearGated = (suffix) => 'body[data-we-wallpaper][data-we-adapter="browser"]' + suffix;
+const hostFrame = ' > #root > [class*="_frame"]:not([data-we-surface-preserve])';
+const hostRoot = hostFrame + ' > [class*="_root"]:not([data-we-surface-preserve])';
 assert.ok(code.includes(clearGated(',')),
-  'the container fallback must clear the host page canvas (body) itself, wallpaper+browser gated');
-assert.ok(code.includes(clearGated(' [class*="_frame"]')) && code.includes(clearGated(' [class*="_root"]')),
-  'the container fallback must clear the host _frame and _root containers too (both gates included)');
-assert.ok((blockBodyOf(clearGated(' [class*="_root"] {')) || '').includes('background: transparent !important'),
-  'the container fallback needs background: transparent !important (host canvas paints an opaque base)');
+  'the page canvas fallback must remain wallpaper+browser gated');
+assert.ok(code.includes(clearGated(hostFrame)) && code.includes(clearGated(hostRoot)),
+  'the container fallback must be limited to the outer host frame/root');
+assert.ok(!code.includes(clearGated(' [class*="_frame"]')) && !code.includes(clearGated(' [class*="_root"]')),
+  'the container fallback must not clear arbitrary third-party roots');
+assert.ok((blockBodyOf(clearGated(hostRoot + ' {')) || '').includes('background: transparent !important'),
+  'the known host canvas still needs an effective transparent fallback');
 console.log('sidebar glass selectors are wallpaper-independent: true · page glass is anchored on data-we-glass-page: true');
 // A3 之后客户端产物不再只有主 bundle 一份：packages/{fx,parallax}/lib/client.*.js 各自在
 // 同一个 loader 上注册一份 bundle（id = 子包真实包名）。所以这里收**数组**，主 bundle = 第一份。
@@ -376,10 +379,10 @@ const SUBPACKAGE_CLIENT_ARTIFACTS = [
   // 主 bundle 显式键集里的 registerPetLink 把服务登记回主包（门面缓冲 + 登记到达时补做）。
   // 求值在 apply() **之前** ⇒ 这里正是"子包先到"那一半的真实形态。
   ['../packages/pet-link/lib/client.pet-link.js', 'dsh-plugin-wallpaper-engine-pet-link'],
-  // P-D S3a：「壁纸库」页签第四节「自定义壁纸」随壁纸子包出产物（packages/wallpaper/lib/
-  // client.wallpaper.js）。它的 factory 会往面板节注册表登记 library 节（order 40）⇒ 与真实
+  // P-D S3a：「壁纸库」页签第四节「自定义壁纸」随壁纸子包出产物（packages/media-bridge/lib/
+  // client.media-bridge.js）。它的 factory 会往面板节注册表登记 library 节（order 40）⇒ 与真实
   // loader 同形，求值在 apply() **之前**，否则：788 那条「library tab has 自定义壁纸」会红。
-  ['../packages/wallpaper/lib/client.wallpaper.js', 'dsh-plugin-wallpaper-engine-wallpaper'],
+  ['../packages/media-bridge/lib/client.media-bridge.js', 'dsh-plugin-wallpaper-engine-media-bridge'],
 ];
 const subRequireMock = (spec) => {
   if (spec === 'dsh-plugin-wallpaper-engine') return exportsObj;
@@ -1609,7 +1612,13 @@ setTimeout(async () => {
     //    "它是一道折叠门（可收起）"这件事由下面的 aria-expanded 与翻转用例承担，
     //    不再靠"默认收起所以看不见"来表达。 ──
     assert.equal(findCtlInput(tree, '侧栏玻璃·独立配置'), null, '设置页不画「侧栏玻璃·独立配置」（已迁侧栏折叠块）');
-    assert.equal(findCtlInput(tree, '内容面玻璃·独立配置'), null, '设置页不画「内容面玻璃·独立配置」（已迁侧栏折叠块）');
+    // ⚠️ **内容面是这一族的例外**（用户口径："侧边栏阅读文件页面的背景底色的设置被删除了，
+    //    需要找回"）：它此前也只在侧栏「详细玻璃调节」展开时才可达 ⇒ 设置页与侧栏收起态
+    //    **两条路都够不着**，观感就是"设置没了"。这一面看的是正文（阅读文件页 / 编辑器 /
+    //    终端），调整期望远高于其余独立配置 ⇒ 从折叠块里提出来、**两档都画**
+    //    （仍在节的 `open` 门内，节收起时随节收起）。
+    assert.ok(findCtlInput(tree, '内容面玻璃·独立配置'),
+      '设置页必须画「内容面玻璃·独立配置」（阅读页底色 / 透明度的唯一入口，用户要求找回）');
     assert.equal(findSliderRow(tree, '侧栏模糊'), null, '设置页不画「侧栏模糊」（精确标签，防 tooltip 骗过）');
     assert.equal((JSON.stringify(tree).match(/"aria-label":"侧栏玻璃颜色 /g) || []).length, 0,
       '设置页不画侧栏玻璃颜色色板（已迁侧栏折叠块）');
@@ -4369,22 +4378,22 @@ setTimeout(async () => {
       anchor: ['function renderWallpaperTab(ctx)', 'function renderAppearanceTab(ctx)',
         'function renderEffectsTab(ctx)', 'function renderAdvancedTab(ctx)',
         'function renderExtensionsTab(ctx)'] },
-    // P-D S3a：「自定义壁纸」节搬进了 packages/wallpaper 的浏览器半边 ⇒ 同一条接缝纪律必须
+    // P-D S3a：「自定义壁纸」节搬进了 packages/media-bridge 的浏览器半边 ⇒ 同一条接缝纪律必须
     // 对包内文件成立（否则"搬出去"等于把这条判据的射程悄悄缩小，正是刀4 那次的教训）。
-    { file: '../packages/wallpaper/src/wallpaper-uploads-section.js', user: '壁纸库自定义壁纸节',
+    { file: '../packages/media-bridge/src/wallpaper-uploads-section.js', user: '壁纸库自定义壁纸节',
       anchor: ['function renderWallpaperUploadsSection(ctx) {', 'we-picker__uploads-list'] },
     // P-D S3b：切换过场 / 自动轮播两节也搬进包内 ⇒ 同一条接缝纪律必须对包内文件成立。
-    { file: '../packages/wallpaper/src/wallpaper-transition-section.js', user: '壁纸库切换过场节',
+    { file: '../packages/media-bridge/src/wallpaper-transition-section.js', user: '壁纸库切换过场节',
       anchor: ['function renderWallpaperTransitionSection(ctx) {', 'we-picker__seg'] },
-    { file: '../packages/wallpaper/src/wallpaper-rotation-section.js', user: '壁纸库自动轮播节',
+    { file: '../packages/media-bridge/src/wallpaper-rotation-section.js', user: '壁纸库自动轮播节',
       anchor: ['function renderWallpaperRotationSection(ctx) {', 'we-picker__rotation-interval'] },
     // P-D S3c：第一节「当前壁纸」也搬进包内（四节全出户）⇒ 同一条接缝纪律必须对包内文件成立。
-    { file: '../packages/wallpaper/src/wallpaper-current-section.js', user: '壁纸库当前壁纸节',
+    { file: '../packages/media-bridge/src/wallpaper-current-section.js', user: '壁纸库当前壁纸节',
       anchor: ['function renderWallpaperCurrentSection(ctx) {', 'we-picker__current-actions'] },
     // P-D S3d：播放配置两节（倍速/帧率上限、适配/翻转）搬进包内 ⇒ 同一条接缝纪律必须对包内文件成立。
-    { file: '../packages/wallpaper/src/playback-rate-section.js', user: '播放页倍速/帧率上限节',
+    { file: '../packages/media-bridge/src/playback-rate-section.js', user: '播放页倍速/帧率上限节',
       anchor: ['function renderEffectsPlaybackSection(ctx) {', 'we-picker__prog-track'] },
-    { file: '../packages/wallpaper/src/wallpaper-fit-section.js', user: '播放页适配/翻转节',
+    { file: '../packages/media-bridge/src/wallpaper-fit-section.js', user: '播放页适配/翻转节',
       anchor: ['function renderEffectsFitSection(ctx) {', 'weT("水平翻转")'] },
   ];
   for (const r of RENDERERS) {
@@ -4537,7 +4546,7 @@ setTimeout(async () => {
   // 的播放节源码（renderTranscodeProgress 与 renderEffectsPlaybackSection 仍同工厂作用域，判据强度不变；
   // 不并 = HELPERS 与「派生+装配」判据会以「找不到」的形式假红）。
   const playbackSectionSrc = readFileSync(
-    new URL('../packages/wallpaper/src/playback-rate-section.js', import.meta.url), 'utf8');
+    new URL('../packages/media-bridge/src/playback-rate-section.js', import.meta.url), 'utf8');
   const src = panelText() + '\n;\n' + fontsSectionSrc + '\n;\n' + playbackSectionSrc;   // 刀4：页签族并集（helper 声明顺序判据按构建序）。
   const bodyOf = (name) => {
     const i = src.indexOf('function ' + name + '(');

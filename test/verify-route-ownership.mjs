@@ -265,7 +265,7 @@ console.log('\n② 组件目录下的文件逐条进 `package.json` 的 `files`'
       own = JSON.parse(readFileSync(join(ROOT, dir, 'package.json'), 'utf8'));
       ownFiles = own.files || [];
     } catch { /* 缺清单由别的判据管 */ }
-    // P-D S3a：组件行也可以有自己的**浏览器半边**（packages/wallpaper 是第一个：client.build.json
+    // P-D S3a：组件行也可以有自己的**浏览器半边**（packages/media-bridge 是第一个：client.build.json
     // 配方 + src/*.js 构建输入 ⇒ lib/client.<short>.js 产物）。构建输入按设计不进 npm tarball 的
     // `files`（字体包先例），产物由 `lib/` 覆盖 ⇒ 对"有声明的浏览器半边"的包豁免配方与 src/。
     const hasBrowserHalf = Boolean(own.exports && own.exports['./client'])
@@ -377,6 +377,18 @@ console.log('\n④ 子包行 ⇄ `packages/<dir>/package.json` 双向对账（�
   const deadRow = subpackageModuleViolations([...rows, 'dsh-plugin-wallpaper-engine-ghost'], manifests, exists);
   check('negative control：patch 里多一条没有包认领的子包行 ⇒ 同一条判据点名 "死行"',
     deadRow.some((v) => v.includes('死行')), deadRow.join('；') || '（没判出来）');
+
+  const independent = { dir: 'probe', name: 'vendor-pet-probe', main: './lib/index.js' };
+  const independentRows = [pkg.name, independent.name];
+  check('独立命名子包按清单真名对账，不要求主包名前缀',
+    subpackageModuleViolations(independentRows, [independent], () => true).length === 0);
+  const independentMissing = subpackageModuleViolations([pkg.name], [independent], () => true);
+  const independentEntry = subpackageModuleViolations(independentRows, [independent], () => false);
+  const independentDead = subpackageModuleViolations([...independentRows, 'vendor-orphan-probe'], [independent], () => true);
+  check('negative control：独立命名子包缺行、缺入口、无包认领仍逐项报错',
+    independentMissing.length === 1 && independentMissing[0].includes('未登记行')
+    && independentEntry.length === 1 && independentEntry[0].includes('入口不存在')
+    && independentDead.length === 1 && independentDead[0].includes('死行'));
 
   // 子包路由族必须在孤儿扫描面内（面塌回 `lib/routes/`-only ⇒ 搬走的族"文件在、没人调用"判不出来）。
   const pkgRouteCandidates = routeModuleCandidates().filter((rel) => rel.startsWith('packages/') && rel.includes('/lib/routes/'));

@@ -1,3 +1,8 @@
+> **2026-10-27 合流裁决（本文件是 2026-10-18 的历史账）**：合并 upstream v1.4.0 时按 A 方案执行 ——
+> P-D 的搬移成果（宿主路由族 / 浏览器半边 / 判据）全部保留，但**包名与行 id 不改**：维持 upstream 已发布
+> npm 的 `media-bridge`（目录 `packages/media-bridge/`、产物 `lib/client.media-bridge.js`）。下文 S1
+> 「改名 → `wallpaper`」及 wallpaper 命名是当时形态，已按合流裁决回退；其余阶段账与判据清单仍有效。
+>
 > **状态：已落地并归档（2026-10-18）** —— 本文覆盖的 P-A … P-E 各阶段**已全部落地**，本文自此是
 > **历史记录**：不再反映现行实现，也不记进度。归档原因：全部落地 —— 留在 `docs/wip/` 会让
 > "未完成"的印象与实况不符。
@@ -48,7 +53,7 @@
 | 包 | 职责 | 备注 |
 |---|---|---|
 | **主包** `dsh-plugin-wallpaper-engine` | 设置面板、配置文件、WE 壁纸获取、多平台识别与差异处理、**留给其它插件的钩子**、以及"大部分组件都依赖的基础模块" | 唯一被"一次安装"的名字 |
-| **壁纸子插件** | WE 壁纸与自定义导入壁纸的**渲染**；壁纸库 + 播放-画面里的配置项、声音、省电 | 以现在的 `packages/wallpaper`（P-F 批 1c 出户，原 `lib/components/media-bridge`）为基础，**大改** |
+| **壁纸子插件** | WE 壁纸与自定义导入壁纸的**渲染**；壁纸库 + 播放-画面里的配置项、声音、省电 | 以现在的 `packages/media-bridge`（P-F 批 1c 出户，原 `lib/components/media-bridge`）为基础，**大改** |
 | **UI 子插件** | 玻璃面板、侧边栏圆角等**前端 UI**；外观里的配置项 | **字体除外** |
 | **字体系统子插件** | 字体集 / 排版 / 应用 | 已可自成一系；**目标形态 = 整个「字体自定义」配置类**（宿主半边 + 浏览器半边 + 外观页签字体节 + 字体键所有权），**定案 A**（2026-10-15，§7.8） |
 | **点击与拖尾效果子插件** | `src/fx-layer.js` 一族 | 天然低耦合 |
@@ -168,7 +173,7 @@ Cordis 的级联只有**一个判据**：`name in fiber.inject`（`cordis/src/re
 | `wallpaper-engine` | `dsh-plugin-wallpaper-engine` |
 | `wallpaper-engine-about-notice` | `dsh-plugin-wallpaper-engine-about-notice`（P-F 前 = `dsh-plugin-wallpaper-engine/about-notice`） |
 | `wallpaper-engine-mascot-avatar` | `dsh-plugin-wallpaper-engine-mascot-avatar`（P-F 前 = `…/mascot-avatar`） |
-| `wallpaper-engine-wallpaper` | `dsh-plugin-wallpaper-engine-wallpaper`（P-F 前 = `…/media-bridge`） |
+| `wallpaper-engine-media-bridge` | `dsh-plugin-wallpaper-engine-media-bridge`（P-F 前 = `…/media-bridge`） |
 | `wallpaper-engine-pet-link` | `dsh-plugin-wallpaper-engine-pet-link`（PR #5 新增；可选行、安装器形态 `S3.8a`，见 §7.10） |
 
 > 本表的**现行真源** = 根 `cordis.patch.yml`（共 8 条 `- id:`，复算：读该文件；`fx` / `parallax` / `fonts` 三行同用真名，
@@ -537,21 +542,21 @@ Cordis 的级联只有**一个判据**：`name in fiber.inject`（`cordis/src/re
 
 ### 7.4 P-D 壁纸子插件（**最大的一块，最后做**）
 
-以 `packages/wallpaper`（P-F 批 1c 2026-10-16 出户）为基础大改：WE 壁纸与自定义导入壁纸的渲染、壁纸库 + 播放-画面里的配置项、声音、省电。
+以 `packages/media-bridge`（P-F 批 1c 2026-10-16 出户）为基础大改：WE 壁纸与自定义导入壁纸的渲染、壁纸库 + 播放-画面里的配置项、声音、省电。
 **前置**：层的所有权（`LAYER_ID` / `SCRIM_ID` / iframe 的建立与退役）必须有唯一所有者，否则两个包各建层 = 撞单例 id。
 **层所有权已钉（P-D S4，2026-10-18）**：所有权 = 主包渲染内核独占（`src/live-layer.js` 建/领养/退役 + `src/client.js` fiber cleanup 摘净），壁纸包浏览器半边不得建层/退层/持 `#layer` 引用；判据 `test/verify-layer-ownership.mjs`（P1 声明与 id 赋值点 · P2 body 挂载白名单逐点归属 · P3 拆卸零残留 · P4 iframe 父链），负对照含"白名单外建层 / 删 scrim 摘除 / iframe 直接挂 body"三种变异。契约正文见 `.integration-notes/p-d-contract.md` §4.1。
 **注意**：引擎已是 npm 依赖（§9.4 定案 = 主包持有、不随子包）；`lib/webwallgl/**` 如今只剩自家模板/桥文件。
 
-**P-D 落地账（2026-10-18，施工至 S5e）**：阶段1 把壁纸子插件的**浏览器半边**搬进 `packages/wallpaper`（S1–S4），S5 再把**宿主半边**（路由族 + 它们的 apply 局部依赖 + 省电判据）搬进同一个包；全程零行为变更（D5；唯一有意的行为变化 = S5d 的遮挡 hub 生命周期从主包 `apply` 改为 wallpaper 行装载，见下）。按阶段记账：
+**P-D 落地账（2026-10-18，施工至 S5e）**：阶段1 把壁纸子插件的**浏览器半边**搬进 `packages/media-bridge`（S1–S4），S5 再把**宿主半边**（路由族 + 它们的 apply 局部依赖 + 省电判据）搬进同一个包；全程零行为变更（D5；唯一有意的行为变化 = S5d 的遮挡 hub 生命周期从主包 `apply` 改为 wallpaper 行装载，见下）。按阶段记账：
 
-- **S1（`ef5b6438`）身份并入**：原「系统媒体桥」子包目录（`packages/` 下的 `media-bridge`）整包 `git mv` 到 `packages/wallpaper/`；包名 / 行 `id` / 行 `name` / `SUBPACKAGE_KEY_TABLE` 键 / `COMPONENT_VIEW_KEYS` 键 / 守卫与测试里的包路径全部同步为新名。行 `id` 改为 `wallpaper-engine-wallpaper` 是 §14 `D-15` 的**唯一例外**（S4.3 强制 `id = wallpaper-engine-<目录名>`，且该行从未发布 ⇒ 无迁移负担）。
+- **S1（`ef5b6438`）身份并入**：原「系统媒体桥」子包目录（`packages/` 下的 `media-bridge`）整包 `git mv` 到 `packages/media-bridge/`；包名 / 行 `id` / 行 `name` / `SUBPACKAGE_KEY_TABLE` 键 / `COMPONENT_VIEW_KEYS` 键 / 守卫与测试里的包路径全部同步为新名。行 `id` 改为 `wallpaper-engine-media-bridge` 是 §14 `D-15` 的**唯一例外**（S4.3 强制 `id = wallpaper-engine-<目录名>`，且该行从未发布 ⇒ 无迁移负担）。
 - **S2（勘察 + 设计，仅有本地工作稿）**：结论 = 只搬**面板节渲染器**、渲染内核与层单例**留主包**——渲染内核 16 个文件 / ≈66 键整族搬包会违反 ADR-0013 `D12①`（注入面收窄）与 ADR-0014 `S5.2`，且把 `LAYER_ID` / `SCRIM_ID` / iframe 的唯一建立点劈成两半（§13 风险 9）；故浏览器半边只搬六个纯渲染节，host 键面 **28 键（5 键复用既有 bridge + 新增 23 键）**。工作稿为 `.integration-notes/p-d-browser-surface.md`（被 `.gitignore` 忽略，不进版本库）。
-- **S3a–S3d（`f0de5c3c` / `a0291d50` / `d8420aa7` / `d265c428`）六节渲染器搬入包**：library 四节 `wallpaper-current`（order 10）/ `wallpaper-transition`（20）/ `wallpaper-rotation`（30）/ `wallpaper-uploads`（40），playback 两节 `wallpaper-playback-rate`（60）/ `wallpaper-fit`（70）；入口 `packages/wallpaper/src/client.js` + 包内构建配方 `client.build.json`（6 个 `inline`）⇒ 产物 `packages/wallpaper/lib/client.wallpaper.js`（构建期生成、`.gitignore` 出库），`FLOORS.clientArtifacts` 随之 **5→6**。主包侧同步：`src/panel-tabs.js` 的 `renderWallpaperTab` / `renderEffectsTab` 只按 `wePanelSectionsOf('library')` / `('playback')` 组装注册节；`src/panel-tabs-wallpaper.js` **整文件删除**（rename 进包）；`src/panel-tabs-effects.js` 只留「画面 / 实况 / 来源」三节；`HOST_BRIDGE_BINDINGS` 从 34 键扩到 **57 键**（壁纸包申报 28 键；D-7 反向对账见 `test/verify-subpackage-client-half.mjs` 的「5 张申报表 / 57 个 host 键」）。
+- **S3a–S3d（`f0de5c3c` / `a0291d50` / `d8420aa7` / `d265c428`）六节渲染器搬入包**：library 四节 `wallpaper-current`（order 10）/ `wallpaper-transition`（20）/ `wallpaper-rotation`（30）/ `wallpaper-uploads`（40），playback 两节 `wallpaper-playback-rate`（60）/ `wallpaper-fit`（70）；入口 `packages/media-bridge/src/client.js` + 包内构建配方 `client.build.json`（6 个 `inline`）⇒ 产物 `packages/media-bridge/lib/client.media-bridge.js`（构建期生成、`.gitignore` 出库），`FLOORS.clientArtifacts` 随之 **5→6**。主包侧同步：`src/panel-tabs.js` 的 `renderWallpaperTab` / `renderEffectsTab` 只按 `wePanelSectionsOf('library')` / `('playback')` 组装注册节；`src/panel-tabs-wallpaper.js` **整文件删除**（rename 进包）；`src/panel-tabs-effects.js` 只留「画面 / 实况 / 来源」三节；`HOST_BRIDGE_BINDINGS` 从 34 键扩到 **57 键**（壁纸包申报 28 键；D-7 反向对账见 `test/verify-subpackage-client-half.mjs` 的「5 张申报表 / 57 个 host 键」）。
 - **S4（`799035d1`）层所有权判据**：见上段；`node test/run-guards.mjs all` 由 98 步增至 **99 步**（新增 `test/verify-layer-ownership.mjs`）。
 - **预设面（§6.4）**：§14 `D-9` 已定案 **A = 主包聚合**——预设键 / `sanitizePresetValues` / 资产安装继续留主包 `lib/settings-schema.js`；壁纸包不注册预设片段、不持键、不新增反向通道。
-- **S5 宿主半边大改（`S5a`–`S5e`，2026-10-18，三笔代码提交 + 一笔收口）**：把主包 `lib/routes/` 里与壁纸渲染 / 壁纸库相关的路由族搬进 `packages/wallpaper`，并把跨包服务面从"静态键表"扩成"静态键表 + per-apply 实例面"。设计稿 = `.integration-notes/p-d-host-surface.md`（工作稿，被 `.gitignore` 忽略；内含入口条件①–④实测、逐族归属与分刀方案）。分三刀落地：
-  - **S5a（勘察设计，无提交）**：先纠一条口径 —— 本节原先说的"路由 / 后端 / supervisor / provision / legacy 搬包"里，**后四件早在 P-F 批 1c 就已随组件行出户**（`packages/wallpaper/lib/{backend,supervisor,provision,legacy}.js`），S5 真正待搬的是**主包 `lib/routes/` 的壁纸域族与其 `apply()` 局部依赖**。入口条件①–④实测：① `FLOORS = { packages: 7, clientArtifacts: 6, rows: 8 }` 与 S3a–S3d 四笔提交全绿 ✅；② `verify-layer-ownership` 四条判据（P1–P4）在守卫链上（当时 99 步）✅；③ 键面待扩（S5b / S5c 补齐）；④ `test/e2e-web-media-origin.mjs` 取证已指包内、`docs/GUARD-MAP.md` 已无 `src/panel-tabs-wallpaper.js` ✅。决定性约束 = **token 域单主权**：`mediaMap`（token → 绝对路径）是**每个 apply 会话各一张 `new Map()`**（`lib/kernel/host-session.js`），铸造面（`lib/inventory.js` 的清单构建器与 `upload` 族）与消费面（`media-bytes` / `media-derived` / `props` / `scene-frame` / `scene-media` / `live-frame`）必须是**同一个实例**，否则 `/media/<token>` 全部 404 ⇒ 这批族只能整簇搬、实例只能由主包按引用交出。三刀 = ① `we-assets`（零共享可变态，验证通路）② token 整簇 21 条路由 ③ `occlusion` 族 + 省电语义；留主包 = `settings` / `presets` / `diag` / `cache-dir` 四族 + 渲染内核 16 文件 + `LAYER_ID` / `SCRIM_ID` 单例 + 设置 schema（声音 / 省电键）。
-  - **S5b 刀1（`a0c5b758`，11 文件）WE 素材源族出户**：`lib/routes/we-assets.js` → `packages/wallpaper/lib/routes/we-assets.js`（2 条路由 `/api/local-assets` / `/we-assets-dir`）；壁纸行键表 8 → **14** 键（+6 全 `kernel:` 源）；`bodyReader` / `sendJson` 经 `http` 面单键注入（与 `now-playing` / `fonts` 同款）。判据侧：`verify-body-caps` 的扫描面扩到 `packages/<pkg>/lib` 并把该条扫描地板 9 → 13，`test/tools/source-locator.mjs` 的 `moduleFace()` 扩到 `packages/<pkg>/{lib,src}/**`（§15.4 ⑤ 那条静默弱点就此收口）；主包 15 → **14** 族。
+- **S5 宿主半边大改（`S5a`–`S5e`，2026-10-18，三笔代码提交 + 一笔收口）**：把主包 `lib/routes/` 里与壁纸渲染 / 壁纸库相关的路由族搬进 `packages/media-bridge`，并把跨包服务面从"静态键表"扩成"静态键表 + per-apply 实例面"。设计稿 = `.integration-notes/p-d-host-surface.md`（工作稿，被 `.gitignore` 忽略；内含入口条件①–④实测、逐族归属与分刀方案）。分三刀落地：
+  - **S5a（勘察设计，无提交）**：先纠一条口径 —— 本节原先说的"路由 / 后端 / supervisor / provision / legacy 搬包"里，**后四件早在 P-F 批 1c 就已随组件行出户**（`packages/media-bridge/lib/{backend,supervisor,provision,legacy}.js`），S5 真正待搬的是**主包 `lib/routes/` 的壁纸域族与其 `apply()` 局部依赖**。入口条件①–④实测：① `FLOORS = { packages: 7, clientArtifacts: 6, rows: 8 }` 与 S3a–S3d 四笔提交全绿 ✅；② `verify-layer-ownership` 四条判据（P1–P4）在守卫链上（当时 99 步）✅；③ 键面待扩（S5b / S5c 补齐）；④ `test/e2e-web-media-origin.mjs` 取证已指包内、`docs/GUARD-MAP.md` 已无 `src/panel-tabs-wallpaper.js` ✅。决定性约束 = **token 域单主权**：`mediaMap`（token → 绝对路径）是**每个 apply 会话各一张 `new Map()`**（`lib/kernel/host-session.js`），铸造面（`lib/inventory.js` 的清单构建器与 `upload` 族）与消费面（`media-bytes` / `media-derived` / `props` / `scene-frame` / `scene-media` / `live-frame`）必须是**同一个实例**，否则 `/media/<token>` 全部 404 ⇒ 这批族只能整簇搬、实例只能由主包按引用交出。三刀 = ① `we-assets`（零共享可变态，验证通路）② token 整簇 21 条路由 ③ `occlusion` 族 + 省电语义；留主包 = `settings` / `presets` / `diag` / `cache-dir` 四族 + 渲染内核 16 文件 + `LAYER_ID` / `SCRIM_ID` 单例 + 设置 schema（声音 / 省电键）。
+  - **S5b 刀1（`a0c5b758`，11 文件）WE 素材源族出户**：`lib/routes/we-assets.js` → `packages/media-bridge/lib/routes/we-assets.js`（2 条路由 `/api/local-assets` / `/we-assets-dir`）；壁纸行键表 8 → **14** 键（+6 全 `kernel:` 源）；`bodyReader` / `sendJson` 经 `http` 面单键注入（与 `now-playing` / `fonts` 同款）。判据侧：`verify-body-caps` 的扫描面扩到 `packages/<pkg>/lib` 并把该条扫描地板 9 → 13，`test/tools/source-locator.mjs` 的 `moduleFace()` 扩到 `packages/<pkg>/{lib,src}/**`（§15.4 ⑤ 那条静默弱点就此收口）；主包 15 → **14** 族。
   - **S5c 刀2（`3af568f7`，34 文件）token 整簇出户**：9 族 21 条路由（`inventory` / `upload` / `props` / `media-bytes` / `media-derived` / `scene-frame` / `scene-serve` / `scene-media` / `live-frame`）搬进包；服务面新增**第七键 `apply`**（per-apply 冻结视图 = `APPLY_VIEW` 15 键：`mediaMap` / `tokenFor` / `serveFile` / `serveLayout` / `faststartVariant` / `pinnedFaststartVariant` / `trackStream` / `handleSceneFiles` / `mediaOriginInfo` / `payloadProgress` / `transcodeCached` / `SCENE_VIDEO_INFLIGHT` / `buildInventory` / `componentsProbe` / `mediaOriginApi`），用**惰性访问器** `provideSubpackageHost(ctx, { applyView: () => applyView })`（`provide` 仍排在 `apply()` 第一步、早于 `createHostSession()`，视图在会话建好后才有值）；键表 14 → **77**，`SCHEMA_VIEW` 5 → **11**（+6 纯符号）；主包 14 → **5** 族。**实测推翻 S5a 的两条判断**：① 原计划随簇搬的六个叶子（`lib/media-origin.js` / `inventory.js` / `faststart.js` / `we-props.js` / `scene-manifest.js` / `pkg-read.js`）**一枚都没搬** —— 主包内核（`lib/kernel/host-session.js` / `lib/shim-seed.js` / `lib/media/scene-probe.js`）仍 import 它们，故留主包、包内族改经 `apply:` / `schema:` 面拿实例与纯符号；② 新增判据 `test/verify-token-domain.mjs`（守卫链 99 → **100** 步），钉"铸造面与消费面同一 `mediaMap` 实例 + 门面 `applyView` 恰好 15 键且来自同一次会话 + 包入口不得覆盖那 5 个共享实例键"，带四条负对照。
   - **S5d 刀3（`4551d677`，15 文件）遮挡族 + 省电语义出户**：`lib/routes/occlusion.js` → 包内，`lib/occlusion/index.js`（hub）随迁，hub 在包入口 `createOcclusionHub({ log, diag, isX11CandidateEnv, createX11Adapter })` 现建 ——**省电判据源与策略同包**；`lib/occlusion/{x11,rects}.js` **留主包**：x11 只是取数适配器、不是省电判据本身，按纯符号经 `schema:` 面注入（`isX11CandidateEnv` / `createX11Adapter`），`rects.js` 只被主包 x11 消费。键表 77 → **79**（+2 `schema:`）、`SCHEMA_VIEW` 11 → **13**、`verify-host-teardown` 的 `ROUTE_FLOOR` 9 → **8**（主包注册面 8 条路由）；`verify-occlusion-hub` 按新落点重述 D1–D5 + 四条负对照。**声音 / 省电的设置键 `audioSource` / `mediaIntegration` / `mediaLyricsOnline` 与 `pauseOnHidden` / `pauseOnBlur` / `pauseOnBattery`（含校验与迁移）仍住主包 `lib/settings-schema.js`** —— 代码归属 = A（§14 `D-6`），随包走的是渲染器与判据，不是键与状态。
   - **S5e 收口**：本账 + §9.5 + ADR-0014 `S5.4`（服务面六键 → 七键）+ `docs/SUBPACKAGE-GRAPH.md` + 两份生成物重算；代码侧同批收口 §14 `D-6(b)`（页签按子包浏览器半边的**面板节注册表现存性** gate：`src/client.js` 的 `TAB_SECTION_OWNER` / `visiblePickerTabs()` / `resolvePickerTab()`，判据在 `test/verify-client.mjs` 的 D-6(b) 段）。
@@ -676,10 +681,10 @@ Cordis 的级联只有**一个判据**：`name in fiber.inject`（`cordis/src/re
 （"原 D6 的形态（单包多行）是本次重构的**起点**、不是终态"，`docs/adr/0013-bundle-multi-component-rows.md:121-127`）。
 
 - **时机（用户口径，2026-10-16）**：账① 作**一次独立的机械提交**，**排在 P-D 之前** —— §7.4 的 P-D 要
-  "以 `packages/wallpaper` 为基础大改"（该格已由 P-F 批 1c 搬出），**先搬后改写只付一次路径成本**；反序要把那批实现与测试改两遍。
+  "以 `packages/media-bridge` 为基础大改"（该格已由 P-F 批 1c 搬出），**先搬后改写只付一次路径成本**；反序要把那批实现与测试改两遍。
   **不与 P-D 合批**（机械搬迁与行为重写混在一个提交 ⇒ `bisect` / `revert` 失能）。
 - **分批**：① 包边界 + 行名（行 `name` 改真名；机械、**零行为变化**，先行）→ ② 浏览器半边逐组件成产物
-  （`about-notice` 先、`mascot-avatar` 后；`wallpaper`（P-D 阶段1 前名 `media-bridge`）那格已由 P-D S3a–S3d（2026-10-18）交付六节渲染半边、产物 `lib/client.wallpaper.js` ⇒ 账③ 剩余范围只剩 `about-notice` / `mascot-avatar` 两批）。
+  （`about-notice` 先、`mascot-avatar` 后；`wallpaper`（P-D 阶段1 前名 `media-bridge`）那格已由 P-D S3a–S3d（2026-10-18）交付六节渲染半边、产物 `lib/client.media-bridge.js` ⇒ 账③ 剩余范围只剩 `about-notice` / `mascot-avatar` 两批）。
 - **前提已勘误**：三条组件行**从未发布**（已发布物只有主行）⇒ **不存在"曾关过该组件"的用户**，
   行 `name` 可直接改真名、**零迁移代价**（§15.1 / §3 的范围勘误）。
 - **完整计划与须知见 §15**（三笔账的边界 / 落点硬约束 / 判红面 / 前置决策 / 复算入口）。
@@ -840,13 +845,13 @@ Cordis 的级联只有**一个判据**：`name in fiber.inject`（`cordis/src/re
 
 ### 9.5 宿主半边的现状归属（P-D S5 落地后，2026-10-18）
 
-S5 之前"宿主半边"只有一条线：壁纸包拿 `wallpaperEngineHost` 的静态键面做组件会话，**路由实现全在主包**。S5 之后按下面这张表归属（复算：`node test/tools/host-route-index.mjs` 看 44 条路由的来源行、`git ls-files lib/routes packages/wallpaper/lib/routes` 看族文件；行数/条数以生成物为准，本节不抄）：
+S5 之前"宿主半边"只有一条线：壁纸包拿 `wallpaperEngineHost` 的静态键面做组件会话，**路由实现全在主包**。S5 之后按下面这张表归属（复算：`node test/tools/host-route-index.mjs` 看 44 条路由的来源行、`git ls-files lib/routes packages/media-bridge/lib/routes` 看族文件；行数/条数以生成物为准，本节不抄）：
 
 | 面 | 归属 | 内容 |
 |---|---|---|
 | 主包外壳（唯一安装名） | **主包** | 设置面板 / 配置文件 / WE 壁纸获取（安装与发现）/ 多平台识别与差异处理 / 留给其它插件的钩子 / 大部分组件依赖的基础模块（§1.1）；以及**渲染内核 16 文件** + `LAYER_ID` / `SCRIM_ID` / iframe 的唯一建立与退役点（S2 定案，S4 判据钉住） |
 | 主包宿主路由族（4 族） | **主包** | `lib/routes/{settings,presets,diag,cache-dir}.js` —— 设置面、玻璃预设资产、诊断与落证、缓存根；它们的可见面跨多个页签，不随壁纸行整页启停 |
-| 壁纸包宿主半边（12 族） | `packages/wallpaper` | ① **声音主场**：`now-playing` 族 + 包内 `backend.js` / `legacy.js` / `audio-tap.swift` / `supervisor.js` / `provision.js`（P-F 批 1c 起就在包内）；② WE 素材源 `we-assets`（S5b）；③ token 整簇 9 族 `inventory` / `upload` / `props` / `media-bytes` / `media-derived` / `scene-frame` / `scene-serve` / `scene-media` / `live-frame`（S5c）；④ 遮挡 / 省电 `occlusion`（S5d，**判据 hub 与策略同包**） |
+| 壁纸包宿主半边（12 族） | `packages/media-bridge` | ① **声音主场**：`now-playing` 族 + 包内 `backend.js` / `legacy.js` / `audio-tap.swift` / `supervisor.js` / `provision.js`（P-F 批 1c 起就在包内）；② WE 素材源 `we-assets`（S5b）；③ token 整簇 9 族 `inventory` / `upload` / `props` / `media-bytes` / `media-derived` / `scene-frame` / `scene-serve` / `scene-media` / `live-frame`（S5c）；④ 遮挡 / 省电 `occlusion`（S5d，**判据 hub 与策略同包**） |
 | 声音 / 省电的**设置键** | **主包**（`lib/settings-schema.js`） | `audioSource` / `mediaIntegration` / `mediaLyricsOnline`；`pauseOnHidden` / `pauseOnBlur` / `pauseOnBattery`（含校验与迁移）。口径 = §14 `D-6` **代码归属**：键与状态留主包唯一内核，随包走的是渲染器 / 判据 / 描述符 |
 | 遮挡的平台适配器 | **主包**（`lib/occlusion/{x11,rects}.js`） | x11 只是**取数适配器**、不是省电判据本身；包内 hub 经服务面 `schema:` 面取 `isX11CandidateEnv` / `createX11Adapter`（C′ 裁决）。**残留**：x11 外迁 + 壁纸包自己声明依赖 ⇒ S8 / P-E |
 
@@ -995,7 +1000,7 @@ S5 之前"宿主半边"只有一条线：壁纸包拿 `wallpaperEngineHost` 的�
 | D-12 | **开关档位 / 重启边界**（"不用重启"的射程） | **已定案（本轮细化）**：开关只承诺**能力**（同行切换宿主半边 + 浏览器可见面，§1.1 边界 1、§11）；**代码 / 版本 / 清单 / 增删行一律重启**（`U3` / `R3` / `I8`，§1.1 边界 2）。判据 = §7.6 第 4 条 |
 | D-13 | **主包被关掉时的用户可见语义**（§6.5） | ✅ **已定案（2026-10-15，用户口径）：B 明确连坐** —— 主包被关掉 = 整包被关掉，理由是大批组件在机制上依赖主包（配置模板逻辑 / `applyComponent` 门面 / §5.1 ② 的子包→主包 value import），见 §6.5 的表态块。**残余开口** ✅ **已裁决（2026-10-16）**：不自动撤子包行（`inject: ['wallpaperEngineHost']` 级联 park 已覆盖"半死状态"，自动撤行撞 §2.4 / `I8`）；"整族已停用"由主包行状态面渲染（复用 D3③）；判据归 §7.6 第 4 条整族实例 —— 见 §6.5 的 2026-10-16 裁决块 |
 | D-14 | **字体系统子插件的收口形态** | **定案（2026-10-15，用户口径 A）：目标 = 整个「字体自定义」配置类**（宿主半边 + 浏览器半边 + 外观页签字体节 + 字体键所有权）；**不必现在完成** —— 收口线 = P-B 的能力 + P-C（§6.1 / §6.3 表态）+ P-D（§6.4 预设）之后，见 §7.8 |
-| D-15 | **组件行统一后的行名** | ✅ **已定案（2026-10-16，用户口径）：组件行从未发布 ⇒ 沿用清单里已有的真名 `dsh-plugin-wallpaper-engine-<sub>` 做行 `name`，`id` 不变，零迁移**（§15.1 / §3 范围勘误）。**P-D 阶段1（2026-10-18）唯一例外**：`wallpaper` 一格随包改名，行 `id` 由「`wallpaper-engine-` + 旧目录名」改为 `wallpaper-engine-wallpaper` —— 理由 = S4.3 强制 `id = wallpaper-engine-<目录名>`，且该行**从未发布** ⇒ 仍是零迁移（落地账见 §7.4） |
+| D-15 | **组件行统一后的行名** | ✅ **已定案（2026-10-16，用户口径）：组件行从未发布 ⇒ 沿用清单里已有的真名 `dsh-plugin-wallpaper-engine-<sub>` 做行 `name`，`id` 不变，零迁移**（§15.1 / §3 范围勘误）。**P-D 阶段1（2026-10-18）唯一例外**：`wallpaper` 一格随包改名，行 `id` 由「`wallpaper-engine-` + 旧目录名」改为 `wallpaper-engine-media-bridge` —— 理由 = S4.3 强制 `id = wallpaper-engine-<目录名>`，且该行**从未发布** ⇒ 仍是零迁移（落地账见 §7.4） |
 | D-16 | `visibility.js`（97 行）归属 | ✅ **已定案并落地（2026-10-16）**：移到 `lib/component-visibility.js`（顶层语义名，与 `lib/inventory.js` 同族），`lib/components/` 目录删除；`lib/index.js` 的再导出位置不变（§15.6 P-F-2） |
 | D-17 | 组件浏览器半边是否本轮搬进包 | 待定（§15.6 P-F-3；剩余范围 = `about-notice` / `mascot-avatar` 两批 —— `media-bridge` 已改名 `wallpaper`，其浏览器半边已由 P-D S3a–S3d（2026-10-18）交付六节渲染器，不再占 P-F 账） |
 | D-18 | **统一后的发布形态排期** | 待定（§15.6 P-F-4；统一 ⇒ 主包必须**精确依赖**这 3 个包 ⇒ ADR-0014 `S8.2`「发布形态尚未执行过」由"没做过"变"必须做"，§12 的发布顺序要排期） |
@@ -1093,14 +1098,14 @@ S5 之前"宿主半边"只有一条线：壁纸包拿 `wallpaperEngineHost` 的�
 > - **仍未做**：`media-bridge`（须排在 P-D 之前）；账③（组件浏览器半边）未动。
 
 > **落地账 · P-F 批 1c（`media-bridge`，2026-10-16，已提交 `6dfb431d`）**
-> - **搬迁**：`packages/wallpaper/{package.json, cordis.patch.yml, icon.png, locale/{en,zh}.json,
+> - **搬迁**：`packages/media-bridge/{package.json, cordis.patch.yml, icon.png, locale/{en,zh}.json,
 >   lib/{index.js, backend.js, legacy.js, provision.js, supervisor.js, audio-tap.swift},
 >   lib/routes/now-playing.js}`；`lib/components/media-bridge/` 已删 —— **`lib/components/` 当时只剩松散的
 >   `visibility.js`（无子目录）⇒ 账①（包边界）在三格上全部落完**（该目录随后删除，见 §15.6 P-F-2 / D-16）。
 > - **两处 `..` 级数修正（本批唯一"非逐字搬移"）**：`lib/legacy.js` 的 `TAP_SWIFT` 由 `SELF_DIR,'..','..'`
 >   改 `SELF_DIR`（`audio-tap.swift` 同批随包走：主包 `lib/audio-tap.swift` → 包内 `lib/audio-tap.swift`，
 >   根清单 `files` 里的 `"lib/audio-tap.swift"` 随之删除）；`lib/provision.js` 的 `PLUGIN_ROOT` 由
->   `SELF_DIR,'..','..','..'` 改 `SELF_DIR,'..'`（= **本包根**：开发期 `packages/wallpaper/`、安装期
+>   `SELF_DIR,'..','..','..'` 改 `SELF_DIR,'..'`（= **本包根**：开发期 `packages/media-bridge/`、安装期
 >   `<profile>/node_modules/<pkg>/` —— 主包与子包在安装形态下是两个目录，旧级数会指到主包上）。
 > - **键表登记 `'media-bridge'`（8 键）**：`base` / `pluginName`（`const:`）、`configPath`（`data:`）、
 >   `CONTROL_JSON_MAX_BYTES`（`http:`）、`componentViewFrom` / `createComponentSession`（`session:`）、
@@ -1115,7 +1120,7 @@ S5 之前"宿主半边"只有一条线：壁纸包拿 `wallpaperEngineHost` 的�
 >   `RangeError: Maximum call stack size exceeded`）、`test/tools/packages.mjs` selftest（发现层不再有
 >   `kind==='subpath'` ⇒ `subNoClient` 改从任意 kind 找；⑥ 负对照断言"改名 ⇒ 行认领整条因果链"）、
 >   `verify-guard-map`（删掉 `verify-route-ownership` 的元守卫例外 —— 它现在**直读**模块了）。
-> - **生成物重算**：`docs/ROUTE-INDEX.md`（五条媒体路由归 `packages/wallpaper/lib/routes/now-playing.js`）、
+> - **生成物重算**：`docs/ROUTE-INDEX.md`（五条媒体路由归 `packages/media-bridge/lib/routes/now-playing.js`）、
 >   `docs/GUARD-MAP.md`（模块 159 · 守卫 88 · 零覆盖 5）。
 > - **读数**：`verify` 72/72 · `docs` 6/6 · `smoke` 6/6 · `all` 85/85 · `npm run verify:static` ALL PASSED
 >   （ESLint 283 文件 / 0 规则超限 · tsc 0；`lib/client.js` 未被 build 改动）。
@@ -1147,7 +1152,7 @@ S5 之前"宿主半边"只有一条线：壁纸包拿 `wallpaperEngineHost` 的�
 
 | 选项 | 内容 | 判定 |
 |---|---|---|
-| **A（取）** | ① 作**独立机械提交** → P-D → ③ | §7.4 的 P-D 要"**以 `packages/wallpaper` 为基础大改**"：先搬后改写**只付一次路径成本**；反序要让 media-bridge 的实现与其测试改两遍 |
+| **A（取）** | ① 作**独立机械提交** → P-D → ③ | §7.4 的 P-D 要"**以 `packages/media-bridge` 为基础大改**"：先搬后改写**只付一次路径成本**；反序要让 media-bridge 的实现与其测试改两遍 |
 | B | 与 P-D 合批 | **不取**：机械搬迁与行为重写混进一个提交 ⇒ `bisect` / `revert` 失能、review 噪声吞掉机械改动 |
 | C | 排在 P-D 之后 | **不取**：二次改动（P-D 在旧路径上动刀）+ 双位置术语债继续付 |
 
@@ -1162,7 +1167,7 @@ S5 之前"宿主半边"只有一条线：壁纸包拿 `wallpaperEngineHost` 的�
 3. **批 2b**：`mascot-avatar` 浏览器半边（`src/avatar-import.js` / `avatar-layer.js` / `ext-avatar.js` / `panel-tabs-mascot.js`）。
 4. **`media-bridge`（P-D 阶段1 已改名 `wallpaper`）的浏览器半边不占 P-F 账③**：原判据「它今天**没有**浏览器半边
    （`lib/types/index.d.ts:166` 明写 "media-bridge is deliberately absent"）⇒ 交给 P-D」已在 2026-10-18 兑现 ——
-   P-D S3a–S3d 交付六节渲染器并自出产物 `lib/client.wallpaper.js`（§7.4）；渲染内核与层单例仍留主包，S5 再收口。
+   P-D S3a–S3d 交付六节渲染器并自出产物 `lib/client.media-bridge.js`（§7.4）；渲染内核与层单例仍留主包，S5 再收口。
 
 ### 15.4 落点硬约束（照做，否则是静默事故）
 
@@ -1229,7 +1234,7 @@ S5 之前"宿主半边"只有一条线：壁纸包拿 `wallpaperEngineHost` 的�
 `rows: 8` = 根 patch 的 8 条 `insert`（PR #5 加 `wallpaper-engine-pet-link` 行）；
 `clientArtifacts` 先由 P-F 批 1c 从 3 **抬到 4**（`main+fonts+fx+parallax` 四份产物），
 再由 PR #5 的 `491282f7`（浏览器半边收口成一般形态）**4→5**（`+pet-link`），
-最后由 P-D 阶段1 的 `f0de5c3c`（S3a，壁纸子包出 `client.wallpaper.js`）**5→6**（`+wallpaper`），且
+最后由 P-D 阶段1 的 `f0de5c3c`（S3a，壁纸子包出 `client.media-bridge.js`）**5→6**（`+wallpaper`），且
 `test/verify-client-sync.mjs` 直接 import 这**同一个常量** ⇒ 两处不会再一高一低。
 前提是每个包**仍自带直接位于其下的 `package.json`**（`:219-240` 只认直接子目录）。
 

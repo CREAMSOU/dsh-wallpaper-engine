@@ -198,7 +198,7 @@ const dispose = apply(mockCtx);
 // 处置（Lead 裁决 (a)）：**连组件一起 boot**，保住组件边界；判据判什么一个字没改。
 // 同 verify-scene-live 的既有做法（`['wallpaper', 'mascot-avatar', 'about-notice']`）。
 if (typeof hostMod.applyComponent === 'function') {
-  for (const comp of ['wallpaper', 'mascot-avatar', 'about-notice']) {
+  for (const comp of ['media-bridge', 'mascot-avatar', 'about-notice']) {
     try { hostMod.applyComponent(mockCtx, {}, comp); } catch (err) {
       console.log('  · 组件行 boot 失败（' + comp + '）：' + String(err && err.message));
     }
@@ -985,8 +985,8 @@ if (token) {
     slotBody !== null && /function sceneFrameSlot\(\s*abs\s*\)/.test(slotBody) && !slotBody.includes("'_v'"),
     slotBody === null ? '锚点缺失' : 'arity-ok=' + /function sceneFrameSlot\(\s*abs\s*\)/.test(slotBody));
   check('P4-16 档 4 豁免抓帧时**不解析槽位**（不留那次白做的 statSync + ensureFrameCacheDir）',
-    /const slot = variant === 4 \? null : sceneFrameSlot\(abs\);/.test(readFileSync(join(root, 'packages', 'wallpaper', 'lib', 'routes', 'scene-frame.js'), 'utf8'))
-    && /const gpuFile = slot \? gpuFrameFileFor\(slot\) : null;/.test(readFileSync(join(root, 'packages', 'wallpaper', 'lib', 'routes', 'scene-frame.js'), 'utf8')));
+    /const slot = variant === 4 \? null : sceneFrameSlot\(abs\);/.test(readFileSync(join(root, 'packages', 'media-bridge', 'lib', 'routes', 'scene-frame.js'), 'utf8'))
+    && /const gpuFile = slot \? gpuFrameFileFor\(slot\) : null;/.test(readFileSync(join(root, 'packages', 'media-bridge', 'lib', 'routes', 'scene-frame.js'), 'utf8')));
 }
 
 // ── Level F: sceneVideo 文件版探测（issue #136）──────────────────────────────
@@ -1127,16 +1127,16 @@ console.log('Level F — sceneVideo 文件版探测（issue #136）等价 / 读�
       usesUint8Probe('extractSceneVideo(new Uint8Array(await readFile(abs)))') === true);
   }
   // ③b 族文件归属：场景内嵌媒资族（`/scene-video` + `/scene-audio`）已搬进
-  //     `packages/wallpaper/lib/routes/scene-media.js`（S5c 刀2 随包出户；逐条理由见该文件头）。判据钉两件事：
+  //     `packages/media-bridge/lib/routes/scene-media.js`（S5c 刀2 随包出户；逐条理由见该文件头）。判据钉两件事：
   //     ① 门面里零残留、两条注册都在包入口里；
   //     ② 去重账本 `SCENE_VIDEO_INFLIGHT` **只以引用进 `c`**（声明在本 fiber 的会话段）
   //        ⇒ 搬文件不改变它"本 fiber 单例"的生命周期（这是纯搬移、不是行为改动）。
   {
     const hostSrc = stripComments(readFileSync(join(root, 'lib', 'index.js'), 'utf8'));
-    const pkgEntrySrc = stripComments(readFileSync(join(root, 'packages', 'wallpaper', 'lib', 'index.js'), 'utf8'));
-    const famSrc = stripComments(readFileSync(join(root, 'packages', 'wallpaper', 'lib', 'routes', 'scene-media.js'), 'utf8'));
+    const pkgEntrySrc = stripComments(readFileSync(join(root, 'packages', 'media-bridge', 'lib', 'index.js'), 'utf8'));
+    const famSrc = stripComments(readFileSync(join(root, 'packages', 'media-bridge', 'lib', 'routes', 'scene-media.js'), 'utf8'));
     const stale = /path:\s*`\$\{BASE\}\/(scene-video|scene-audio)`/;
-    check('G 场景内嵌媒资族已搬进 packages/wallpaper/lib/routes/scene-media.js（门面里零残留）',
+    check('G 场景内嵌媒资族已搬进 packages/media-bridge/lib/routes/scene-media.js（门面里零残留）',
       !stale.test(hostSrc)
         && famSrc.includes('path: `${BASE}/scene-video`')
         && famSrc.includes('path: `${BASE}/scene-audio`'));
@@ -1152,7 +1152,7 @@ console.log('Level F — sceneVideo 文件版探测（issue #136）等价 / 读�
       stale.test(hostSrc + '\n  path: `${BASE}/scene-audio`,'));
   }
   // ③c 族文件归属：属性族（`/props`）、首帧缓存族（`/live-frame`）随 S5c 刀2 搬进
-  //     `packages/wallpaper/lib/routes/`；设置族（`/settings`）留在主包 `lib/routes/settings.js`。
+  //     `packages/media-bridge/lib/routes/`；设置族（`/settings`）留在主包 `lib/routes/settings.js`。
   //     判据钉两件事（与 ③b 同形）：
   //     ① 门面里三条路由字面量零残留，且改成"一次调用"的调用点形态（props/live-frame 在包入口）；
   //     ② 各族的**关键不变量**随文件一起落地（不是只剩空壳路由）——
@@ -1161,9 +1161,9 @@ console.log('Level F — sceneVideo 文件版探测（issue #136）等价 / 读�
   //        · settings：写路径只认 PUT，落盘前必过 `sanitizeSettings` 与迁移护栏 `withLegacyFontValues`。
   {
     const hostSrc = stripComments(readFileSync(join(root, 'lib', 'index.js'), 'utf8'));
-    const pkgEntrySrc = stripComments(readFileSync(join(root, 'packages', 'wallpaper', 'lib', 'index.js'), 'utf8'));
-    const propsSrc = stripComments(readFileSync(join(root, 'packages', 'wallpaper', 'lib', 'routes', 'props.js'), 'utf8'));
-    const frameSrc = stripComments(readFileSync(join(root, 'packages', 'wallpaper', 'lib', 'routes', 'live-frame.js'), 'utf8'));
+    const pkgEntrySrc = stripComments(readFileSync(join(root, 'packages', 'media-bridge', 'lib', 'index.js'), 'utf8'));
+    const propsSrc = stripComments(readFileSync(join(root, 'packages', 'media-bridge', 'lib', 'routes', 'props.js'), 'utf8'));
+    const frameSrc = stripComments(readFileSync(join(root, 'packages', 'media-bridge', 'lib', 'routes', 'live-frame.js'), 'utf8'));
     const settingsSrc = stripComments(readFileSync(join(root, 'lib', 'routes', 'settings.js'), 'utf8'));
     const stale = /path:\s*`\$\{BASE\}\/(props|live-frame|settings)`/;
     check('H 三条路由族已搬出 apply()（门面里零残留，族文件各持一条注册）',
@@ -1186,7 +1186,7 @@ console.log('Level F — sceneVideo 文件版探测（issue #136）等价 / 读�
       stale.test(hostSrc + '\n  path: `${BASE}/settings`,'));
   }
   // ③d 媒体字节族：`/media` + `/preview`（原始字节直出）随 S5c 刀2 搬进
-  //     `packages/wallpaper/lib/routes/media-bytes.js`。
+  //     `packages/media-bridge/lib/routes/media-bytes.js`。
   //     判据与 ③c 同形，钉三件事：
   //     ① 门面里两条路由字面量与那个循环零残留（`for (const seg of ['media','preview'])` 也搬走了）；
   //     ② 改成"一次调用"（在包入口），且**调用点必须排在 media-derived 之后** —— `/media-info` 与
@@ -1195,8 +1195,8 @@ console.log('Level F — sceneVideo 文件版探测（issue #136）等价 / 读�
   //        `/preview` 不定音、非 GET/HEAD 出 405。
   {
     const hostSrc = stripComments(readFileSync(join(root, 'lib', 'index.js'), 'utf8'));
-    const pkgEntrySrc = stripComments(readFileSync(join(root, 'packages', 'wallpaper', 'lib', 'index.js'), 'utf8'));
-    const bytesSrc = stripComments(readFileSync(join(root, 'packages', 'wallpaper', 'lib', 'routes', 'media-bytes.js'), 'utf8'));
+    const pkgEntrySrc = stripComments(readFileSync(join(root, 'packages', 'media-bridge', 'lib', 'index.js'), 'utf8'));
+    const bytesSrc = stripComments(readFileSync(join(root, 'packages', 'media-bridge', 'lib', 'routes', 'media-bytes.js'), 'utf8'));
     const stale = /path:\s*`\$\{BASE\}\/\$\{seg\}`/;
     check('I 媒体字节族已搬出 apply()（门面里零残留，族文件持循环注册）',
       !stale.test(hostSrc)

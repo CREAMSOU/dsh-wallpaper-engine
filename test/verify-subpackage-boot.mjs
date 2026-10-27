@@ -35,9 +35,19 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, wri
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { functionBodyOf, stripComments } from './tools/js-text.mjs';
+import { isUpstreamFork, upstreamForkOf } from './tools/subpackage-shapes.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const CONTRACT_REL = 'lib/subpackage-boot.js';
+const PACKAGES_PREFIX = 'packages/';
+/** packages/ 下带 package.json 的直接子目录（形态判定用它，不用包的自称字段）。 */
+const PACKAGE_DIRS_ON_DISK = (() => {
+  const dir = join(ROOT, 'packages');
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir).sort()
+    .filter((n) => { try { return statSync(join(dir, n, 'package.json')).isFile(); } catch { return false; } })
+    .map((n) => PACKAGES_PREFIX + n);
+})();
 const APPLY_HEADER = 'export function apply(';
 
 let failed = 0;
@@ -139,7 +149,7 @@ const rows = patchRows(patchText);
 const discovered = discoverSubpackages();
 const badManifests = discovered.filter((d) => d.error || !d.name);
 const rowNames = rows.map((r) => r.name).filter(Boolean);
-const rowSpecs = rowNames.filter((n) => n !== rootName && !n.startsWith(rootName + '/') && n.startsWith(rootName + '-'));
+const rowSpecs = rowNames.filter((n) => n !== rootName && !n.startsWith(rootName + '/'));
 
 check('packages/ 下至少有一个子包（P-A 未落 ⇒ 判红，不放宽）', discovered.length > 0,
   discovered.length ? discovered.map((d) => d.dir + '=' + d.name).join(' / ') : 'packages/ 下没有带 package.json 的目录');
@@ -343,8 +353,34 @@ check('跨包服务面契约（HOST_SERVICE_NAME 字面量 / 7 键冻结 / schem
 // P-F：组件行出户后，组件宿主半边**也只**能从这个服务面取键（零主包说明符）⇒ 把每个已登记 id 的
 // 键面都真取一遍（数据驱动，不写死 about-notice）：声明面非空、且每个键都能取到值（缺键即抛）。
 const componentKeyIssues = [];
+// upstream-fork 形态（P1：packages/pet）的宿主半边**不消费**这张服务面 ⇒ 它的登记面必须**为空**，
+// 且"为空"是被断言的事实（不是漏登记）：非空反而判红（伪造键 = 给未来越界留门）。
+// 判定读形态真源，不读包的自称字段。
+const forkConsumerIds = new Set();
+if (mod && typeof mod.subpackageIds === 'function') {
+  for (const dir of PACKAGE_DIRS_ON_DISK) if (isUpstreamFork(dir)) {
+    const fork = upstreamForkOf(dir);
+    if (fork && fork.hostServiceConsumer === false) forkConsumerIds.add(fork.dir.slice(PACKAGES_PREFIX.length));
+  }
+}
+const emptyFaceIssues = [];
+if (mod && typeof mod.subpackageIds === 'function' && typeof mod.subpackageKeyNames === 'function') {
+  for (const id of forkConsumerIds) {
+    if (!mod.subpackageIds().includes(id)) { emptyFaceIssues.push(id + ' 没有登记（S10.1 要求每个 packages/* 有一格）'); continue; }
+    const names = mod.subpackageKeyNames(id);
+    if (!Array.isArray(names) || names.length !== 0) {
+      emptyFaceIssues.push(id + ' 的声明面应为空（它不消费服务面），实际 ' + JSON.stringify(names));
+    }
+    // 空面取键必须既**不抛**也**取不到键**：抛错与取值非空都是"该包其实在偷偷消费服务面"。
+    try {
+      const view = mod.subpackageKeys(id, null);
+      if (view && Object.keys(view).length !== 0) emptyFaceIssues.push(id + ' 空面取到了键 ' + Object.keys(view).join(','));
+    } catch (e) { emptyFaceIssues.push(id + ' 空面取键抛错：' + e.message); }
+  }
+}
 if (mod && typeof mod.subpackageIds === 'function' && typeof mod.subpackageKeys === 'function') {
   for (const id of mod.subpackageIds()) {
+    if (forkConsumerIds.has(id)) continue;
     const names = mod.subpackageKeyNames(id);
     if (!Array.isArray(names) || names.length === 0) { componentKeyIssues.push(id + ' 的声明面为空'); continue; }
     let view;
@@ -358,6 +394,13 @@ if (mod && typeof mod.subpackageIds === 'function' && typeof mod.subpackageKeys 
 check('每个已登记 id（含出户的组件行）都能通过服务面取到一份**非空**键集（组件半边零主包说明符的物理前提）',
   mod ? mod.subpackageIds().length >= 4 && componentKeyIssues.length === 0 : false,
   componentKeyIssues.join('；') || (mod ? mod.subpackageIds().map((id) => id + '(' + mod.subpackageKeyNames(id).length + ')').join(' ') : 'n/a'));
+// 不再捆绑 fork：服务登记必须与实际目录逐项一致，不允许残留 pet 幽灵项。
+const expectedIds = PACKAGE_DIRS_ON_DISK.map(dir => dir.slice(PACKAGES_PREFIX.length)).sort();
+const idsMatch = ids => JSON.stringify([...ids].sort()) === JSON.stringify(expectedIds);
+check('外置官方桌宠：无内置 fork，服务登记与磁盘七子包严格双射',
+  mod && forkConsumerIds.size === 0 && emptyFaceIssues.length === 0 && idsMatch(mod.subpackageIds()));
+check('negative control: 残留 pet 服务登记必须判红',
+  mod && !idsMatch([...mod.subpackageIds(), 'pet']));
 check('负对照：合成服务面缺 handOff 键 ⇒ 判红（键集不许少）',
   serviceViolations(synthHost({ createSubpackageHost: () => Object.freeze({ ids: () => [], keyNames: () => [], keys: () => ({}), schema: baseHostValue.schema, http: baseHostValue.http }) }), HOST_SERVICE_LITERAL).length > 0);
 check('负对照：服务面缺 apply 键（per-apply 实例面无通道）⇒ 判红',
@@ -555,6 +598,37 @@ check('宿主腿默认解析根（不注入）：合成 profile 里**没装**的
   realNegErr instanceof Error && realNegErr.message.includes(notInstalledName),
   realNegErr ? realNegErr.message : '没有抛错');
 
+// b3) **同名但另一个版本**的 profile **不归本版管**（2026-10-18 真机事故）。
+//     现场：开发机 `dshwe132` 钉着 1.3.0-r2 的**打包产物**（那个版本的 patch 只有一条主包行、
+//     根本没有子包行），而它同样满足"装了同名主包"的形态 ⇒ 被旧口径扫进检查面 ⇒ 新版 apply
+//     在自检里抛错 ⇒ **六条路由一条都没注册** ⇒ 设置页「壁纸引擎」整屏 404
+//     （用户原话："子包怎么又没有挂载了"，主机日志零报错，因为抛错发生在路由注册之前）。
+//     口径：**同名 ≠ 同一份代码** —— 旧版 profile 加载的是那份旧代码，由它自己的自检负责。
+//     ⚠️ 这批断言同时是**行为级负对照**：把 `isForeignVersion(...) continue` 那一行删掉，
+//     roots 会变成 {old-version, same-version} ⇒ 下面的集合相等断言立刻判红。
+const foreignHome = join(HOST_LEG_ISO, 'home-foreign');
+const ownVersion = JSON.parse(read('package.json')).version;
+const mkInstalledMain = (home, profile, version) => {
+  const dir = makeHostProfile(home, profile, { installsMain: true });
+  writeFileSync(join(dir, 'node_modules', rootName, 'package.json'),
+    JSON.stringify({ name: rootName, version }) + '\n');
+  return dir;
+};
+mkInstalledMain(foreignHome, 'old-version', '0.0.1-old');
+mkInstalledMain(foreignHome, 'same-version', ownVersion);
+// 无 package.json 的裸目录（读不出它是谁）⇒ 按"是我们"处理（大声失败的方向），见实现注释。
+makeHostProfile(foreignHome, 'bare-dir', { installsMain: true });
+let foreignRoots = null, foreignErr = null;
+try {
+  foreignRoots = mod.assertSubpackagesResolvableInHost([{ id: 'probe-ok', name: rootName + '-__probe_ok' }],
+    { mainName: rootName, env: { DSH_HOME: foreignHome }, resolveInRoot: () => '/always-resolves' });
+} catch (e) { foreignErr = e; }
+check('宿主腿：同名但**另一个版本**的 profile 不被检查（旧版不可能是本版子包行的装载者）；'
+  + '同版本 / 读不出身份的都照常检查',
+  foreignErr === null && Array.isArray(foreignRoots)
+  && JSON.stringify(foreignRoots.map((r) => r.name).sort()) === JSON.stringify(['bare-dir', 'same-version']),
+  foreignErr ? foreignErr.message : JSON.stringify(foreignRoots));
+
 // c2) 真接线：apply 体里两条腿都在，且都在 provide 之后
 const facadeHostRe = /assertSubpackagesResolvableInHost\s*\(/;
 const facadeHostImported = /import\s*\{[^}]*\bassertSubpackagesResolvableInHost\b[^}]*\}\s*from\s*['"]\.\/subpackage-boot\.js['"]/.test(stripComments(facadeSrc));
@@ -579,6 +653,24 @@ if (mod) {
   check('负对照：真源码变异（宿主腿的 throw 被抹掉 = 自检不出声）⇒ 宿主腿判据判红（证明判据有牙）',
     hostMutBad.length > 0, JSON.stringify(hostMutBad));
 }
+// 灰测回归：非主包前缀的内置桌宠也必须进入真实自检集合。
+check('灰测：自检覆盖 packages/ 中全部子包（包括内置桌宠）',
+  JSON.stringify([...mod.subpackageSpecifiers(patchText, rootName)].sort())
+    === JSON.stringify(discovered.map((d) => d.name).sort()));
+
+// 当前运行的 profile 优先，不能由同版本的另一个残缺安装阻断启动。
+let activeRoots = null, activeErr = null;
+try {
+  activeRoots = mod.assertSubpackagesResolvableInHost(hostLegRows, {
+    mainName: rootName,
+    env: { DSH_HOME: foreignHome, DSH_PROFILE: 'same-version', DSH_PROFILE_DIR: join(foreignHome, 'profiles', 'same-version') },
+    resolveInRoot: (root) => root.name === 'same-version' ? '/resolves' : null,
+  });
+} catch (e) { activeErr = e; }
+check('灰测：只检查当前 profile，无关残缺 profile 不得阻断启动',
+  activeErr === null && activeRoots.length === 1 && activeRoots[0].name === 'same-version',
+  activeErr ? activeErr.message : JSON.stringify(activeRoots));
+
 rmSync(HOST_LEG_ISO, { recursive: true, force: true });
 
 if (failed) { console.log('SUBPACKAGE BOOT CHECKS FAILED — ' + failed + ' failed'); process.exit(1); }

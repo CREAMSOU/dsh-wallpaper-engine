@@ -64,7 +64,7 @@ const LAYER_ID = "dsh-wallpaper-engine-layer"; // 壁纸层单例：全仓唯一
 const SCRIM_ID = "dsh-wallpaper-engine-scrim"; // 可读性 scrim 单例：同上
 // **层所有权契约（P-D S4，ADR-0013 D12 / BUNDLE-SPLIT §7.4 / §13 风险 9）**：壁纸层与 scrim 是
 // **进程内单例 DOM 节点**，所有权 = 主包渲染内核独占 —— `src/live-layer.js` 建层/领养/退役，
-// `src/client.js` 的 fiber cleanup 摘净。子包（`packages/wallpaper` 浏览器半边）**不得**建层/退层，
+// `src/client.js` 的 fiber cleanup 摘净。子包（`packages/media-bridge` 浏览器半边）**不得**建层/退层，
 // 也不许持 `#layer` 引用：它只经 host 键面拿渲染器与状态（`selection` 等活别名）。
 // 判据：`test/verify-layer-ownership.mjs`（P1 声明/id 赋值点 · P2 body 挂载白名单 ·
 // P3 拆卸零残留 · P4 iframe 父链）。改这两行或这两条路径 = 改契约，必须同步守卫与
@@ -1055,6 +1055,7 @@ function seedGroupsFromPlaylists() {
     name: typeof source.name === "string" && source.name.trim() ? source.name.trim() : weT("轮播列表"),
     interval: DEFAULTS.rotationInterval,
     order: source.order === "random" ? "random" : "sequence",
+    trigger: "interval",
     wallpaperIds: ids,
   });
   selection.rotationGroupId = selection.rotationGroups[selection.rotationGroups.length - 1].id;
@@ -1120,8 +1121,16 @@ function syncRotationTimer() {
   clearRotationTimer();
   if (!selection.rotationEnabled || !selection.id) return;
   if (rotationCandidates().length < 2) return;
-  if (typeof window === "undefined" || typeof window.setTimeout !== "function") return;
   const group = activeRotationGroup();
+  // 「当前视频播完就换」档（issue #230 后续诉求）：**不计时** —— 推进由视频的 ended
+  // 事件驱动（watchVideoState 里那一支）。这里只把上一次留下的计时收掉（上面已调
+  // clearRotationTimer），于是切回「按间隔」档时由下一次 sync 重新 arm。
+  const trigger = group && group.trigger === "videoEnd" ? "videoEnd" : "interval";
+  if (trigger === "videoEnd") {
+    liveLog("rotation-arm", "跟随视频播放结束（不计时，候选 " + rotationCandidates().length + " 张）");
+    return;
+  }
+  if (typeof window === "undefined" || typeof window.setTimeout !== "function") return;
   const minutes = group ? group.interval : DEFAULTS.rotationInterval;
   // 开发/测试覆盖钩子：localStorage.weRotationTestSec（秒）可临时缩短轮换
   // 间隔（冒烟测试与手动预览用）；未设置时按组间隔正常运转（缺省值见 lib/settings-schema.js
@@ -1293,6 +1302,7 @@ function startCreateGroup() {
     name: weT("轮播列表 {index}", { index: selection.rotationGroups.length + 1 }),
     interval: DEFAULTS.rotationInterval,
     order: "sequence",
+    trigger: "interval",
     wallpaperIds: [],
   });
   emit();
@@ -1305,7 +1315,8 @@ function saveEditingGroup() {
   const cleaned = {
     id: draft.id,
     name: typeof draft.name === "string" && draft.name.trim() ? draft.name.trim() : weT("轮播列表"),
-    interval: clampNum(draft.interval, ...schemaRange("rotationInterval"), DEFAULTS.rotationInterval),
+    interval: clampNum(draft.interval, ROTATION_INTERVAL_MIN, ROTATION_INTERVAL_MAX, DEFAULTS.rotationInterval),
+    trigger: draft.trigger === "videoEnd" ? "videoEnd" : "interval",
     order: draft.order === "random" ? "random" : "sequence",
     wallpaperIds: Array.isArray(draft.wallpaperIds)
       ? draft.wallpaperIds.filter((x) => typeof x === "string" && x)
@@ -1817,6 +1828,27 @@ function watchVideoState(video) {
   for (const t of ["play", "playing", "pause", "ended", "error", "emptied"]) {
     try { video.addEventListener(t, () => syncVideoState(video)); } catch { /* ignore */ }
   }
+  // 「当前视频播完就换下一张」（issue #230 后续诉求）：轮播组选了 `trigger: 'videoEnd'`
+  // 时，壁纸视频的 ended 就是轮换信号 —— 与计时器二选一（syncRotationTimer 在该档不计时）。
+  // 只认**当前层**那个 <video>：预热 / 探测元素也走 watchVideoState，它们播完不代表壁纸播完。
+  // `loop` 会把 ended 吞掉，所以按 trigger 在建层时关掉 loop（见 video-layer 的
+  // loop 分支）—— 这里再加一道 `video.loop` 判断，防止旧层残留的 ended 误触。
+  try {
+    video.addEventListener("ended", () => {
+      if (video.loop) return;
+      if (!selection.rotationEnabled || !selection.id) return;
+      const group = activeRotationGroup();
+      if (!group || group.trigger !== "videoEnd") return;
+      const cur = (selection.inventory && selection.inventory.wallpapers || []).find((w) => w && w.id === selection.id);
+      // 只对**视频**壁纸生效：场景内嵌视频播完不等于场景结束（它可能还有别的动画）；
+      // 图片 / 网页壁纸没有 ended 语义，真出现了也按"不是这个档该管的事"跳过。
+      if (!cur || cur.type !== "video") return;
+      if (video.currentSrc && selection.url && video.currentSrc.indexOf(String(selection.url).split("?")[0]) < 0) return;
+      if (rotationCandidates().length < 2) return;
+      liveLog("rotation-video-end", "视频播完 → 换下一张（候选 " + rotationCandidates().length + " 张）");
+      beginRotationPrepare(new Set());
+    });
+  } catch { /* ignore */ }
   // 媒体就绪后按意图自动补一次播放：play() 最常见的失败是被紧接着的 src 切换
   // （转码替换 / 换源）打断 —— 那一刻元素已经 paused，用户看到的就是冻在首帧
   // 的静止画面。就绪事件里重试即可自愈；真的被拒过时由 wePlayRefused 兜底，
@@ -2298,7 +2330,16 @@ function onEditName(e) {
 }
 function onEditInterval(e) {
   if (!selection.editing) return;
-  selection.editing.interval = clampNum(Number(e.target.value), ...schemaRange("rotationInterval"), DEFAULTS.rotationInterval);
+  // ⚠️ 取值域用 ROTATION_INTERVAL_MIN/MAX 而不是 schemaRange("rotationInterval")：
+  // `rotationInterval` 是 DEFAULTS_ONLY 键（**不在 KINDS 里**）⇒ 问 KINDS 得到的是
+  // [undefined, undefined] ⇒ clampNum 恒回落默认值 30，界面上"选任何时间都无效"
+  // （issue #230 的根因）。真源见 lib/settings-schema.js 的那对常量。
+  selection.editing.interval = clampNum(Number(e.target.value), ROTATION_INTERVAL_MIN, ROTATION_INTERVAL_MAX, DEFAULTS.rotationInterval);
+  emit();
+}
+function onEditTrigger(e) {
+  if (!selection.editing) return;
+  selection.editing.trigger = e.target.value === "videoEnd" ? "videoEnd" : "interval";
   emit();
 }
 function onEditOrder(e) {
@@ -2738,6 +2779,13 @@ async function postImageAsset(path, blob, what) {
 function onAvatarEnabled(e) { setSetting("avatarEnabled", e.target.checked); emit(); }
 function onAvatarSize(v, live) { commitLiveSetting("avatarSize", v, live); if (live) syncAvatarLayer(); }
 function onAvatarRadius(v, live) { commitLiveSetting("avatarRadius", v, live); if (live) syncAvatarLayer(); }
+/** 助手头像的出现间隔（issue #231）：只影响分组判定，没有样式变量 ⇒ 抬手那一次 emit 重算即可
+ *  （渲染器不重算分组；分组由 emit 订阅链里的 syncAvatarLayer 触发，见下）。 */
+function onAvatarAiRepeatRows(v, live) {
+  // 取值域走 schemaRange（与其它滑块同一口径：改 KINDS 不会漏改这里的第二份数字）。
+  commitLiveSetting("avatarAiRepeatRows", clampNum(Math.round(Number(v)), ...schemaRange("avatarAiRepeatRows"), DEFAULTS.avatarAiRepeatRows), live);
+  if (live) syncAvatarLayer();
+}
 // 上传裁切（issue #191 问题 1）：用户口径是"上传非正方形、或主体不在中央时效果很差"。
 // 做法是**导入时先裁再传**（而不是存裁切参数第二次渲染）：
 //   · 盘上那张就是裁完的方形图 ⇒ 预览、会话里、以及"以后任何读到它的地方"天然一致，
@@ -2835,10 +2883,15 @@ async function openAvatarCrop(side, file) {
     return;
   }
   let url;
+  // ⚠️ `w` / `h` 必须声明在 try **之外**：它们要在 catch 之后写进瞬态（`avatarCropW/H`）。
+  // 写进 try 内曾让这两行抛 `ReferenceError: w is not defined` —— 结果是裁切弹窗弹出但
+  // 几何恒为 0（图不可见）、且 `emit()` 永远到不了（首次选图界面毫无反应）。
+  let w;
+  let h;
   try {
     const src = await decodeImageFile(file);
-    const w = Number(src.width) || 0;
-    const h = Number(src.height) || 0;
+    w = Number(src.width) || 0;
+    h = Number(src.height) || 0;
     if (src.close) { try { src.close(); } catch { /* ignore */ } }
     if (!w || !h) throw new Error(weT("读不出图片尺寸"));
     url = URL.createObjectURL(file);
@@ -2897,21 +2950,70 @@ function avatarCropGeometry() {
     dy: -slackY * ny,
   };
 }
-/** 拖动取景：把指针位移换成归一化平移（1 = 可用位移的满量）。 */
+/**
+ * 拖动 / 缩放期间把取景框里那张图**就地**挪到新几何（live 档的"看得见的那部分"）。
+ *
+ * 为什么不是 emit：拖动与滚轮一次就是上百个事件，emit 会重渲染整棵设置面板（与
+ * `commitLiveSetting` 的两档纪律相同）。渲染器只在完整渲染时按 ctx 里的几何写 inline
+ * style，而 live 档**没有**重渲染 ⇒ 图必须由这里自己挪。几何仍然只来自唯一实现
+ * `avatarCropGeometry()`；抬手那一次照常 emit，React 写回的值与这里逐字相同。
+ */
+function syncAvatarCropLive() {
+  if (typeof document === "undefined" || typeof document.querySelector !== "function") return;
+  let view;
+  try { view = document.querySelector(".we-crop__view"); } catch { return; }
+  const img = view && typeof view.querySelector === "function" ? view.querySelector(".we-crop__img") : null;
+  if (!img || !img.style) return;
+  const geo = avatarCropGeometry();
+  img.style.width = geo.dw + "px";
+  img.style.height = geo.dh + "px";
+  img.style.left = ((AVATAR_CROP_VIEW - geo.dw) / 2 + geo.dx) + "px";
+  img.style.top = ((AVATAR_CROP_VIEW - geo.dh) / 2 + geo.dy) + "px";
+  // 缩放滑块也跟着回真值：live 档没有重渲染，不补这一下，滚轮放大了图而滑块还停在 100%
+  // （滑块自己的 liveFill 只在**它的** input 事件里跑，滚轮不经过它）。
+  try {
+    const row = document.querySelector(".we-crop");
+    const range = row && typeof row.querySelector === "function" ? row.querySelector('input[type="range"]') : null;
+    if (!range) return;
+    const pct = Math.round((Math.max(1, Number(selection.avatarCropZoom) || 1)) * 100);
+    range.value = String(pct);
+    const lo = Number(range.min); const hi = Number(range.max);
+    if (typeof range.style.setProperty === "function" && isFinite(lo) && isFinite(hi) && hi > lo) {
+      range.style.setProperty("--we-fill", ((pct - lo) / (hi - lo) * 100) + "%");
+    }
+    const out = row.querySelector(".we-picker__value");
+    if (out) out.textContent = pct + "%";
+  } catch { /* 回显是增强，失败不影响取值 */ }
+}
+/** 拖动取景：把**这一步**的指针增量换成归一化平移（1 = 可用位移的满量）。 */
 function onAvatarCropDrag(dxPx, dyPx) {
   const geo = avatarCropGeometry();
   const slackX = Math.max(0, (geo.dw - AVATAR_CROP_VIEW) / 2);
   const slackY = Math.max(0, (geo.dh - AVATAR_CROP_VIEW) / 2);
   const nx = slackX > 0 ? (Number(selection.avatarCropX) || 0) - dxPx / slackX : 0;
   const ny = slackY > 0 ? (Number(selection.avatarCropY) || 0) - dyPx / slackY : 0;
-  // 拖动是"看得见的那部分" ⇒ 走 live 档（面板不重渲染；预览图由控件按新值自己挪）。
+  // 拖动是"看得见的那部分" ⇒ 走 live 档（面板不重渲染），图由 syncAvatarCropLive 就地挪。
   commitLiveTransient("avatarCropX", Math.max(-1, Math.min(1, nx)), true);
   commitLiveTransient("avatarCropY", Math.max(-1, Math.min(1, ny)), true);
+  syncAvatarCropLive();
 }
-/** 缩放取景（滚轮 / 滑块）。 */
+/** 缩放取景（滑块：绝对值）。 */
 function onAvatarCropZoom(z, live) {
   const v = Math.max(1, Math.min(4, Number(z) || 1));
   commitLiveTransient("avatarCropZoom", v, live);
+  if (live) syncAvatarCropLive();
+}
+/**
+ * 滚轮缩放（增量）。**必须从 `selection` 现读当前值**：live 档不 emit，渲染器手里的
+ * `sel.avatarCropZoom` 会停在事件发生前那一版 —— 拿它累加的话连滚十格也只放大一步。
+ */
+function onAvatarCropWheel(delta) {
+  const cur = Math.max(1, Number(selection.avatarCropZoom) || 1);
+  // 按百分位取整：滚轮一格是 ±0.1，浮点累加会留下 1.2000000000000002 这类尾巴
+  // （它会被写进滑块回显，也让「滚十格正好到上限」变得不确定）。
+  const v = Math.round(Math.max(1, Math.min(4, cur + (Number(delta) || 0))) * 100) / 100;
+  commitLiveTransient("avatarCropZoom", v, true);
+  syncAvatarCropLive();
 }
 /** 把取景框里那一块**按原图分辨率**裁出来（再用既有 downscale 链缩到 512）。 */
 async function cropAvatarToBlob() {
@@ -3373,6 +3475,12 @@ const onGlassFidelity = (pct, live) =>
 // 与本模块生成侧（glass-extra.js）**共用同一份**判据，所以用户敲到一半的非法串既不会进
 // 规则、也不会被"修剪"成另一个选择器。**不做防抖**：只有清单真的变了才会重写 <style>
 // （glass-extra 里那句内容比对），且一次只写一条文本节点，代价与拖滑杆同量级。
+const onGlassSurfacePolicy = (id, policy) => {
+  if (!["left-sidebar", "right-sidebar", "settings-window", "content", "declared", "extra"].includes(id)
+    || !["auto", "native"].includes(policy)) return;
+  setSetting("glassSurfacePolicy", { ...selection.glassSurfacePolicy, [id]: policy });
+  applyEffects(); emit();
+};
 const onExtraGlassSelectors = (text) => {
   setSetting("extraGlassSelectors", text == null ? "" : String(text));
   applyEffects();
@@ -3820,12 +3928,31 @@ const onEdgeCompatChange = (checked) => {
 };
 // Per-group interval: writes straight into the active group so each rotation
 // list keeps its own switch cadence.
-const onGroupInterval = (e) => {
+function onGroupInterval(e) {
   const group = activeRotationGroup();
   if (!group) return;
-  group.interval = clampNum(Number(e.target.value), ...schemaRange("rotationInterval"), DEFAULTS.rotationInterval);
+  group.interval = clampNum(Number(e.target.value), ROTATION_INTERVAL_MIN, ROTATION_INTERVAL_MAX, DEFAULTS.rotationInterval);
   persistSelection();
   syncRotationTimer();
+  emit();
+};
+/**
+ * 轮播推进方式（「按间隔」/「当前视频播完就换」）。写进**当前列表**（与 interval 同口径：
+ * 每个列表记自己的节奏），然后重排计时器 —— 视频结束档要在建层时关掉 loop，而已经上屏
+ * 的那一层不会自己变，所以这里额外触发一次层同步。
+ */
+const onGroupTrigger = (e) => {
+  const group = activeRotationGroup();
+  if (!group) return;
+  group.trigger = e.target.value === "videoEnd" ? "videoEnd" : "interval";
+  persistSelection();
+  syncRotationTimer();
+  // 已经上屏的视频层要跟着换 loop 语义（否则"切到视频结束档"要等下一次换壁纸才生效）。
+  const layer = typeof document !== "undefined" && document.getElementById ? document.getElementById(LAYER_ID) : null;
+  const media = layer && typeof layer.querySelector === "function" ? layer.querySelector("video") : null;
+  if (media && "loop" in media) {
+    try { media.loop = group.trigger !== "videoEnd"; } catch { /* ignore */ }
+  }
   emit();
 };
 // 「删除」按钮**只置令牌**；真正的删除在问句行的「确认」里（不变量 2）。两件事分开的
@@ -4386,9 +4513,9 @@ function WallpaperPicker() {
     // **插件前端那一块自己的开关**（用户诉求 m03549）关着时层也不认它们，面板就跟着空 ——
     // 名单与"真的会动"必须同源，否则会出现点了没反应的滑杆。它与「界面元素跟随」互不依赖。
     parallaxPluginSlots: sel.parallaxPlugin === true ? weDiscoveredGroupsOf('parallax').sort() : [],
-    onAvatarEnabled, onAvatarSize, onAvatarRadius, onAvatarPick, onAvatarClear,
+    onAvatarEnabled, onAvatarSize, onAvatarRadius, onAvatarAiRepeatRows, onAvatarPick, onAvatarClear,
     // 上传裁切（issue #191 问题 1）：几何在这里现算（唯一实现），渲染器只读结果。
-    onAvatarCropZoom, onAvatarCropDrag, onAvatarCropConfirm, onAvatarCropCancel: closeAvatarCrop,
+    onAvatarCropZoom, onAvatarCropDrag, onAvatarCropWheel, onAvatarCropConfirm, onAvatarCropCancel: closeAvatarCrop,
     avatarCropGeo: avatarCropGeometry(), avatarCropView: AVATAR_CROP_VIEW,
     // 超限拦截（#185 后续）：面板画提示行 + 「自动压缩后导入」按钮，处理器在 client 这一侧。
     onAvatarAutoCompress,
@@ -4416,6 +4543,7 @@ function WallpaperPicker() {
       // 处理器是模块级的（onAccent / onCaretColor / onToggleUiColorCustom / onUiColorElement）。
       uiColorOpen: pickerUiColorOpen, onToggleUiColorSection: togglePickerUiColorSection,
       onToggleUiColorCustom, onUiColorElement,
+      onGlassSurfacePolicy, surfaceStatus: weGlassSurfaceStatus(),
       officialColorOf, onAccent, onCapsuleBlur, onCapsuleColor, onBlur, onBorder, onCaretColor, onChatGlassFidelity, onComponentFamily, onComponentFont, onExtraGlassSelectors, onFontAdvanced, onFontResetAll, onGlassAlpha, onGlassColor, onGlassDarkSeparate, onGlassFidelity, onGlobalFamily, onLeftSidebarGlass, onTitlebarGlass, onRefreshSystemFonts, onSidebarAllCorners, onSidebarAlpha, onSidebarBlur, onSidebarColor, onSidebarContentAlpha, onSidebarContentColor, onSidebarCornerRadius, onSidebarCornerSquare, onSidebarFollowGlobal, onSidebarGlass, onSidebarFullClear, onThemeColor, onThemeColorClear, onThemeDarkSeparate, onThemeFamily, onThemeSize, onThemeTypeOnly, onThemeWeight, onThinkingMode, onToggleFontCustom, onToggleThemeFollow, sel,
       // 玻璃 UI 子项开关 + 独立配置 + 独立参数（见 onToggleChildIndependent 那段注释）
       onToggleChildIndependent, onGlassChildParam, childIndependentOn,
@@ -4461,7 +4589,7 @@ function WallpaperPicker() {
     );
     return renderWallpaperTab({
       setSetting, setTransient,
-      INTERVALS, armedConfirm: sel.armedConfirm, cdMode, current, editing, editorPageView, group, groups, isLiveScene, onArmConfirm: armConfirm, onArmDeleteGroup, onCancelEditUploadDir, onCancelEditWeAssetsDir, onClear, onDeleteGroup, onDisarmConfirm: disarmConfirm, onEditInterval, onEditName, onEditOrder, onGroupChange, onGroupInterval, onOpenPicker, onOpenPickerDraft, onRefresh, onStartEditUploadDir, onStartEditWeAssetsDir, onSwitchTransition, onSwitchTransitionDir, onSwitchTransitionSpeed, onToggleAudio, onTogglePlay, onTogglePropsPanel, onToggleRotation, onUploadDirDraft, onWeAssetsDirDraft, pagerRow, playableCount, playableList, playbackLive, propsPanelOpen, renderUserPropsPanel, sel, setPickerOpener, uploadedList,
+      INTERVALS, armedConfirm: sel.armedConfirm, cdMode, current, editing, editorPageView, group, groups, isLiveScene, onArmConfirm: armConfirm, onArmDeleteGroup, onCancelEditUploadDir, onCancelEditWeAssetsDir, onClear, onDeleteGroup, onDisarmConfirm: disarmConfirm, onEditInterval, onEditName, onEditOrder, onEditTrigger, onGroupChange, onGroupInterval, onGroupTrigger, onOpenPicker, onOpenPickerDraft, onRefresh, onStartEditUploadDir, onStartEditWeAssetsDir, onSwitchTransition, onSwitchTransitionDir, onSwitchTransitionSpeed, onToggleAudio, onTogglePlay, onTogglePropsPanel, onToggleRotation, onUploadDirDraft, onWeAssetsDirDraft, pagerRow, playableCount, playableList, playbackLive, propsPanelOpen, renderUserPropsPanel, sel, setPickerOpener, uploadedList,
     });
   };
   const tabIdx = Math.max(0, visibleTabs.findIndex((t) => t.id === activeTab));
@@ -4853,89 +4981,313 @@ function RopeDock() {
   }, [hidden]);
 
   const petOfficialMode = sidebarRightMode() === "official";
-  // 桌宠联动编排用的侧栏控制面（pet-link 子包）。旧版抽屉已删除，所以只有官方态。
-  // 官方侧栏是**宿主自己的** CSS Grid 第三列，列宽由 React 内联样式写，且宿主自带
-  // `transition: grid-template-columns var(--ds-transition-duration-slow)`。
-  // 我们**绝不改写它的 grid-template-columns**（实测那样会覆盖宿主三列定义、
-  // 把左列冻结成错误宽度，面板会跑到屏幕左侧）；只把它的过渡时长临时调长，
-  // 让宿主**自己的**展开动画变慢 —— 这就是"缓慢拉出"，且不碰它的布局。
+  // 只接管过渡时序，不改宿主列宽值；新版须同时控制外层 grid 与 panel 内的 DockKit。
   const officialPull = {
     saved: null,
     savedOverflow: null,
-    /** 调长宿主过渡并触发展开。 */
-    begin(ms, expanded = true) {
-      const frame = typeof document !== "undefined" && document.querySelector
-        ? document.querySelector(".dshDesktopFrame") : null;
-      if (!frame) { if (expanded) wallSidebarOpen(); else wallSidebarClose(); return 0; }
-      if (officialPull.saved === null) {
-        officialPull.saved = frame.style.getPropertyValue("--ds-transition-duration-slow") || "";
+    savedFrame: null,
+    savedSurface: null,
+    savedTransition: null,
+    savedPriority: "",
+    motionRun: null,
+    // 临时现场诊断：最多24组，不采文本/URL/会话标识。定位完成后移除。
+    traceLeft: 24,
+    trace(stage, target, progress) {
+      if (officialPull.traceLeft <= 0 || typeof apiPostJson !== "function") return;
+      officialPull.traceLeft--;
+      try {
+        const panel = target && target.surface;
+        const round = value => Number.isFinite(value) ? Math.round(value) : null;
+        const rectOf = node => {
+          if (!node || typeof node.getBoundingClientRect !== "function") return null;
+          const r = node.getBoundingClientRect();
+          return [round(r.left), round(r.top), round(r.width), round(r.height)];
+        };
+        const clipOf = node => node && node.style ? node.style.getPropertyValue("clip-path") : "";
+        const record = panel && typeof weSurfaceRuntime !== "undefined" && weSurfaceRuntime
+          ? weSurfaceRuntime.records.get(panel) : null;
+        const docks = panel ? Array.from(panel.querySelectorAll('[data-dockkit-host="dock"], [data-dockkit-empty]')).slice(0, 3) : [];
+        const data = { s: stage, q: progress, m: !!(target && target.modern),
+          o: !!(panel && panel.hasAttribute("data-sidebar-right-open")), p: rectOf(panel), c: clipOf(panel),
+          d: docks.map(node => [...rectOf(node), !!(node.closest && node.closest('[hidden], [aria-hidden="true"]'))]),
+          g: record ? rectOf(record.plate) : null, gc: record ? clipOf(record.plate) : "" };
+        const detail = JSON.stringify(data);
+        if (detail.length <= 300) apiPostJson("/client-diag", {
+          event: "sidebar-paint-v4", type: "sidebar-motion", detail,
+        }, { keepalive: true }).catch(() => {});
+        if (target && target.frame && typeof getComputedStyle === "function") {
+          const frame = target.frame, style = getComputedStyle(frame);
+          const column = panel && panel.closest("[data-rightbar-col]");
+          const animations = typeof frame.getAnimations === "function" ? frame.getAnimations() : [];
+          const data = { s: stage, q: progress, f: rectOf(frame), c: rectOf(column),
+            g: style.gridTemplateColumns, d: style.transitionDuration,
+            v: style.getPropertyValue("--ds-transition-duration-slow"),
+            a: animations.filter(animation => animation.effect?.target === frame).slice(0, 2).map(animation => [
+              animation.transitionProperty || "waapi", round(animation.effect?.getTiming?.().duration),
+              round(animation.currentTime), animation.playState,
+            ]) };
+          const detail = JSON.stringify(data);
+          if (detail.length <= 300) apiPostJson("/client-diag", {
+            event: "sidebar-grid-v6", type: "sidebar-motion", detail,
+          }, { keepalive: true }).catch(() => {});
+        }
+        if (stage === "moving" && (progress === 0 || progress === 1)
+          && panel && typeof document.elementsFromPoint === "function") {
+          const r = panel.getBoundingClientRect();
+          const x = Math.max(0, r.left + r.width * .1), y = Math.max(0, r.top + r.height * .9);
+          const layers = document.elementsFromPoint(x, y).slice(0, 3).map(node => {
+            const style = getComputedStyle(node), before = getComputedStyle(node, "::before");
+            return [String(node.tagName || "").toLowerCase(), String(node.className || "").slice(0, 42),
+              style.backgroundColor, before.content !== "none" ? before.backgroundColor : ""];
+          });
+          const data = { q: progress, x: round(x), y: round(y), e: layers };
+          while (JSON.stringify(data).length > 300 && data.e.length) data.e.pop();
+          apiPostJson("/client-diag", { event: "sidebar-layers-v5", type: "sidebar-motion", detail: JSON.stringify(data) },
+            { keepalive: true }).catch(() => {});
+        }
+      } catch { /* 诊断失败不影响动画与宿主 */ }
+    },
+    motionElements(panel, dividers = false) {
+      const selector = '[data-dockkit-host="dock"], [data-dockkit-empty]'
+        + (dividers ? ', [data-dockkit-divider]' : '');
+      return Array.from(panel.querySelectorAll(selector)).filter(node => {
+        if (node.isConnected === false || (typeof node.closest === "function"
+          && node.closest('[hidden], [aria-hidden="true"]'))) return false;
+        if (typeof node.getBoundingClientRect === "function") {
+          const rect = node.getBoundingClientRect();
+          if (rect.width <= 0 || rect.height <= 0) return false;
+        }
+        if (typeof getComputedStyle === "function") {
+          const style = getComputedStyle(node);
+          if (style.display === "none" || style.visibility === "hidden") return false;
+        }
+        return true;
+      });
+    },
+    armMotion(target, ms, expanded) {
+      if (officialPull.motionRun) officialPull.motionRun.cancel();
+      if (!target.modern || typeof MutationObserver !== "function") return;
+      const panel = target.surface;
+      const wasOpen = typeof panel.hasAttribute === "function" ? panel.hasAttribute("data-sidebar-right-open") : null;
+      if (wasOpen === expanded) return;
+      const animations = new Set(), seen = new Set(), clips = new Map();
+      let disposed = false, frameId = null, reached = false, tracePhase = -1, tracedWait = false;
+      const traceStart = Date.now();
+      const clip = (node, inset) => {
+        if (!node || !node.style) return;
+        if (!clips.has(node)) clips.set(node, {
+          before: node.style.getPropertyValue("clip-path"),
+          priority: typeof node.style.getPropertyPriority === "function" ? node.style.getPropertyPriority("clip-path") : "",
+          written: null,
+        });
+        const record = clips.get(node), value = "inset(0px 0px 0px " + inset + "px)";
+        if (record.inset !== inset || node.style.getPropertyValue("clip-path") !== record.written) {
+          node.style.setProperty("clip-path", value);
+          record.written = node.style.getPropertyValue("clip-path");
+          record.inset = inset;
+        }
+      };
+      const syncClip = initial => {
+        const rect = panel.getBoundingClientRect();
+        if (!(rect.width > 0)) return;
+        let inset = expanded ? rect.width : 0;
+        if (!initial) {
+          const edges = officialPull.motionElements(panel)
+            .map(node => node.getBoundingClientRect().left).filter(Number.isFinite);
+          if (edges.length) inset = Math.max(0, Math.min(rect.width, Math.min(...edges) - rect.left));
+        }
+        clip(panel, inset);
+        // 霜层是独立根叶，不能只裁宿主外壳；从当前区域记录取，避免碰其他会话。
+        const surface = typeof weSurfaceRuntime !== "undefined" && weSurfaceRuntime
+          && weSurfaceRuntime.records.get(panel);
+        if (surface && surface.plate) {
+          if (!clips.has(surface.plate)) observer.observe(surface.plate, { attributes: true, attributeFilter: ["style"] });
+          clip(surface.plate, inset);
+        }
+      };
+      const scan = () => {
+        if (disposed) return;
+        if (officialPull.targets()?.surface !== panel) { run.cancel(); return; }
+        if (typeof panel.hasAttribute === "function" && panel.hasAttribute("data-sidebar-right-open") !== expanded) {
+          // React 可延迟提交；首次到达目标状态前不是取消，不能先撤底板裁剪。
+          if (!tracedWait) { officialPull.trace("waiting", target); tracedWait = true; }
+          if (reached) run.cancel();
+          return;
+        }
+        reached = true;
+        const reduced = typeof window !== "undefined" && typeof window.matchMedia === "function"
+          && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        const column = target.frame !== panel && panel.closest("[data-rightbar-col]");
+        for (const element of officialPull.motionElements(panel, true)) {
+          if (seen.has(element) || typeof element.animate !== "function") continue;
+          seen.add(element);
+          // 已有过渡由宿主管；首次挂载没有旧样式，只补本次位移动画。
+          const native = typeof element.getAnimations === "function" && element.getAnimations().some(animation =>
+            animation.transitionProperty === "transform" && !["idle", "finished"].includes(animation.playState));
+          if (native || reduced) continue;
+          const width = panel.getBoundingClientRect().width;
+          if (!(width > 0)) continue;
+          const closed = "translateX(" + width + "px)";
+          const animation = element.animate([
+            { transform: expanded ? closed : "none" },
+            { transform: expanded ? "none" : closed },
+          ], { duration: ms, easing: column ? "linear" : "ease-in-out" });
+          if (column) animation.pause();
+          animations.add(animation);
+        }
+        if (column && animations.size) {
+          // 直接锁到宿主整列的实时边缘；不同缓动/掉帧/暂停都不能再让内容抢跑。
+          const rect = panel.getBoundingClientRect(), edge = column.getBoundingClientRect().left;
+          if (rect.width > 0 && Number.isFinite(edge)) {
+            const closed = Math.max(0, Math.min(1, (edge - rect.left) / rect.width));
+            for (const animation of animations) animation.currentTime = ms * (expanded ? 1 - closed : closed);
+          }
+        }
+        syncClip(false);
+        const phase = Math.min(4, Math.floor((Date.now() - traceStart) / Math.max(1, ms) * 4));
+        if (phase !== tracePhase) { tracePhase = phase; officialPull.trace("moving", target, phase); }
+      };
+      const observer = new MutationObserver(scan);
+      observer.observe(panel, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-sidebar-right-open"] });
+      const body = panel.ownerDocument ? panel.ownerDocument.body : document.body;
+      if (body) observer.observe(body, { childList: true, subtree: true });
+      const run = {
+        animations,
+        cancel() {
+          if (disposed) return;
+          disposed = true;
+          observer.disconnect();
+          if (frameId !== null) cancelAnimationFrame(frameId);
+          for (const animation of animations) animation.cancel();
+          for (const [node, record] of clips) {
+            if (node.style.getPropertyValue("clip-path") !== record.written) continue;
+            if (record.before) node.style.setProperty("clip-path", record.before, record.priority);
+            else node.style.removeProperty("clip-path");
+          }
+          if (officialPull.motionRun === run) officialPull.motionRun = null;
+        },
+      };
+      officialPull.motionRun = run;
+      syncClip(true);
+      const tick = () => {
+        scan();
+        if (!disposed) frameId = requestAnimationFrame(tick);
+      };
+      if (typeof requestAnimationFrame === "function") frameId = requestAnimationFrame(tick);
+    },
+    targets() {
+      if (typeof document === "undefined" || !document.querySelector) return null;
+      if (typeof document.querySelectorAll === "function") {
+        const panels = Array.from(document.querySelectorAll("[data-sidebar-right-panel]"));
+        const active = panels.filter(panel => !panel.closest("[hidden]"));
+        const ours = active.filter(panel => panel.querySelector(".we-qp--official"));
+        const panel = ours.length === 1 ? ours[0] : ours.length === 0 && active.length === 1 ? active[0] : null;
+        if (panel) {
+          // 新宿主把类名模块化；稳定标记所在列的父节点才拥有整层 grid 过渡。
+          const column = panel.closest("[data-rightbar-col]");
+          return { frame: column && column.parentElement || panel, surface: panel, modern: true };
+        }
+        if (panels.length) return null;
       }
-      // 面板内容**固定渲染在最终位置**（x=面板最终左边缘），只把列宽变慢会出现
-      // "容器慢慢开、内容早就到位"的错位（用户："侧边栏其他部分会先动"）。
-      // 拉出期间把表面裁剪到列边界，内容就随边缘一起露出 —— 这才是"贴着边缘拉出来"。
-      // 只动 overflow（用完还原），不碰宿主的任何尺寸/网格定义。
-      const surf = typeof document !== "undefined" && document.querySelector
-        ? document.querySelector(".dshDesktopRightbarSurface") : null;
-      if (surf && officialPull.savedOverflow === null) {
-        officialPull.savedOverflow = surf.style.getPropertyValue("overflow") || "";
-        try { surf.style.setProperty("overflow", "hidden"); } catch { /* ignore */ }
+      const frame = document.querySelector(".dshDesktopFrame");
+      return frame ? { frame, surface: document.querySelector(".dshDesktopRightbarSurface"), modern: false } : null;
+    },
+    begin(ms, expanded = true) {
+      const target = officialPull.targets();
+      officialPull.trace(expanded ? "begin-open" : "begin-close", target);
+      if (!target) { if (expanded) wallSidebarOpen(); else wallSidebarClose(); return 0; }
+      const { frame, surface } = target;
+      if (officialPull.savedFrame && officialPull.savedFrame !== frame) officialPull.restore();
+      if (officialPull.saved === null) {
+        officialPull.savedFrame = frame;
+        officialPull.saved = frame.style.getPropertyValue("--ds-transition-duration-slow") || "";
+        officialPull.savedPriority = frame.style.getPropertyPriority?.("--ds-transition-duration-slow") || "";
+      }
+      if (surface && officialPull.savedOverflow === null) {
+        officialPull.savedSurface = surface;
+        officialPull.savedOverflow = surface.style.getPropertyValue("overflow") || "";
+        try { surface.style.setProperty("overflow", "hidden"); } catch { /* ignore */ }
       }
       frame.style.setProperty("--ds-transition-duration-slow", ms + "ms");
+      const reduced = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+      const instant = frame.hasAttribute && ["data-dragging", "data-rightbar-fullscreen", "data-rightbar-instant"]
+        .some(name => frame.hasAttribute(name));
+      if (target.modern && frame !== surface && !reduced && !instant) {
+        // 宿主在 600ms 后撤掉 data-animating；仅延长变量会被中途切断。
+        if (!officialPull.savedTransition) officialPull.savedTransition = {
+          value: frame.style.getPropertyValue("transition"),
+          priority: frame.style.getPropertyPriority?.("transition") || "",
+        };
+        frame.style.setProperty("transition", "grid-template-columns var(--ds-transition-duration-slow) var(--ds-ease-in-out, ease-in-out)");
+      }
+      officialPull.armMotion(target, ms, expanded);
+      // 开合前结算已有节点的旧样式，否则与 React 提交合并时也可能没有过渡。
+      if (surface && typeof surface.getBoundingClientRect === "function") surface.getBoundingClientRect();
       if (expanded) wallSidebarOpen(); else wallSidebarClose();
       return ms;
     },
-    /** 动画结束后把时长与裁剪还回去（宿主后续的开合恢复原样）。 */
     restore() {
-      const frame = typeof document !== "undefined" && document.querySelector
-        ? document.querySelector(".dshDesktopFrame") : null;
+      if (officialPull.motionRun) officialPull.motionRun.cancel();
+      // 还给本次实际改过的节点，不能重查 DOM 后误改新会话或替换后的面板。
+      const frame = officialPull.savedFrame, surface = officialPull.savedSurface;
       if (frame && officialPull.saved !== null) {
-        if (officialPull.saved) frame.style.setProperty("--ds-transition-duration-slow", officialPull.saved);
+        if (officialPull.saved) frame.style.setProperty("--ds-transition-duration-slow", officialPull.saved, officialPull.savedPriority);
         else frame.style.removeProperty("--ds-transition-duration-slow");
+        if (officialPull.savedTransition) {
+          const { value, priority } = officialPull.savedTransition;
+          if (value) frame.style.setProperty("transition", value, priority);
+          else frame.style.removeProperty("transition");
+        }
       }
-      officialPull.saved = null;
-      const surf = typeof document !== "undefined" && document.querySelector
-        ? document.querySelector(".dshDesktopRightbarSurface") : null;
-      if (surf && officialPull.savedOverflow !== null) {
+      if (surface && officialPull.savedOverflow !== null) {
         try {
-          if (officialPull.savedOverflow) surf.style.setProperty("overflow", officialPull.savedOverflow);
-          else surf.style.removeProperty("overflow");
+          if (officialPull.savedOverflow) surface.style.setProperty("overflow", officialPull.savedOverflow);
+          else surface.style.removeProperty("overflow");
         } catch { /* ignore */ }
       }
+      officialPull.saved = null;
       officialPull.savedOverflow = null;
+      officialPull.savedFrame = null;
+      officialPull.savedSurface = null;
+      officialPull.savedTransition = null;
+      officialPull.savedPriority = "";
     },
-    /** 只接管本次新建的原生过渡；视频进度推进它，真实 ended 才 finish。 */
     syncOpen() {
       if (officialPull.syncOwner) officialPull.syncOwner.cancel();
-      const frame = typeof document !== "undefined" && document.querySelector
-        ? document.querySelector(".dshDesktopFrame") : null;
-      const before = new Set(frame && typeof frame.getAnimations === 'function' ? frame.getAnimations() : []);
-      let animation = null;
+      const target = officialPull.targets(), frame = target && target.frame;
+      const list = () => frame && typeof frame.getAnimations === 'function'
+        ? frame.getAnimations(target.modern ? { subtree: true } : undefined) : [];
+      const before = new Set(list()), owned = new Set();
       const current = () => officialPull.syncOwner === session;
       const capture = () => {
-        if (!animation && frame && typeof frame.getAnimations === 'function') {
-          animation = frame.getAnimations().find(item => !before.has(item)
-            && item.transitionProperty === 'grid-template-columns') || null;
-          if (animation) {
-            animation.pause();
-            animation.effect.updateTiming({ easing: 'linear' });
-          }
+        for (const animation of list()) {
+          const element = animation.effect && animation.effect.target;
+          const mountedMotion = officialPull.motionRun && officialPull.motionRun.animations.has(animation);
+          const matches = target.modern
+            ? (frame !== target.surface && element === frame && animation.transitionProperty === 'grid-template-columns')
+              || (animation.transitionProperty === 'transform' || mountedMotion) && element && typeof element.matches === 'function'
+                && element.matches('[data-dockkit-host="dock"], [data-dockkit-empty], [data-dockkit-divider]')
+            : animation.transitionProperty === 'grid-template-columns';
+          if (before.has(animation) || owned.has(animation) || !matches) continue;
+          owned.add(animation);
+          animation.pause();
+          animation.effect.updateTiming({ easing: 'linear' });
         }
-        return animation;
+        return owned;
       };
-      const release = (complete) => {
+      const release = complete => {
         if (!current()) return;
         officialPull.syncOwner = null;
-        const owned = capture();
-        if (owned) { if (complete) owned.finish(); else owned.cancel(); }
+        for (const animation of capture()) { if (complete) animation.finish(); else animation.cancel(); }
         officialPull.restore();
       };
       const session = {
         seek(progress) {
           if (!current() || !Number.isFinite(progress)) return;
-          const owned = capture();
-          if (!owned) return;
-          const duration = Number(owned.effect.getComputedTiming().duration);
-          if (Number.isFinite(duration)) owned.currentTime = duration * Math.max(0, Math.min(.999, progress));
+          for (const animation of capture()) {
+            const duration = Number(animation.effect.getComputedTiming().duration);
+            if (Number.isFinite(duration)) animation.currentTime = duration * Math.max(0, Math.min(.999, progress));
+          }
         },
         finish() { release(true); },
         cancel() { release(false); },
@@ -4944,13 +5296,23 @@ function RopeDock() {
       officialPull.begin(1000);
       return session;
     },
-    /** 侧边栏**左边缘**的实时 x（宠物拉着它一起往左走）。 */
     edgeX() {
-      const surf = typeof document !== "undefined" && document.querySelector
-        ? document.querySelector(".dshDesktopRightbarSurface") : null;
-      if (!surf) return null;
-      const r = surf.getBoundingClientRect();
-      return Number.isFinite(r.left) ? r.left : null;
+      const target = officialPull.targets();
+      if (!target || !target.surface) return null;
+      const surfaces = target.modern
+        ? officialPull.motionElements(target.surface)
+        : [target.surface];
+      let edge = null;
+      for (const surface of surfaces) {
+        const rect = surface.getBoundingClientRect();
+        if (Number.isFinite(rect.left) && (edge === null || rect.left < edge)) edge = rect.left;
+      }
+      // 收起时 dock 由 aria-hidden 隐藏，仍须给彩蛋一提供首次弹出的碰撞起点。
+      if (edge === null && target.modern) {
+        const rect = target.surface.getBoundingClientRect();
+        if (Number.isFinite(rect.right)) return rect.right;
+      }
+      return edge;
     },
   };
   React.useEffect(() => {
@@ -4971,6 +5333,7 @@ function RopeDock() {
         edgeX: () => officialPull.edgeX(),
         commit: () => { officialPull.restore(); },
       });
+      officialPull.trace("ready", officialPull.targets());
     } catch { /* 注册失败不影响面板本身 */ }
     return () => {
       try { petLink.mascot.registerSidebar(null); } catch { /* ignore */ }
@@ -4979,12 +5342,10 @@ function RopeDock() {
   }, [hidden, petOfficialMode]);
 
   // Hidden: render nothing (rope + drawer), but keep the one-time update
-  // notice — it is independent of the mascot and must still surface. The
-  // preset intro dialog rides the same rule (independent of mascot too).
+  // notice — it is independent of the mascot and must still surface.
   if (hidden) {
     return React.createElement(React.Fragment, null,
       React.createElement(UpdateNotice, null),
-      React.createElement(PresetIntroDialog, null),
     );
   }
 
@@ -5044,7 +5405,6 @@ function RopeDock() {
       ),
     ),
     React.createElement(UpdateNotice, null),
-    React.createElement(PresetIntroDialog, null),
   );
 }
 
@@ -5078,7 +5438,7 @@ function RopeDock() {
 // ⚠️ 公告正文与配图是**随版本换血**的：改内容就要升哨兵（否则看过旧版的用户永远看不到
 // 新说明，改了等于没改 ⇒ 重弹一次是设计意图）。配图下方那行是**求星跳转** —— 与正文四条
 // 各管一件事，同守 `art === "ready"` 的门控。
-const NOTICE_VERSION = "1.3.3";
+const NOTICE_VERSION = "1.4.0";
 // 配图就绪探针的节奏：HEAD 轮询到新白名单在场（= 后端已重启）才弹；旧后端一直
 // 不在场超过 WAIT 则降级为**无图**弹出（文案信息完整；求星入口另有「关于」页那枚常驻按钮
 // 与它的重看按钮，不靠弹窗这一条命）。探针打在 /about-qr 上是自清洁的：404 响应 no-store、200
@@ -5207,8 +5567,15 @@ function UpdateNotice() {
     emit();
   };
   if (!show) return null;
+  // ══ UPDATE NOTICE COPY（begin）══════════════════════════════════════════════
+  // 下面到 end 之间的区段是**纯公告文案**：CI 的 `notice` 快通道只在这一段内放行
+  // "只改字符串内容"的提交。判据是**内容级**的（见 test/tools/ci-routing.mjs 的
+  // judgeNoticeEdit）：① 区块外逐字节完全一致；② 区块内剥掉字符串内容后的**代码骨架**
+  // 逐字一致。改结构（增删条目、改 props、加分支）⇒ 骨架变 ⇒ 回落 `npm run verify:all`。
+  // ⚠️ 不要在这里写注释以外的逻辑：注释会被骨架判据剥掉（所以写注释是安全的），
+  //    任何可执行 token 的增删都会让骨架判据判红。
   return React.createElement("div", { className: "we-update-notice", role: "alert" },
-    React.createElement("div", { className: "we-update-notice__title" }, weT("🎉 更新：头像导入大升级 · 一组修复 · 省电与外观提示")),
+    React.createElement("div", { className: "we-update-notice__title" }, weT("🎉 更新：拆成八包可自选 · 头像与轮播修复 · 玻璃优化")),
     // 只有 ready 才渲染配图与说明行（timeout 降级态无图弹出，正文信息自足）。
     // 图下那行是**求星入口**（见下面的说明），所以它随配图同一条门控：无图降级态没有它，
     // 但求星入口另有「关于」页那枚常驻按钮兜住，不是唯一命脉。
@@ -5239,108 +5606,71 @@ function UpdateNotice() {
         title: weT("在浏览器里打开项目仓库"),
       }, weT("⭐ 去 GitHub 点亮 Star"))) : null,
     React.createElement("div", { className: "we-update-notice__body" },
-      // 行文体例（用户口径：简单公告）：简洁 + 大字 —— 只讲四件事，
+      // 行文体例（用户口径：简单公告）：简洁 + 大字 —— 只讲五件事，
       // 全部走 16pt callout（.we-update-notice__callout），每条一句不加尾巴长文。
       React.createElement("p", { className: "we-update-notice__callout" },
-        "① ", noticeEx(2), React.createElement("strong", null, weT("头像导入大升级！")),
-        weT("现支持 SVG / GIF 等更多格式，超大图可自动压缩，上传前还能先裁切 —— 都在「扩展」分页。")),
+        "① ", noticeEx(2), React.createElement("strong", null, weT("关掉也能再看")),
+        weT("：本公告点「知道了」后不再自动弹出，想回顾就到「设置 → 壁纸引擎 → 关于」点「重新查看本版更新公告」。")),
       React.createElement("p", { className: "we-update-notice__callout" },
-        "② ", noticeEx(2), React.createElement("strong", null, weT("修复一批")),
-        weT("：多窗口实时渲染不再互相踢掉；网页壁纸音频可视化恢复跳动；设置图标对齐、思考块行内代码与下拉弹层显示恢复正常。")),
+        "② ", noticeEx(2), React.createElement("strong", null, weT("插件拆成八个包了")),
+        weT("：主包 + 七个功能包，插件管理器里各占一行，可只留你要的；关掉的行连界面一起退出，重启生效。")),
       React.createElement("p", { className: "we-update-notice__callout" },
-        "③ ", noticeEx(2), React.createElement("strong", null, weT("Linux 用户更省电")),
-        weT("：窗口被遮挡时自动降帧，完全遮挡时暂停渲染。")),
+        "③ ", noticeEx(2), React.createElement("strong", null, weT("头像修复")),
+        weT("：助手头像不再成片消失，新增「助手头像间隔」滑块（1–30，默认 6）；裁切框不再空白、不用点第二次。")),
       React.createElement("p", { className: "we-update-notice__callout" },
-        "④ ", noticeEx(2), React.createElement("strong", null, weT("在设置中启用深色模式 + 「作者自用」预设，为本插件最佳效果之一！"))),
+        "④ ", noticeEx(2), React.createElement("strong", null, weT("轮播终于能调了")),
+        weT("：此前无论怎么设都锁死 30 分钟，现已恢复 1–1440 分钟；新增「视频播完就换」档。")),
+      React.createElement("p", { className: "we-update-notice__callout" },
+        "⑤ ", noticeEx(2), React.createElement("strong", null, weT("玻璃优化")),
+        weT("：分数缩放下右栏不再丢失；开合动画中两侧不再同时消失；第二个会话不再抢走右栏。")),
+      React.createElement("p", { className: "we-update-notice__callout" },
+        "⑥ ", noticeEx(2), React.createElement("strong", null, weT("另修一批")),
+        weT("：大图上传不再卡死壁纸库；阅读页底色找得回；设置快速改回原值不再漏存。")),
       React.createElement("p", { className: "we-update-notice__hint" },
-        weT("升级后建议重启一次 DSH，改动才完整生效；本提示每个新版本只出现一次，点下方按钮关闭后不再弹出。")),
+        weT("升级后建议重启一次 DSH，改动才完整生效；本提示每个新版本只出现一次，点下方按钮关闭后不再弹出。"),
+        weT("本版已发布到 npm，可直接按包名安装。")),
     ),
     React.createElement("button", { className: "we-update-notice__btn we-picker__btn", type: "button", onClick: dismiss }, weT("知道了")),
   );
+  // ══ UPDATE NOTICE COPY（end）════════════════════════════════════════════════
 }
 
-// ── One-time preset intro dialog（「作者自用」推广弹窗，用户口径）──────────
-// 方案：更新后弹**一次性**对话框，由用户自选 —— A：采用「作者自用」（作者日常在用、
-// 兼顾美观与可读性，降低新用户上手难度）；B：保持当前设置不变。不强制：老调参用户选
-// B 即可，答过就不再问。哨兵住 **localStorage**（与折叠态同一条"每机 UI 状态"口径；
-// 不进 settings ⇒ 不进任何预设快照，也不动 schema / sanitize golden）。
-// ⚠️ 排在公告**之后**：门控借用 NOTICE_VERSION 本尊（noticeSeen 已写 = 公告已处理）
-// —— 同一次更新先读"有什么新"，再答"要不要换外观"，两个弹窗不同屏。
-const PRESET_INTRO_VERSION = "1";
-const PRESET_INTRO_SEEN_KEY = "dsh-wallpaper-engine:preset-intro-seen";
-// 后端代际探针（#188）：弹窗 A 键走 applyPreset("factory-author")，而宿主半边只在 DSH
-// 重启时换血 —— 升级窗口期（磁盘已是新版、宿主内存还是旧路由）里这个 GET 必然失败，
-// 弹窗必然报错。与更新公告的 art-gate 同一条防线：**探到 200 才允许弹**。
-// 非 200 就不弹、也**不写**已读哨兵 —— 重启后端后（同一次升级里）弹窗照常出现，
-// 用户不会永久错过；区别只是"在必然失败的窗口期里保持安静"。
-// 探针打正文路由而不是清单：弹窗要应用的就是这一份，它 200 才有弹的意义（清单 200
-// 只说明路由挂了，说明不了这条随包预设读得懂 —— 旧后端读新 tag 文件正是读不懂）。
-// 结论缓存到模块级（与 noticeArtVerdict 同口径）：面板可反复开关，"这台机器上这个
-// 后端认不认这份预设"是页面级事实，多开面板只探一轮；页面刷新重新探，恰好等价于
-// "重启后刷新就能弹"。
-let presetIntroProbeVerdict = "";
-function PresetIntroDialog() {
-  useWeLocale(); // 与公告同一条口径：文案跟随语言切换
-  const sel = useStore();
-  // 已读标记同步读（localStorage 可同步拿）：不需要等 hostLoaded 才知道"答没答过"。
-  const [seen, setSeen] = React.useState(() => {
-    try { return localStorage.getItem(PRESET_INTRO_SEEN_KEY) === PRESET_INTRO_VERSION; } catch { return false; }
-  });
-  // 探针态："pending"（在探，不弹）/"ok"（后端认，可弹）/"no"（后端不认，不弹）。
-  // 组件本地 state 而不是 store 字段：纯视图态，进 store 会平白多一对瞬态字段要过
-  // 直写棘轮（与公告 art 态同一条理由）。
-  const [probe, setProbe] = React.useState(presetIntroProbeVerdict || "pending");
-  const [applying, setApplying] = React.useState(false);
-  const [failed, setFailed] = React.useState(false);
-  const markSeen = () => {
-    try { localStorage.setItem(PRESET_INTRO_SEEN_KEY, PRESET_INTRO_VERSION); } catch { /* ignore */ }
-    setSeen(true);
-  };
-  // A 键 = 与预设卡片同一条 applyPreset 整快照链（settings 合并 + 资产落位 + 失败滚回）。
-  // 失败**不**记已读：弹窗留在原地，错误文案读 glassPresetError 现值（与卡片同一通道，
-  // emit 后重渲染拿到的就是本次失败的 freshly 值 —— 本地 state 只记"要不要显示错误行"）。
-  const accept = () => {
-    if (applying) return;
-    setApplying(true);
-    setFailed(false);
-    setTransient("glassPresetError", ""); // 清掉面板里可能挂着的旧错，别让它串场
-    emit();
+// ── 首次安装：自动套用「深色 + 作者自用」（用户口径，取代原来的推广弹窗）──────
+// 口径：新装默认就是作者在用的那套观感，不再弹窗问"要不要试试"。
+// 触发点只有一个 —— `src/persistence.js` 的 `loadPersisted()` 发现**宿主没有存档
+// 且本机也没有本地存档**（真正第一次）。升级用户、重装宿主但本地存档还在的用户，
+// 一概不受影响；套用后存档被写出，下次启动走宿主分支，天然只触发一次。
+//
+// 三条不变量：
+//   · **失败不回滚**：预设应用是一整批操作，主题这一腿或某段资产失败时只记错误文案，
+//     不把已经落好的部分撤掉（撤一半比不套用更难解释）。
+//   · **不阻塞启动**：异步跑，不 await —— 启动链（settings → fontset → inventory）不该
+//     等一次预设应用。
+//   · **主题腿要等服务**：宿主 `theme` 服务在启动早期拿不到（实测 7ms 时还没有、325ms 才有），
+//     而 `applyPreset` 里的 `themeFollowApplyPreference` 拿到空句柄会静默跳过。
+//     所以这里先套预设（设置 + 资产），主题留给服务就绪后补一次 —— 见下面的 `pending`。
+//     补写只有一次，且**只补主题**，不重跑整份预设（重跑会把用户这几百毫秒里的改动盖掉）。
+let firstRunAuthorPending = false;
+function firstRunAdopt() {
+  try {
     applyPreset("factory-author").then((ok) => {
-      setApplying(false);
-      if (ok) markSeen(); else setFailed(true);
+      if (ok) return;
+      // 失败静默：新装用户不该一上手就看见一条红字。诊断行留给排障。
+      try { liveLog && liveLog("首次安装套用作者自用失败：" + String(selection.glassPresetError || "")); } catch { /* ignore */ }
     });
-  };
-  const eligible = sel.hostLoaded && !seen && sel.noticeSeen === NOTICE_VERSION;
-  // 探针只在 eligible 时起跑：已答过/公告未处理完的机器一个请求都不发。
-  React.useEffect(() => {
-    if (!eligible) return undefined;
-    if (presetIntroProbeVerdict) { setProbe(presetIntroProbeVerdict); return undefined; }
-    let alive = true;
-    gpJson(glassPresetUrl("factory-author")).then((r) => {
-      if (!alive) return;
-      // 200 = 后端这份预设读得懂（路由与 tag 同代）⇒ 弹。其余（404/405/422/断网）
-      // 都归 "no"：不管哪种，A 键在这个后端上都必然失败，不值得打扰用户。
-      presetIntroProbeVerdict = r.ok && !r.error ? "ok" : "no";
-      setProbe(presetIntroProbeVerdict);
-    });
-    return () => { alive = false; };
-  }, [eligible]);
-  if (!eligible || probe !== "ok") return null;
-  return React.createElement("div", { className: "we-preset-intro", role: "alertdialog", "aria-label": weT("试试「作者自用」外观预设？") },
-    React.createElement("div", { className: "we-preset-intro__title" }, weT("试试「作者自用」外观预设？")),
-    React.createElement("div", { className: "we-preset-intro__body" },
-      React.createElement("p", null, weT("「作者自用」是作者日常在用的整机外观方案：兼顾美观与可读性，一键套用、不用逐项调。")),
-      React.createElement("p", null, weT("采用后当前外观设置会被整份替换（不能一键撤销）；选择保持的话，随时可在「设置 → 壁纸引擎 → 主题预设」里再套用。")),
-      failed && sel.glassPresetError ? React.createElement("p", { className: "we-preset-intro__err" }, sel.glassPresetError) : null,
-    ),
-    React.createElement("div", { className: "we-preset-intro__actions" },
-      React.createElement("button", { className: "we-preset-intro__btn we-preset-intro__btn--primary", type: "button", disabled: applying,
-        onClick: accept }, applying ? weT("正在应用…") : weT("采用「作者自用」")),
-      React.createElement("button", { className: "we-preset-intro__btn", type: "button", onClick: markSeen }, weT("保持我的设置")),
-    ),
-  );
+    // 主题补写：服务可能还没就绪 ⇒ 交给主题层 onReady 那次回调（见 armFirstRunThemeFlush）。
+    firstRunAuthorPending = true;
+    flushFirstRunAuthorTheme();
+  } catch { /* 首装美化是增强：任何异常都不该阻断启动 */ }
 }
 
+/** 主题服务就绪后把首装的主题腿补上（可被 onReady 与定时重试两处调，幂等）。 */
+function flushFirstRunAuthorTheme() {
+  if (!firstRunAuthorPending) return;
+  try {
+    if (themeFollowApplyPreference("dark")) firstRunAuthorPending = false;
+  } catch { /* 服务异常：留给下一次 */ }
+}
 
 // Bumped v3: tabbed picker IA + unified control chrome (sliding segmented tab
 // bar, pill switches everywhere, ink-token labels, 30px control heights).
@@ -5785,6 +6115,9 @@ function apply(ctx) {
         intervalMs: 250,
         timeoutMs: 6000,
         onReady: (theme) => { themeFollowAttach(theme, ctx);   // 主题随壁纸：同一个服务句柄，接上即补评一次（开关默认关，关着时这次补评整体空转）
+          // 首装的主题腿：applyPreset 若跑得比服务就绪早，那一次写会因句柄为空而静默跳过
+          // ⇒ 这里补一次（幂等；非首装时 firstRunAuthorPending 为假，零开销）。
+          try { flushFirstRunAuthorTheme(); } catch { /* 增强腿，不阻断主题层 */ }
           try {
             const available = scanThemeTokens(document);
             // 样式表扫描是清单的权威来源（active.tokens 为空、exportInspectTokens 只有 14 条）；
@@ -6068,8 +6401,8 @@ const HOST_BRIDGE_BINDINGS = {
   wallSidebarClose: () => wallSidebarClose,
   wallSidebarToggle: () => wallSidebarToggle,
   registerPetLink: () => petLinkRegister,
-  // ── 壁纸子包浏览器半边（packages/wallpaper，P-D S3a）的显式键集 ─────────────────────
-  // 来源 = 被搬渲染器（packages/wallpaper/src/wallpaper-uploads-section.js，原
+  // ── 壁纸子包浏览器半边（packages/media-bridge，P-D S3a）的显式键集 ─────────────────────
+  // 来源 = 被搬渲染器（packages/media-bridge/src/wallpaper-uploads-section.js，原
   // src/panel-tabs-wallpaper.js 的「自定义壁纸」节）里的**自由标识符**逐个点名。
   // 动作体全留主包（ADR-0013 D20）：这里给的是活绑定 getter，不是值拷贝。
   changeUploadDir: () => changeUploadDir,
@@ -6077,8 +6410,8 @@ const HOST_BRIDGE_BINDINGS = {
   uploadWallpaperFile: () => uploadWallpaperFile,
   removeUploadWallpaper: () => removeUploadWallpaper,
   renderConfirmRow: () => renderConfirmRow,
-  // ── 壁纸子包浏览器半边（packages/wallpaper，P-D S3b：切换过场 / 自动轮播两节）的显式键集 ─
-  // 来源 = 两个被搬渲染器（packages/wallpaper/src/wallpaper-{transition,rotation}-section.js，
+  // ── 壁纸子包浏览器半边（packages/media-bridge，P-D S3b：切换过场 / 自动轮播两节）的显式键集 ─
+  // 来源 = 两个被搬渲染器（packages/media-bridge/src/wallpaper-{transition,rotation}-section.js，
   // 原 src/panel-tabs-wallpaper.js:108-167 / :169-316）里的**自由标识符**逐个点名；
   // 动作体 / 默认值 / 持久化全留主包（ADR-0013 D20）⇒ 这里给活绑定 getter，不是值拷贝。
   // 轮播间隔走窄键 rotationIntervalDefault（同源 = DEFAULTS.rotationInterval，见上方常量）。
@@ -6095,15 +6428,15 @@ const HOST_BRIDGE_BINDINGS = {
   importPlaylistIntoDraft: () => importPlaylistIntoDraft,
   Toggle: () => Toggle,
   rotationIntervalDefault: () => ROTATION_INTERVAL_DEFAULT,
-  // ── 壁纸子包浏览器半边（packages/wallpaper，P-D S3c：当前壁纸节）的显式键集 ─────────────
-  // 来源 = packages/wallpaper/src/wallpaper-current-section.js 的**自由标识符**逐个点名：
+  // ── 壁纸子包浏览器半边（packages/media-bridge，P-D S3c：当前壁纸节）的显式键集 ─────────────
+  // 来源 = packages/media-bridge/src/wallpaper-current-section.js 的**自由标识符**逐个点名：
   //   VinylRecord / vinylSpinVisible（src/client.js 工厂作用域）· liveFailReasonOf（src/live-layer.js，
   //   同一内联工厂作用域）。播放态 / 失败原因计算 / 动作体全留主包（ADR-0013 D20）⇒ 活绑定 getter。
   VinylRecord: () => VinylRecord,
   vinylSpinVisible: () => vinylSpinVisible,
   liveFailReasonOf: () => liveFailReasonOf,
-  // ── 壁纸子包浏览器半边（packages/wallpaper，P-D S3d：播放配置两节）的显式键集 ─────────
-  // 来源 = packages/wallpaper/src/playback-rate-section.js / wallpaper-fit-section.js 的自由标识符：
+  // ── 壁纸子包浏览器半边（packages/media-bridge，P-D S3d：播放配置两节）的显式键集 ─────────
+  // 来源 = packages/media-bridge/src/playback-rate-section.js / wallpaper-fit-section.js 的自由标识符：
   //   FPS_CAP_VALUES（lib/settings-schema.js）· codecLabel（src/client-audio-playback.js）—— 两者都在
   //   主 bundle 的内联工厂作用域里。倍速 / 帧率 / 适配 / 翻转的动作体全留主包（ADR-0013 D20）⇒ 活绑定。
   FPS_CAP_VALUES: () => FPS_CAP_VALUES,

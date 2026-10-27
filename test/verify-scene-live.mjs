@@ -136,13 +136,13 @@ async function loadExtensionRegistry() {
     render: fontSectionMod.renderAppearanceFontSection,
   });
   // P-D S3a/S3b：「壁纸库」页签第二/三/四节（切换过场 / 自动轮播 / 自定义壁纸）都随壁纸子包
-  // 搬出 ⇒ 按标准包内源文件 import 真渲染器，描述符与 packages/wallpaper/src/client.js 逐字同形
+  // 搬出 ⇒ 按标准包内源文件 import 真渲染器，描述符与 packages/media-bridge/src/client.js 逐字同形
   // （title 是 accessor + order 20/30/40）。**故意乱序登记**：注册表按 (order, seq) 排序，下面
   // 的顺序快照就在验证这一点（否则"登记顺序恰好等于期望顺序"会让这条判据空转）。
-  const wallpaperCurrentSectionMod = await import(pathToFileURL(join(root, 'packages', 'wallpaper', 'src', 'wallpaper-current-section.js')).href);
-  const wallpaperRotationSectionMod = await import(pathToFileURL(join(root, 'packages', 'wallpaper', 'src', 'wallpaper-rotation-section.js')).href);
-  const wallpaperUploadsSectionMod = await import(pathToFileURL(join(root, 'packages', 'wallpaper', 'src', 'wallpaper-uploads-section.js')).href);
-  const wallpaperTransitionSectionMod = await import(pathToFileURL(join(root, 'packages', 'wallpaper', 'src', 'wallpaper-transition-section.js')).href);
+  const wallpaperCurrentSectionMod = await import(pathToFileURL(join(root, 'packages', 'media-bridge', 'src', 'wallpaper-current-section.js')).href);
+  const wallpaperRotationSectionMod = await import(pathToFileURL(join(root, 'packages', 'media-bridge', 'src', 'wallpaper-rotation-section.js')).href);
+  const wallpaperUploadsSectionMod = await import(pathToFileURL(join(root, 'packages', 'media-bridge', 'src', 'wallpaper-uploads-section.js')).href);
+  const wallpaperTransitionSectionMod = await import(pathToFileURL(join(root, 'packages', 'media-bridge', 'src', 'wallpaper-transition-section.js')).href);
   // P-D S3c：第四节「当前壁纸」搬走后，四节全部由注册表提供；order = 10/20/30/40。
   reg.weRegisterPanelSection('library', 'wallpaper-current', {
     id: 'wallpaper-current',
@@ -176,10 +176,10 @@ async function loadExtensionRegistry() {
     && libSections.map((s) => s.order).join(',') === '10,20,30,40',
     'got=' + libSections.map((s) => s.id + ':' + s.order).join(', '));
   // P-D S3d：「播放」页签的倍速/帧率上限与适配/翻转两节同样随包搬出 ⇒ 按标准包内源文件 import
-  // 真渲染器，描述符与 packages/wallpaper/src/client.js 逐字同形（title 是 accessor + order 60/70）。
+  // 真渲染器，描述符与 packages/media-bridge/src/client.js 逐字同形（title 是 accessor + order 60/70）。
   // **故意乱序登记**（先 fit(70) 后 rate(60)）⇒ 下面的顺序快照验证「屏上顺序由 order 决定」。
-  const wallpaperPlaybackRateMod = await import(pathToFileURL(join(root, 'packages', 'wallpaper', 'src', 'playback-rate-section.js')).href);
-  const wallpaperFitSectionMod = await import(pathToFileURL(join(root, 'packages', 'wallpaper', 'src', 'wallpaper-fit-section.js')).href);
+  const wallpaperPlaybackRateMod = await import(pathToFileURL(join(root, 'packages', 'media-bridge', 'src', 'playback-rate-section.js')).href);
+  const wallpaperFitSectionMod = await import(pathToFileURL(join(root, 'packages', 'media-bridge', 'src', 'wallpaper-fit-section.js')).href);
   reg.weRegisterPanelSection('playback', 'wallpaper-fit', {
     id: 'wallpaper-fit',
     get title() { return globalThis.weT('适配'); },
@@ -370,7 +370,7 @@ check('fallback page present: default-wallpaper/index.html exists',
 check('renderer page mounts the fallback page on error',
   pageJs.includes('./default-wallpaper/index.html') && /inst\.on\("error"/.test(pageJs));
 check('scene-serve serves default-wallpaper without long cache',
-  /rest === 'default-wallpaper\/index.html'/.test(readFileSync(join(root, 'packages', 'wallpaper', 'lib', 'routes', 'scene-serve.js'), 'utf8')));
+  /rest === 'default-wallpaper\/index.html'/.test(readFileSync(join(root, 'packages', 'media-bridge', 'lib', 'routes', 'scene-serve.js'), 'utf8')));
 
 // 网页壁纸 shim：npm 包不单独发 web-shim.js，宿主从 bundle 的 `shimSource` 模板字面量提取
 // （lib/index.js 的 extractWebShim）。bundle 形态变了提取就静默得空串 —— 先钉住形态还在。
@@ -402,10 +402,10 @@ const host = hostMod.default || hostMod;
 const apply = host.apply || (host.inject && host.apply);
 const dispose = apply(mockCtx);
 
-// ── 组件行也要 boot（本分支的路由族归属：媒体状态族归 `wallpaper` 组件行；P-D 阶段1 前名 `media-bridge`）──
+// ── 组件行也要 boot（本分支的路由族归属：媒体状态族归 `media-bridge` 组件行；P-D 阶段1 起承载壁纸域）──
 // ⚠️ 这不是"放宽判据"，而是夹具的 boot 段要跟上本分支结构：`/media-status`、`/audio-spectrum`、
 // `/now-playing`、`/now-playing/artwork`、`/media-control` 五条路由的实现住在
-// `packages/wallpaper/lib/`（P2-2 入包、P-F 批 1c 出户，ADR-0013 D14「实现入包、主包不留注册点」，
+// `packages/media-bridge/lib/`（P2-2 入包、P-F 批 1c 出户，ADR-0013 D14「实现入包、主包不留注册点」，
 // 由 `verify-route-ownership` 的 M10 钉住）。上游那条判据按"门面 apply 后即可用"写（单包单行假设）。
 // 处置与第 4 轮 `/avatar` 一致：**连组件一起 boot**，判据判什么一个字没改。
 // S5d 刀3：`wallpaper` 组件行现在**拥有省电（occlusion）hub 的生命周期**（hub 随族入包，由本组件
@@ -413,7 +413,7 @@ const dispose = apply(mockCtx);
 // 一起收掉，否则本脚本跑完进程不退出（真宿主里由行卸载/进程退出收尾，判据一个字没改）。
 const componentDisposers = [];
 if (typeof hostMod.applyComponent === 'function') {
-  for (const comp of ['wallpaper', 'mascot-avatar', 'about-notice']) {
+  for (const comp of ['media-bridge', 'mascot-avatar', 'about-notice']) {
     try { componentDisposers.push(hostMod.applyComponent(mockCtx, {}, comp)); } catch (err) {
       console.log('  · 组件行 boot 失败（' + comp + '）：' + String(err && err.message));
     }
@@ -1071,16 +1071,16 @@ const fontSectionSrc = readFileSync(join(root, 'packages', 'fonts', 'src', 'appe
   .replace(/\r\n/g, '\n');
 const tabsSrcWithFontSection = tabsSrc + '\n;\n' + fontSectionSrc;
 // P-D S3a/S3b/S3c：「壁纸库」页签四节（当前壁纸 / 切换过场 / 自动轮播 / 自定义壁纸）的渲染器
-// 全部随壁纸子包搬出（packages/wallpaper/src/wallpaper-*-section.js）⇒ 同一条口径：判"该节
+// 全部随壁纸子包搬出（packages/media-bridge/src/wallpaper-*-section.js）⇒ 同一条口径：判"该节
 // 画什么 / 解构了哪些 ctx 字段"的判据读 **页签族 + 包内四节** 的并集（运行时本来就在同一
 // 作用域；文件住处变了，判据的取文来源跟着变，强度不变）。
-const wallpaperCurrentSrc = readFileSync(join(root, 'packages', 'wallpaper', 'src', 'wallpaper-current-section.js'), 'utf8')
+const wallpaperCurrentSrc = readFileSync(join(root, 'packages', 'media-bridge', 'src', 'wallpaper-current-section.js'), 'utf8')
   .replace(/\r\n/g, '\n');
-const wallpaperTransitionSrc = readFileSync(join(root, 'packages', 'wallpaper', 'src', 'wallpaper-transition-section.js'), 'utf8')
+const wallpaperTransitionSrc = readFileSync(join(root, 'packages', 'media-bridge', 'src', 'wallpaper-transition-section.js'), 'utf8')
   .replace(/\r\n/g, '\n');
-const wallpaperRotationSrc = readFileSync(join(root, 'packages', 'wallpaper', 'src', 'wallpaper-rotation-section.js'), 'utf8')
+const wallpaperRotationSrc = readFileSync(join(root, 'packages', 'media-bridge', 'src', 'wallpaper-rotation-section.js'), 'utf8')
   .replace(/\r\n/g, '\n');
-const wallpaperUploadsSrc = readFileSync(join(root, 'packages', 'wallpaper', 'src', 'wallpaper-uploads-section.js'), 'utf8')
+const wallpaperUploadsSrc = readFileSync(join(root, 'packages', 'media-bridge', 'src', 'wallpaper-uploads-section.js'), 'utf8')
   .replace(/\r\n/g, '\n');
 const wallpaperSectionsSrc = wallpaperCurrentSrc + '\n;\n' + wallpaperTransitionSrc + '\n;\n' + wallpaperRotationSrc + '\n;\n' + wallpaperUploadsSrc;
 // 判「壁纸库页签里的节」的内容判据一律读这个并集（页签族 + 包内四节）：移动文件不该让
@@ -1088,9 +1088,9 @@ const wallpaperSectionsSrc = wallpaperCurrentSrc + '\n;\n' + wallpaperTransition
 const tabsSrcAll = tabsSrc + '\n;\n' + wallpaperSectionsSrc;
 // P-D S3d：「播放」页签的倍速/帧率上限与适配/翻转两节也随壁纸子包搬出（playback-rate-section.js /
 // wallpaper-fit-section.js）⇒ 表面门 / 文本锚的取文来源同样扩成「页签族 + 包内两节」（强度不变）。
-const playbackRateSectionSrc = readFileSync(join(root, 'packages', 'wallpaper', 'src', 'playback-rate-section.js'), 'utf8')
+const playbackRateSectionSrc = readFileSync(join(root, 'packages', 'media-bridge', 'src', 'playback-rate-section.js'), 'utf8')
   .replace(/\r\n/g, '\n');
-const wallpaperFitSectionSrc = readFileSync(join(root, 'packages', 'wallpaper', 'src', 'wallpaper-fit-section.js'), 'utf8')
+const wallpaperFitSectionSrc = readFileSync(join(root, 'packages', 'media-bridge', 'src', 'wallpaper-fit-section.js'), 'utf8')
   .replace(/\r\n/g, '\n');
 const playbackSectionsSrc = playbackRateSectionSrc + '\n;\n' + wallpaperFitSectionSrc;
 const effectsSrcAll = tabsSrc + '\n;\n' + playbackSectionsSrc;
@@ -1787,6 +1787,7 @@ for (const [name, ok] of clientChecks) check(name, ok);
     // 实测：宿主+磁盘 ~4ms、loadedmetadata→presented ~110ms，其余是"还没开始取数"；
     // 视频档此前刻意不跑准备链（怕第二个 4K 解码器）⇒ 整段启动成本压在关键路径上。
     // 折中＝只预到 HAVE_METADATA：**绝不 play()、绝不开 autoplay**。
+    const guardsAdoptedVideoSource = (text) => /if \(\(!prepared && !warmed\)\s*\|\| \(useCached && media\.dataset\.weTranscoded !== String\(rc\.fps\)\)\) \{/.test(text);
     check('① 提交前预热只到元数据（不引进第二个解码器）',
       CH.includes('const VIDEO_WARM_TTL_MS')
       && CH.includes('el.preload = "metadata"')
@@ -1797,9 +1798,10 @@ for (const [name, ok] of clientChecks) check(name, ok);
       // 赋 src 已经启动资源选择，**不得**再补一次 load()（同值重启 = 白跑一次取数）。
       && !/el\.src = u;\s*\n\s*el\.load\(\);/.test(CH)
       && CH.includes('const warmed = prepared ? null : consumeWarmVideo(sel.url);')
-      // 领养的元素**不得重赋 src**（同值重赋也会重启资源选择 = 黑屏闪烁源）：
-      // 建层那段"设 src / 挑抽帧版"只对新建元素生效。
-      && CH.includes('if (!prepared && !warmed) {'));
+      // 领养原片仅在匹配的抽帧缓存已就绪时换源；已匹配元素不得同值重赋。
+      && guardsAdoptedVideoSource(CH));
+    check('① negative control: 去掉已匹配转码元素的 src 保护会被判出',
+      !guardsAdoptedVideoSource(CH.replace('media.dataset.weTranscoded !== String(rc.fps)', 'true')));
     check('① 预热的触发点是卡片身份标记（按下即预热、停在卡上也预热）',
       src.includes('warmVideoForPointer')
       && src.includes('addEventListener("pointerdown", onWarmPointerDown, { capture: true, passive: true });')
@@ -1825,7 +1827,7 @@ for (const [name, ok] of clientChecks) check(name, ok);
     //     `lib/serve.js`，**消费点**在 `lib/routes/media-bytes.js`。
     const faststartLib = readFileSync(join(root, 'lib', 'faststart.js'), 'utf8');
     const vfsLib = readFileSync(join(root, 'lib', 'mp4-vfs.js'), 'utf8');
-    const mediaBytesFam = readFileSync(join(root, 'packages', 'wallpaper', 'lib', 'routes', 'media-bytes.js'), 'utf8');
+    const mediaBytesFam = readFileSync(join(root, 'packages', 'media-bridge', 'lib', 'routes', 'media-bytes.js'), 'utf8');
     // 服务面与接线面的源文本就地读：本文件别处的同名常量声明在更后面（TDZ）。
     const serveLib = readFileSync(join(root, 'lib', 'serve.js'), 'utf8');
     // ⚠️ 合成宿主面：门面 + 内核段 + P0 拆出的模块。**不要**只读 lib/index.js ——
@@ -2272,12 +2274,12 @@ const hostLib = hostLibComposed;
 }
 
 // ⚠️ 门面面 = lib/index.js + **组件行真源**。本分支把媒体桥实现搬进了
-// lib/components/media-bridge/**（P2 拆包）→ **P-F 批 1c 出户到 `packages/wallpaper/lib/**`**，
+// lib/components/media-bridge/**（P2 拆包）→ **P-F 批 1c 出户到 `packages/media-bridge/lib/**`**，
 // "中间件优先 / legacy 回落 / 音频已关透传"这些形态住在那儿 ⇒ 只扫门面会误报丢失
 // （判据纪律同 hostHalfSrc："拆出的模块必须加进来"）。
-const componentMediaSources = ['packages/wallpaper/lib/index.js', 'packages/wallpaper/lib/legacy.js',
-  'packages/wallpaper/lib/routes/now-playing.js', 'packages/wallpaper/lib/provision.js',
-  'packages/wallpaper/lib/supervisor.js']
+const componentMediaSources = ['packages/media-bridge/lib/index.js', 'packages/media-bridge/lib/legacy.js',
+  'packages/media-bridge/lib/routes/now-playing.js', 'packages/media-bridge/lib/provision.js',
+  'packages/media-bridge/lib/supervisor.js']
   .map((f) => { try { return readFileSync(join(root, f), 'utf8'); } catch { return ''; } }).join('\n');
 // 再补 **P0 拆出的 lib 模块**：这些模块的实现形态（如 upload-dir 的 `up-dir-${name}` 前缀与
 // `resolveSceneMainFileP` 解析）本就是"原门面里那段代码"，判据按门面面扫时必须能看到它们。
@@ -2311,7 +2313,7 @@ const extraHostHalfSources = [
   'lib/startup-sweep.js', 'lib/we-assets.js', 'lib/media-origin.js',
   // S5b 刀1：`we-assets` 路由族已出户到壁纸子包 —— 它不再被下面 `lib/routes/` 的目录枚举覆盖，
   // 必须显式进面（否则 `/api/local-assets` 的路径围栏与指纹判据一起假红，见文件头纪律）。
-  'packages/wallpaper/lib/routes/we-assets.js',
+  'packages/media-bridge/lib/routes/we-assets.js',
   ...readdirSync(join(root, 'lib', 'kernel')).filter((f) => f.endsWith('.js')).map((f) => 'lib/kernel/' + f),
   ...readdirSync(join(root, 'lib', 'media')).filter((f) => f.endsWith('.js')).map((f) => 'lib/media/' + f),
 ].map((f) => { try { return readFileSync(join(root, f), 'utf8'); } catch { return ''; } });
@@ -2321,8 +2323,8 @@ const hostHalfSrc = [hostSrc, mediaOriginSrc, inventorySrc, serveSrc, faststartS
     .map((f) => readFileSync(join(root, 'lib', 'routes', f), 'utf8')),
   // S5c 刀2：九族路由族随包出户 ⇒ 包内路由目录也要进"宿主半实现面"，否则这些族里的契约
   //（路径围栏 / 指纹 / 不变量）会随搬移被误报为丢失（同 S5b 的纪律）。
-  ...readdirSync(join(root, 'packages', 'wallpaper', 'lib', 'routes')).filter((f) => f.endsWith('.js'))
-    .map((f) => readFileSync(join(root, 'packages', 'wallpaper', 'lib', 'routes', f), 'utf8'))].join('\n');
+  ...readdirSync(join(root, 'packages', 'media-bridge', 'lib', 'routes')).filter((f) => f.endsWith('.js'))
+    .map((f) => readFileSync(join(root, 'packages', 'media-bridge', 'lib', 'routes', f), 'utf8'))].join('\n');
 // 宿主设置白名单已改为**派生**（唯一真源 lib/settings-schema.js，P1-5）。因此这几条不再
 // 抠实现里的字面量，而是把值喂给宿主的规范化函数看它收不收 —— 断言的是**行为**。
 const schemaMod = await import(pathToFileURL(join(root, 'lib', 'settings-schema.js')).href);
@@ -2572,8 +2574,8 @@ check('negative control: 调用点保持语句形态（加赋值前缀会被路�
 // 这套现为**回落实现**（lib/media/legacy.js），首选是 media-bridge 子进程（lib/media/*）
 // —— 断言因此两边都盯：回落能力不能退化，新链路的接缝要在。
 // ⚠️ 实现归属随 P2 拆包搬进**组件行**（lib/components/media-bridge/legacy.js），P-F 批 1c 出户到
-// `packages/wallpaper/lib/legacy.js`：判据按**真源**读，候选表兼容三种排布，缺锚即判红。
-const legacyBridgePath = ['packages/wallpaper/lib/legacy.js', 'lib/components/media-bridge/legacy.js',
+// `packages/media-bridge/lib/legacy.js`：判据按**真源**读，候选表兼容三种排布，缺锚即判红。
+const legacyBridgePath = ['packages/media-bridge/lib/legacy.js', 'lib/components/media-bridge/legacy.js',
   'lib/media/legacy.js']
   .find((rel) => existsSync(join(root, rel)));
 const legacyBridgeSrc = legacyBridgePath ? readFileSync(join(root, legacyBridgePath), 'utf8') : '';
@@ -2598,16 +2600,16 @@ check('host 按扩展名回封面 Content-Type', serveSrc.includes("bmp: 'image/
 // ── media-bridge 中间件的接缝（首选路径）────────────────────────────────────
 // ── media 域真源映射（P2 拆包把实现搬进组件行）────────────────────────────────
 // 上游把媒体域放在 `lib/media/<f>`；本分支随 P2 把整套实现搬进了**组件行**、P-F 批 1c 再出户到
-// `packages/wallpaper/lib/**`。判据按真源读：出户包优先、组件行兼容、`lib/media` 兜底；
+// `packages/media-bridge/lib/**`。判据按真源读：出户包优先、组件行兼容、`lib/media` 兜底；
 // 三处都没有时返回首选路径（后续 readFileSync 会响亮地 ENOENT）—— 绝不回落到"再调一次自己"。
-const mediaSrcCandidates = (f) => ['packages/wallpaper/lib/' + f, 'packages/wallpaper/lib/routes/' + f,
+const mediaSrcCandidates = (f) => ['packages/media-bridge/lib/' + f, 'packages/media-bridge/lib/routes/' + f,
   'lib/components/media-bridge/' + f, 'lib/media/' + f].map((rel) => join(root, rel));
 const mediaSrcPath = (f) => mediaSrcCandidates(f).find((abs) => existsSync(abs)) || mediaSrcCandidates(f)[0];
 const provSrc = readFileSync(mediaSrcPath('provision.js'), 'utf8');
 const supSrc = readFileSync(mediaSrcPath('supervisor.js'), 'utf8');
 // ⚠️ 门面面 = 媒体桥子包的**整面**（不是只有 index.js）：'中间件优先/回落/音频已关透传'这些形态
 // 分布在 index.js 与 legacy.js/supervisor.js 里 ⇒ 只读一个文件会误报丢失（判据纪律：拆出的模块必须加进来）。
-const mediaPkgDir = ['packages/wallpaper/lib', 'lib/components/media-bridge']
+const mediaPkgDir = ['packages/media-bridge/lib', 'lib/components/media-bridge']
   .map((rel) => join(root, rel)).find((abs) => existsSync(abs));
 const facadeSrc = (mediaPkgDir ? readdirSync(mediaPkgDir) : [])
   .filter((f) => f.endsWith('.js'))
@@ -2660,11 +2662,11 @@ const winHideSites = [
 const winHideBad = [];
 for (const site of winHideSites) {
   // ⚠️ 真源解析：表内保留**上游坐标**（lib/transcode.js、lib/media/legacy.js），读取时按候选表
-  // 定位本分支的真源 —— P2 拆包把媒体域实现搬进了组件行（P-F 批 1c 再出户到 `packages/wallpaper/lib/`），
+  // 定位本分支的真源 —— P2 拆包把媒体域实现搬进了组件行（P-F 批 1c 再出户到 `packages/media-bridge/lib/`），
   // 而 lib/transcode.js 在本分支是 lib/media/transcode.js。找不到就落回原路径（下面的判据会以"读了空/缺失"响亮地判红）。
   const siteBase = site.file.split('/').pop();
   const siteAbs = [join(root, site.file), join(root, 'lib', 'media', siteBase),
-    join(root, 'packages', 'wallpaper', 'lib', siteBase),
+    join(root, 'packages', 'media-bridge', 'lib', siteBase),
     join(root, 'lib', 'components', 'media-bridge', siteBase)]
     .find((abs) => existsSync(abs)) || join(root, site.file);
   const body = readFileSync(siteAbs, 'utf8');
@@ -4219,12 +4221,23 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
     const avSrc = readFileSync(join(root, 'src', 'avatar-layer.js'), 'utf8').replace(/\r\n/g, '\n');
     // ⚠️ 刀4 之后 `src/styles.js` 只是 31 行组装点 ⇒ 样式判据必须读**样式族全文**（styleText()）。
     const stSrc = styleText();
-    check('#191 头像分组：只在首条显示 + 续行用 visibility 隐藏（不摘节点 ⇒ 不踩回 #154）',
+    check('#191/#231 头像分组：一回合一张脸 + 贴在可见行 + 续行用 visibility 隐藏（不摘节点 ⇒ 不踩回 #154）',
       avSrc.includes("const AVATAR_CONT_CLASS = 'we-avatar--cont';")
       && avSrc.includes('function avatarApplyGrouping()')
-      && avSrc.includes('classList.toggle(AVATAR_CONT_CLASS, side === prev)')
+      && avSrc.includes('classList.toggle(AVATAR_CONT_CLASS, cont)')
+      // #231 的三个判据源：回合号、折叠标记、可见性判定（折叠行不占"段首"）。
+      && avSrc.includes("const AVATAR_TURN_ATTR = 'data-chat-turn';")
+      && avSrc.includes("const AVATAR_FOLD_ATTR = 'data-turn-process-hidden';")
+      && avSrc.includes('function avatarRowHidden(row)')
+      // 分组必须看见**全部** flow kind（工具调用行要能断开用户连续段、也要参与助手的
+      // 重复计数：思考 / 工具调用在宿主里是两类行，一个回合里工具调用可能几十条）。
+      && avSrc.includes("const AVATAR_FLOW_ROW_SELECTOR = '[data-chat-flow-kind]';")
+      && avSrc.includes('function avatarAiRepeatRows(selLike)')
+      && avSrc.includes('aiSince >= repeatRows')
       && avSrc.includes('function avatarScheduleGrouping()')
-      && avSrc.includes('if (decorated) avatarScheduleGrouping();')
+      && avSrc.includes('if (decorated || regroup) avatarScheduleGrouping();')
+      // 折叠 / 展开会换"当前可见的第一条"⇒ 观察者必须订这些属性（只订这几枚，别全量）。
+      && avSrc.includes('attributes: true,')
       // #154 的保护线：续行**只许**用 visibility 隐藏。出现 display 就是踩回那个坑 ——
       // 摘掉/收起头像那一路曾让收起的思考行宽度塌成 0、连入口一起消失。
       && /\.we-avatar--cont\s*\{\s*visibility:\s*hidden;\s*\}/.test(stSrc)
@@ -5860,7 +5873,8 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
       };
       const prevFns = {};
       for (const k of Object.keys(stubs2)) { prevFns[k] = globalThis[k]; globalThis[k] = stubs2[k]; }
-      for (const k of ['AVATAR_SIZE_MIN', 'AVATAR_SIZE_MAX', 'AVATAR_RADIUS_MIN', 'AVATAR_RADIUS_MAX']) {
+      for (const k of ['AVATAR_SIZE_MIN', 'AVATAR_SIZE_MAX', 'AVATAR_RADIUS_MIN', 'AVATAR_RADIUS_MAX',
+        'AVATAR_AI_REPEAT_MIN', 'AVATAR_AI_REPEAT_MAX']) {
         prevFns[k] = globalThis[k]; globalThis[k] = schemaMod[k];
       }
       try {
@@ -5888,6 +5902,7 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
         const islandCtx = (sel) => ({
           sel,
           onAvatarEnabled: () => {}, onAvatarSize: () => {}, onAvatarRadius: () => {},
+          onAvatarAiRepeatRows: () => {},
           onAvatarPick: () => {}, onAvatarClear: () => {}, onAvatarAutoCompress: () => {},
         });
         const exceeded = Object.assign({}, schemaMod.DEFAULTS, {
@@ -5978,17 +5993,19 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
       onAvatarEnabled: () => {}, onAvatarSize: () => {}, onAvatarRadius: () => {},
       onAvatarPick: () => {}, onAvatarClear: () => {},
     });
-    const PARAMS = ['「我」的头像', '「助手」的头像', '头像大小', '圆角强度'];
+    const PARAMS = ['「我」的头像', '「助手」的头像', '头像大小', '圆角强度', '助手头像间隔'];
     // 岛的取值面跨了三个模块：schema 的四个常量（滑块范围 / 昵称上限）+ 头像层的三枚
     // （URL / 默认名 / 默认头像几何）⇒ 单独 import 时补替身（同 ext-fx 那块对
     // FX_BLEND_VALUES 的处理）。
     const STUB_KEYS = ['AVATAR_SIZE_MIN', 'AVATAR_SIZE_MAX', 'AVATAR_RADIUS_MIN', 'AVATAR_RADIUS_MAX',
+      'AVATAR_AI_REPEAT_MIN', 'AVATAR_AI_REPEAT_MAX',
       'avatarImageUrl', 'renderAvatarGlyph'];
     const PREV_STUBS = {};
     for (const k of STUB_KEYS) PREV_STUBS[k] = globalThis[k];
     Object.assign(globalThis, {
       AVATAR_SIZE_MIN: schemaMod.AVATAR_SIZE_MIN, AVATAR_SIZE_MAX: schemaMod.AVATAR_SIZE_MAX,
       AVATAR_RADIUS_MIN: schemaMod.AVATAR_RADIUS_MIN, AVATAR_RADIUS_MAX: schemaMod.AVATAR_RADIUS_MAX,
+      AVATAR_AI_REPEAT_MIN: schemaMod.AVATAR_AI_REPEAT_MIN, AVATAR_AI_REPEAT_MAX: schemaMod.AVATAR_AI_REPEAT_MAX,
       avatarImageUrl: avatarLayerMod.avatarImageUrl,
       renderAvatarGlyph: avatarLayerMod.renderAvatarGlyph,
     });
@@ -6788,7 +6805,7 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
       // ⚠️ 本档打开 `thinkingGlass`（上游 #134 的「思考块液态玻璃」，默认关）：原属本档的
       //    「胶囊雾化」与「思考触发条玻璃·独立配置」都迁进侧栏折叠块了（本档不再画它们 ——
       //    这正是"真迁移"的字面含义；侧栏展开档在下面钉它们）。
-      wantLabels: ['主题随壁纸', '边框', '预设方案', '深色单独设置', '玻璃透明度', '雾化', '额外补雾化的选择器', '玻璃保真度', '思考块液态玻璃', '左侧栏液态玻璃', '标题栏液态玻璃', '侧栏液态玻璃', '侧栏全透明', '侧栏玻璃跟随全局', '左侧栏 · 统一圆角', '左侧栏 · 四角单独', '右侧栏 · 统一圆角', '右侧栏 · 四角单独'] },
+      wantLabels: ['主题随壁纸', '边框', '预设方案', '深色单独设置', '玻璃透明度', '雾化', '额外补雾化的选择器', '玻璃保真度', '思考块液态玻璃', '左侧栏液态玻璃', '标题栏液态玻璃', '侧栏液态玻璃', '侧栏全透明', '侧栏玻璃跟随全局', '内容面玻璃·独立配置', '左侧栏 · 统一圆角', '左侧栏 · 四角单独', '右侧栏 · 统一圆角', '右侧栏 · 四角单独'] },
     // 设置页 · 主题预设**收起**档：不给 `presetsOpen`（ctxFrom 填 noop ⇒ 被当成收起）。
     // 节头必须仍在（它是重新展开的唯一入口），预设网格一行都不画 —— 判据形状与「全局 UI 配色」
     // 收起档同款（verify-client 里那条"存 0 ⇒ 色板不进树、节头仍在"的渲染侧镜像）。
@@ -6796,7 +6813,7 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
       selOver: { sidebarPresent: true, sidebarGlass: true, thinkingGlass: true },
       ctxOver: { glassPresets: { presets: [] }, detailOpen: true, glassUiOpen: true, cornersOpen: true },
       want: ['主题', '细节', '主题预设', '玻璃 UI', '侧边栏圆角', '全局 UI 配色', '全局字体'],
-      wantLabels: ['主题随壁纸', '边框', '深色单独设置', '玻璃透明度', '雾化', '额外补雾化的选择器', '玻璃保真度', '思考块液态玻璃', '左侧栏液态玻璃', '标题栏液态玻璃', '侧栏液态玻璃', '侧栏全透明', '侧栏玻璃跟随全局', '左侧栏 · 统一圆角', '左侧栏 · 四角单独', '右侧栏 · 统一圆角', '右侧栏 · 四角单独'] },
+      wantLabels: ['主题随壁纸', '边框', '深色单独设置', '玻璃透明度', '雾化', '额外补雾化的选择器', '玻璃保真度', '思考块液态玻璃', '左侧栏液态玻璃', '标题栏液态玻璃', '侧栏液态玻璃', '侧栏全透明', '侧栏玻璃跟随全局', '内容面玻璃·独立配置', '左侧栏 · 统一圆角', '左侧栏 · 四角单独', '右侧栏 · 统一圆角', '右侧栏 · 四角单独'] },
     // 侧栏档（默认收起）：**简化配置 + 两块折叠块的头**（ADR-0008 D4）——
     // 「详细玻璃调节」开关在（收起 ⇒ 它后面的独立配置层一行都不画）；「全局字体」节头在
     // （收起 ⇒ 字体内容不画）。`selOver` 与设置页用例同位 ⇒ 侧栏家族开关同样画得出来。
@@ -6805,6 +6822,23 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
     //    不在、接线通不通"，那是**等价前提**下的老断言，不该因为默认值变了就删/改判不在
     //    （那会把"控件坏了"与"默认收起了"混成同一件事）。默认收敛这条**新行为**由紧随的
     //    下面这条用例单独承担（它一个门都不给 ⇒ 新判据的"收起"分支才不会空转）。
+    // ⚠️ **没装 dsh-better-sidebar 的机器**（`sidebarPresent: false`）：内容面那组
+    //    （阅读文件页 / 编辑器 / 终端的底色与透明度）**必须仍然画得出来**。用户实测报过这次
+    //    回归：门错挂在 `sidebarPresent` 上 ⇒ 不装该插件的用户整组行一行都没有，
+    //    "阅读页底色"又一次够不着。真正的 CSS 门是 `data-we-sidebar-glass`（由
+    //    `sidebarGlass` 写，默认开），与 `sidebarPresent` 无关 —— 宿主原生右栏
+    //    （阅读文件页就在那儿）同样吃那张底板。
+    { fn: 'renderAppearanceTab', label: '（设置页 · 未安装 better-sidebar：内容面那组仍在）', surface: 'settings',
+      selOver: { sidebarPresent: false, sidebarGlass: true },
+      ctxOver: { glassPresets: { presets: [] }, presetsOpen: true, detailOpen: true, glassUiOpen: true, cornersOpen: true },
+      want: ['主题', '细节', '主题预设', '玻璃 UI', '侧边栏圆角', '全局 UI 配色', '全局字体'],
+      wantLabels: ['主题随壁纸', '边框', '预设方案', '深色单独设置', '玻璃透明度', '雾化', '额外补雾化的选择器', '玻璃保真度', '思考块液态玻璃', '左侧栏液态玻璃', '标题栏液态玻璃', '内容面玻璃·独立配置', '左侧栏 · 统一圆角', '左侧栏 · 四角单独', '右侧栏 · 统一圆角', '右侧栏 · 四角单独'] },
+    // 同一条的另一半：`sidebarGlass` 关掉（侧栏玻璃总开关）⇒ 内容面那组也收（它的 CSS 门同源）。
+    { fn: 'renderAppearanceTab', label: '（设置页 · 侧栏玻璃总开关关：内容面那组跟着收）', surface: 'settings',
+      selOver: { sidebarPresent: false, sidebarGlass: false },
+      ctxOver: { glassPresets: { presets: [] }, presetsOpen: true, detailOpen: true, glassUiOpen: true, cornersOpen: true },
+      want: ['主题', '细节', '主题预设', '玻璃 UI', '侧边栏圆角', '全局 UI 配色', '全局字体'],
+      wantLabels: ['主题随壁纸', '边框', '预设方案', '深色单独设置', '玻璃透明度', '雾化', '额外补雾化的选择器', '玻璃保真度', '思考块液态玻璃', '左侧栏液态玻璃', '标题栏液态玻璃', '左侧栏 · 统一圆角', '左侧栏 · 四角单独', '右侧栏 · 统一圆角', '右侧栏 · 四角单独'] },
     // 侧栏档 · 三节**默认收敛**（一个门都不给 = 全收起）：这是用户口径要的新行为 ——
     // 侧栏外观页打开时只剩六行节头，一屏放得下（此前「细节 + 玻璃 UI + 侧边栏圆角」要滚好几屏）。
     { fn: 'renderAppearanceTab', label: '（侧栏档 · 三节默认收敛：只画节头）', surface: 'sidebar',
@@ -6822,7 +6856,7 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
       selOver: { sidebarPresent: true, sidebarGlass: true },
       ctxOver: { detailOpen: true, glassUiOpen: true, cornersOpen: true },
       want: ['主题', '细节', '玻璃 UI', '侧边栏圆角', '全局 UI 配色', '全局字体'],
-      wantLabels: ['主题随壁纸', '边框', '玻璃透明度', '雾化', '额外补雾化的选择器', '玻璃保真度', '思考块液态玻璃', '左侧栏液态玻璃', '标题栏液态玻璃', '侧栏液态玻璃', '侧栏全透明', '侧栏玻璃跟随全局', '详细玻璃调节', '左侧栏 · 统一圆角', '左侧栏 · 四角单独', '右侧栏 · 统一圆角', '右侧栏 · 四角单独'] },
+      wantLabels: ['主题随壁纸', '边框', '玻璃透明度', '雾化', '额外补雾化的选择器', '玻璃保真度', '思考块液态玻璃', '左侧栏液态玻璃', '标题栏液态玻璃', '侧栏液态玻璃', '侧栏全透明', '侧栏玻璃跟随全局', '详细玻璃调节', '内容面玻璃·独立配置', '左侧栏 · 统一圆角', '左侧栏 · 四角单独', '右侧栏 · 统一圆角', '右侧栏 · 四角单独'] },
     // 侧栏档 · 「详细玻璃调节」展开（ctxOver.glassDetailOpen）：高级行全部回来 ——
     // 胶囊细调（thinkingGlass 开 ⇒ 同门）、内容面与登记表各面的「独立配置」。
     // `sidebarFollowGlobal` 默认开 ⇒ 「侧栏玻璃·独立配置」被跟随门收起（画出来又不生效的
@@ -6831,7 +6865,7 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
       selOver: { sidebarPresent: true, sidebarGlass: true, thinkingGlass: true },
       ctxOver: { glassDetailOpen: true, detailOpen: true, glassUiOpen: true, cornersOpen: true },
       want: ['主题', '细节', '玻璃 UI', '侧边栏圆角', '全局 UI 配色', '全局字体'],
-      wantLabels: ['主题随壁纸', '边框', '玻璃透明度', '雾化', '额外补雾化的选择器', '玻璃保真度', '思考块液态玻璃', '左侧栏液态玻璃', '标题栏液态玻璃', '侧栏液态玻璃', '侧栏全透明', '侧栏玻璃跟随全局', '详细玻璃调节', '胶囊雾化', '内容面玻璃·独立配置', '设置窗口玻璃·独立配置', '对话框玻璃·独立配置', '思考触发条玻璃·独立配置', '浮层玻璃·独立配置', '左侧栏 · 统一圆角', '左侧栏 · 四角单独', '右侧栏 · 统一圆角', '右侧栏 · 四角单独'] },
+      wantLabels: ['主题随壁纸', '边框', '玻璃透明度', '雾化', '额外补雾化的选择器', '玻璃保真度', '思考块液态玻璃', '左侧栏液态玻璃', '标题栏液态玻璃', '侧栏液态玻璃', '侧栏全透明', '侧栏玻璃跟随全局', '详细玻璃调节', '胶囊雾化', '设置窗口玻璃·独立配置', '对话框玻璃·独立配置', '思考触发条玻璃·独立配置', '浮层玻璃·独立配置', '内容面玻璃·独立配置', '左侧栏 · 统一圆角', '左侧栏 · 四角单独', '右侧栏 · 统一圆角', '右侧栏 · 四角单独'] },
     // ⚠️ 这一条是**覆盖缺口**补上的：字体那一节的细节（颜色角色 / 排版角色 / 字体族 / 组件字体 /
     // 字体集预设，~180 行）被 `sel.fontCustom` 挡着，而它的默认值是关 ⇒ **任何用例都没渲染过它**。
     // 打开它才能让那些行第一次进入判据的视野（这本身是找缺陷，不只是补锚）。
@@ -6840,7 +6874,7 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
       selOver: { fontCustom: true, sidebarPresent: true, sidebarGlass: true },
       ctxOver: { fontOpen: true, detailOpen: true, glassUiOpen: true, cornersOpen: true, fontSet: FONTSET_STUB },
       want: ['主题', '细节', '玻璃 UI', '侧边栏圆角', '全局 UI 配色', '全局字体'],
-      wantLabels: ['主题随壁纸', '边框', '玻璃透明度', '雾化', '额外补雾化的选择器', '玻璃保真度', '思考块液态玻璃', '左侧栏液态玻璃', '标题栏液态玻璃', '侧栏液态玻璃', '侧栏全透明', '侧栏玻璃跟随全局', '详细玻璃调节',
+      wantLabels: ['主题随壁纸', '边框', '玻璃透明度', '雾化', '额外补雾化的选择器', '玻璃保真度', '思考块液态玻璃', '左侧栏液态玻璃', '标题栏液态玻璃', '侧栏液态玻璃', '侧栏全透明', '侧栏玻璃跟随全局', '详细玻璃调节', '内容面玻璃·独立配置',
         '左侧栏 · 统一圆角', '左侧栏 · 四角单独', '右侧栏 · 统一圆角', '右侧栏 · 四角单独',
         '字体自定义', '默认字体', '终端字体', '文字颜色角色', '深色单独设置', '正文', '次要文字', '弱化说明', '极小说明', '禁用 / 更弱',
         '排版角色', '只看改过的', '高级字体设置', '字体集预设'] },
@@ -6859,6 +6893,7 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
       //    **按序拼接** —— 两个来源各自都被别的用例钉住了，这里是它们的交叉验证：拼接后
       //    逐字相等 ⇒ 设置页的字体节渲染的就是侧栏那一份同一渲染器的产物（无 surface 分支残留）。
       wantLabels: ['主题随壁纸', '边框', '预设方案', '深色单独设置', '玻璃透明度', '雾化', '额外补雾化的选择器', '玻璃保真度', '思考块液态玻璃', '左侧栏液态玻璃', '标题栏液态玻璃', '侧栏液态玻璃', '侧栏全透明', '侧栏玻璃跟随全局',
+        '内容面玻璃·独立配置',
         '左侧栏 · 统一圆角', '左侧栏 · 四角单独', '右侧栏 · 统一圆角', '右侧栏 · 四角单独',
         '字体自定义', '默认字体', '终端字体', '文字颜色角色', '深色单独设置', '正文', '次要文字', '弱化说明', '极小说明', '禁用 / 更弱',
         '排版角色', '只看改过的', '高级字体设置', '字体集预设'] },
@@ -7030,7 +7065,12 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
       // ⚠️ 这道判据只对**带「玻璃 UI」节**的档判（其它页签本来就没有独立配置层）；
       //    它必须住在**跑得到外观用例的那个循环**里 —— 上一版住在旧的 `CASES` 循环、
       //    而外观用例早已搬进 `MORE_CASES` ⇒ 那条判据当时是**空转的**（实测：改口径它不红）。
-      const indep = labels.filter((l) => l.includes('独立配置'));
+      // ⚠️ 「内容面玻璃·独立配置」是**这一族的例外**（用户口径："阅读文件页面的背景底色的
+      // 设置被删除了，需要找回"）：它是阅读页 / 编辑器 / 终端底色的唯一入口，此前只在
+      // 侧栏折叠块里 ⇒ 设置页与侧栏收起态都够不着。现在它两档都画（仍在节门内），
+      // 所以下面那两条 D4 判据统计「独立配置」层时要把它排除在外。
+      const CONTENT_INDEP = '内容面玻璃·独立配置';
+      const indep = labels.filter((l) => l.includes('独立配置') && l !== CONTENT_INDEP);
       // 预设块的标签（`预设方案`）**也进标签序列** —— 它由 `ctlText` 画成一行 `we-picker__ctl`，
       // 与滑块 / 开关同族。所以两侧都钉得住：序列里不许有（侧栏档）/ 必须有（设置档），
       // 再加一条整树文本锚兜住"块被画了但标签换了写法"的形态。
@@ -7525,15 +7565,15 @@ check('client posts assets dir to host route',
 check('host inventory reports weAssets availability',
   /weAssetsAvailable: weAssetsAvailable\(\)/.test(hostHalfSrc));
 // ⚠️ 下面这组读**宿主半**：`/api/local-assets` 与 `/we-assets-dir` 已出户到
-//    `packages/wallpaper/lib/routes/we-assets.js`（S5b 刀1；§★ 重构 W-B B1 时先搬进
+//    `packages/media-bridge/lib/routes/we-assets.js`（S5b 刀1；§★ 重构 W-B B1 时先搬进
 //    `lib/routes/`）。本文件头 `hostHalfSrc` 的约定 ——
 //    断言"宿主仍实现某契约"必须覆盖族目录，否则"已搬走"会被误报成"契约丢了"。
-const weAssetsFamSrc = readFileSync(join(root, 'packages', 'wallpaper', 'lib', 'routes', 'we-assets.js'), 'utf8');
+const weAssetsFamSrc = readFileSync(join(root, 'packages', 'media-bridge', 'lib', 'routes', 'we-assets.js'), 'utf8');
 /** 被搬走的路由体的指纹（只在这两处路由的响应里出现过）。 */
 const movedOut = (t) => /未知素材源/.test(t);
 check('host fences local-assets file paths',
   movedOut(hostHalfSrc) && /target\.startsWith\(root \+ sep\)/.test(hostHalfSrc));
-check('we-assets 族已搬进 packages/wallpaper/lib/routes/we-assets.js（门面里零残留）',
+check('we-assets 族已搬进 packages/media-bridge/lib/routes/we-assets.js（门面里零残留）',
   !movedOut(hostSrc) && movedOut(weAssetsFamSrc)
     && /path: '\/api\/local-assets'/.test(weAssetsFamSrc)
     && /path: `\$\{BASE\}\/we-assets-dir`/.test(weAssetsFamSrc));

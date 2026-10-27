@@ -27,6 +27,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { stripComments } from './tools/js-text.mjs';
+import { UPSTREAM_FORKS, isUpstreamFork, upstreamForkOf } from './tools/subpackage-shapes.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const SHORT_PREFIX = 'dsh-plugin-wallpaper-engine-';
@@ -101,12 +102,31 @@ function registers(text, name) {
   return new RegExp('id\\s*:\\s*["' + "'" + ']' + name + '["' + "'" + ']').test(head);
 }
 
+/** `exports['./client']` 取路径：字符串，或条件对象里的 default/import/require/node/browser。 */
+function clientTargetOf(exp) {
+  const v = exp ? exp['./client'] : undefined;
+  if (typeof v === 'string') return v.replace(/^\.\//, '');
+  if (v && typeof v === 'object') {
+    for (const k of ['default', 'import', 'require', 'node', 'browser']) {
+      if (typeof v[k] === 'string') return v[k].replace(/^\.\//, '');
+    }
+    return '';
+  }
+  return null;
+}
+
 /** 判据核心（纯函数）。 */
 function clientHalfViolations(inp) {
   const bad = [];
   const name = inp.name, dir = inp.dir, manifest = inp.manifest || {};
   const exp = manifest.exports || {};
   const dc = manifest.dsh && manifest.dsh.client;
+  // upstream-fork 形态（P1：packages/pet）：独立派生身份 + 预构建产物 + **零主包绑定**。
+  // 它与一般子包的三处差异都在这里显式分叉（不是放宽，是换判据，且每处都有负控）：
+  //   · 包名不带 SHORT_PREFIX ⇒ 产物名不套 client.<short>.js，改由注册表登记的落点定；
+  //   · exports['./client'] 是条件对象（types + default）⇒ 取 default；
+  //   · 产物**不许** require 主包（它是独立插件，不是主包服务面的消费者）⇒ 这一条反向判红。
+  const fork = isUpstreamFork(dir) ? upstreamForkOf(dir) : null;
   // 6) 必被覆盖（P-C 契约 §1 / ADR-0014 S3.1）：清单里的包**不声明 dsh.client 就是违规** ——
   //    必须放在下面的提前返回之前，否则"字体包被明确排除"会静默地一直成立（这正是本轮要堵的洞）。
   const required = Array.isArray(inp.requiredCovered) ? inp.requiredCovered : [];
@@ -121,16 +141,29 @@ function clientHalfViolations(inp) {
   // 1) dsh.client 形状与根一致
   if (!inp.rootDshClient) bad.push('根 package.json 没有 dsh.client（基准缺失）');
   else {
-    for (const k of Object.keys(inp.rootDshClient)) if (!(k in dc)) bad.push(dir + ' 的 dsh.client 缺键 ' + k);
+    for (const k of Object.keys(inp.rootDshClient)) {
+      // fork 的 inject 面是它自己的（dsh-client-connection），与根 bundle 的 inject 不同源；
+      // 但 platform / immediately 这类「装载时机」键必须与根一致（否则浏览器半边不会被立刻发现）。
+      if (k === 'inject' && fork) continue;
+      if (!(k in dc)) bad.push(dir + ' 的 dsh.client 缺键 ' + k);
+    }
     if (dc.platform !== 'web') bad.push(dir + ' 的 dsh.client.platform=' + JSON.stringify(dc.platform) + ' 不等于 "web"');
     if (dc.immediately !== true) bad.push(dir + ' 的 dsh.client.immediately=' + JSON.stringify(dc.immediately) + ' 不等于 true');
   }
   // 2) exports["./client"] 落点规则
-  const target = typeof exp['./client'] === 'string' ? exp['./client'].replace(/^\.\//, '') : null;
-  if (!short) bad.push(name + ' 不是 ' + SHORT_PREFIX + '<short> 形态的包名，无法推导产物名');
-  const want = short ? dir + '/lib/client.' + short + '.js' : null;
-  if (!target) bad.push(dir + ' 声明了 dsh.client 却没有 exports["./client"]');
-  else if (want && dir + '/' + target !== want) bad.push(dir + ' 的 exports["./client"]=' + JSON.stringify(exp['./client']) + '，必须指向 ' + want);
+  const target = clientTargetOf(exp);
+  if (fork) {
+    if (!target) bad.push(dir + ' 声明了 dsh.client 却没有 exports["./client"] 的可解析落点');
+    else if (target !== fork.clientArtifact.slice(dir.length + 1)) {
+      bad.push(dir + ' 的 exports["./client"] 落点=' + JSON.stringify(target) + '，与形态登记表登记的 '
+        + fork.clientArtifact.slice(dir.length + 1) + ' 不一致（预构建产物的落点必须与登记表逐字相等）');
+    }
+  } else if (!short) bad.push(name + ' 不是 ' + SHORT_PREFIX + '<short> 形态的包名，无法推导产物名');
+  const want = (!fork && short) ? dir + '/lib/client.' + short + '.js' : null;
+  if (!fork) {
+    if (!target) bad.push(dir + ' 声明了 dsh.client 却没有 exports["./client"]');
+    else if (want && dir + '/' + target !== want) bad.push(dir + ' 的 exports["./client"]=' + JSON.stringify(exp['./client']) + '，必须指向 ' + want);
+  }
   // 3/4) 产物与注册唯一性
   if (target) {
     const rel = dir + '/' + target;
@@ -152,7 +185,12 @@ function clientHalfViolations(inp) {
   if (artRel && typeof artText === 'string' && artText.length >= 1000) {
     const rootEsc = String(inp.rootName || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const bound = new RegExp('require\\s*\\(\\s*[\'"]' + rootEsc + '[\'"]\\s*\\)').test(stripComments(artText));
-    if (!bound) {
+    if (fork && bound) {
+      // 反向判据：fork 是**独立插件**（自带 patch 行 + 自己的 inject 面），它不消费主包服务面。
+      // 产物里出现主包绑定 = 它偷偷挂到主包模块图上（关掉主包后仍握旧代 exports，ADR-0014 §5.2 反模式）。
+      bad.push(artRel + ' 里出现了主包绑定 require("' + inp.rootName + '")'
+        + '（upstream-fork 是独立插件，不消费主包服务面；不许给它伪造 root 通道，见合同第 6 条）');
+    } else if (!fork && !bound) {
       bad.push(artRel + ' 里没有构建期的主包绑定 require("' + inp.rootName + '")'
         + '（P-C 契约 §2 / ADR-0014 S5.2：浏览器半边唯一跨包通道；产物由 npm run build 发出，勿手改）');
     }
@@ -176,11 +214,11 @@ check('packages/ 下至少有一个子包（P-A 未落判红）', pkgs.length > 
 check('每个子包 manifest 可解析', usable.length === pkgs.length, pkgs.filter((p) => p.error).map((p) => p.dir + '：' + p.error).join('；'));
 
 // P-C 契约 §1 / ADR-0014 S3.1：字体包的浏览器半边**不再是"明确排除"**，而是必被覆盖。
-// P-D S3a（2026-10-18）起壁纸子包（packages/wallpaper）也出浏览器半边（「自定义壁纸」节），
+// P-D S3a（2026-10-18）起壁纸子包（packages/media-bridge）也出浏览器半边（「自定义壁纸」节），
 // 同属必被覆盖。
 // 棘轮（有意硬编码）：这张清单只许随契约显式改动；每个包名都必须在 packages/ 下命中真实目录，
 // 否则改名/搬家会让棘轮**静默失效**（判据变成恒真）—— 命中 0 处即红。
-const REQUIRED_CLIENT_HALF = ['dsh-plugin-wallpaper-engine-fonts', 'dsh-plugin-wallpaper-engine-wallpaper'];
+const REQUIRED_CLIENT_HALF = ['dsh-plugin-wallpaper-engine-fonts', 'dsh-plugin-wallpaper-engine-media-bridge'];
 
 const requiredDirs = [];
 for (const n of REQUIRED_CLIENT_HALF) {
@@ -339,6 +377,14 @@ check('负对照：未声明 dsh.client 的包不产生任何违反项（范围�
   clientHalfViolations(mkIn((o) => { delete o.manifest.dsh.client; })).some((s) => /必须声明 dsh.client/.test(s)) === false);
 check('负对照：清单外的包声明了 dsh.client 也不额外报"必须声明"',
   !clientHalfViolations(mkIn()).some((s) => /必须声明 dsh.client/.test(s)));
+
+// -- upstream-fork 的独立判据面（当前无登记）─────────────────────────────────
+// 内置桌宠副本（`packages/pet`）已解耦，`UPSTREAM_FORKS` 为空 ⇒ 本判据的 fork 分支暂时不可达。
+// 分支代码**保留**（`isUpstreamFork` 命中时启用）：等上游 dsh-pet 提供联动接口、重新登记 fork 后，
+// 这一组正/负对照（预构建落点、条件对象 exports、零主包绑定）按原口径自动生效，一行都不用放宽。
+// 这里只钉住"登记表为空"这一事实本身，防止有人悄悄删掉分支却以为是解耦。
+check('upstream-fork 分支随登记表解耦进入休眠（branch 保留、登记表为空）',
+  UPSTREAM_FORKS.length === 0, '登记表当前有 ' + UPSTREAM_FORKS.length + ' 条');
 
 if (failed) { console.log('SUBPACKAGE CLIENT-HALF CHECKS FAILED -- ' + failed + ' failed'); process.exit(1); }
 console.log('ALL SUBPACKAGE CLIENT-HALF CHECKS PASSED');

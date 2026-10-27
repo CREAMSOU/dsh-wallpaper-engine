@@ -57,14 +57,14 @@ const results = [];
  *  **门面里的调用点**先后"（两族都不在门面里注册路由字面量）。 */
 {
   const host = readFileSync(new URL('../lib/index.js', import.meta.url), 'utf8');
-  const derived = readFileSync(new URL('../packages/wallpaper/lib/routes/media-derived.js', import.meta.url), 'utf8');
+  const derived = readFileSync(new URL('../packages/media-bridge/lib/routes/media-derived.js', import.meta.url), 'utf8');
   const stale = /path: `\$\{BASE\}\/(media-info|transcode-progress|transcoded|video-preview)`/;
   const PATHS = ['media-info', 'transcode-progress', 'transcoded', 'video-preview'];
   check('派生媒体族：四条路由已搬进 lib/routes/media-derived.js（门面里零残留）',
     !stale.test(host) && PATHS.every((p) => derived.includes('path: `${BASE}/' + p + '`')));
-  // S5c 刀2：两族都出户后，调用点先后搬到了包入口（`packages/wallpaper/lib/index.js`）——
+  // S5c 刀2：两族都出户后，调用点先后搬到了包入口（`packages/media-bridge/lib/index.js`）——
   // prefix 吞噬的防线跟着调用点走，所以这条对比读包入口而不是门面。
-  const entry = readFileSync(new URL('../packages/wallpaper/lib/index.js', import.meta.url), 'utf8');
+  const entry = readFileSync(new URL('../packages/media-bridge/lib/index.js', import.meta.url), 'utf8');
   const callAt = entry.indexOf('registerMediaDerivedRoutes(webServer, {');
   const bytesAt = entry.indexOf('registerMediaBytesRoutes(webServer, {');
   check('派生媒体族：调用点在包入口里，且早于 /media 字节族（晚注册会被 prefix 吞掉）',
@@ -83,7 +83,7 @@ const results = [];
   // （P0 库化；task-10 A 起本判据重指真源）；`transcodeCached` 仍在门面 ⇒ 合并两处文本，判据/期望值一字未改。
   const host = readFileSync(new URL('../lib/index.js', import.meta.url), 'utf8')
     + readFileSync(new URL('../lib/media/transcode.js', import.meta.url), 'utf8');
-  const derived = readFileSync(new URL('../packages/wallpaper/lib/routes/media-derived.js', import.meta.url), 'utf8');
+  const derived = readFileSync(new URL('../packages/media-bridge/lib/routes/media-derived.js', import.meta.url), 'utf8');
   const layer = readFileSync(new URL('../src/video-layer.js', import.meta.url), 'utf8');
   check('抽帧缓存键只有一份：落盘与"有没有缓存"共用 transcodeCacheKey(abs, mtimeMs, fps)',
     /function transcodeCacheKey\(abs, mtimeMs, fps\)/.test(host)
@@ -445,16 +445,16 @@ const requireMock = (spec) => {
 };
 const exportsObj = factory(requireMock);
 
-// P-D S3c：「壁纸库」页签四节（含「当前壁纸」）已全部搬进 packages/wallpaper 的浏览器
+// P-D S3c：「壁纸库」页签四节（含「当前壁纸」）已全部搬进 packages/media-bridge 的浏览器
 // 半边 ⇒ 抽屉里的「选择壁纸」按钮只在该产物登记 library 节之后才出现。与真实 loader 同形，
 // 在 apply() **之前**求值该产物（它的 factory 用主 bundle 的显式键集把四节登记进注册表）。
 // 不装这份产物 ⇒ 下面「picker open button found」必然红 —— 那是判据在正确报警，不是回归。
 {
   const wallpaperArtifact = readFileSync(
-    new URL('../packages/wallpaper/lib/client.wallpaper.js', import.meta.url), 'utf8');
+    new URL('../packages/media-bridge/lib/client.media-bridge.js', import.meta.url), 'utf8');
   const subHandoffs = [];
   sandbox.window.__ModuleLoader__ = { load: (h) => { subHandoffs.push(h); } };
-  new vm.Script(wallpaperArtifact, { filename: 'client.wallpaper.js' }).runInContext(sandbox);
+  new vm.Script(wallpaperArtifact, { filename: 'client.media-bridge.js' }).runInContext(sandbox);
   sandbox.window.__ModuleLoader__ = { load: (h) => { cap.handoff = h; } };
   if (subHandoffs.length !== 1) {
     throw new Error('wallpaper 浏览器半边必须恰好注册一份 bundle（实际 ' + subHandoffs.length + ' 份）');
@@ -504,8 +504,157 @@ function findWallpaperCard(tree, title) {
 }
 function renderTree() { return pickerRenders[0](); }
 
+// 同一套受控用例分别执行真实源码与构建产物，不在内存中打修复补丁。
+function stateMachineParts(video, prep, bundled = false) {
+  const between = (text, start, end) => {
+    const a = text.indexOf(start), b = text.indexOf(end, a + start.length);
+    assert(a >= 0 && b > a, '状态机源码边界存在：' + start);
+    return text.slice(a, b);
+  };
+  return between(video, 'let mediaInfoToken = "";', bundled ? '// ── 内联模块：src/media-prep.js' : 'export {')
+    + between(video, 'function buildVideoMedia(sel, fitClass)', '// ═')
+    + between(prep, 'function applySelection(id, opts)', 'function buildMedia(sel)');
+}
+function stateMachineHarness(parts) {
+  const requests = [], timers = new Set();
+  let prepared = null, warmed = null, metadataFailure = false, metadataHandler = null;
+  const info = { codec: 'avc1', fps: 72, width: 3840, height: 2160 };
+  const wallpaper = { id: 'fixture', type: 'video', media: '/wallpaper-engine/media/fixture-token', mediaExt: 'mp4' };
+  const selection = { id: '', type: null, url: null, fpsCap: 30, mediaInfo: null,
+    inventory: { wallpapers: [wallpaper] }, frameVariants: {}, playbackRate: 1, transcodeState: 'idle' };
+  const makeVideo = () => {
+    const el = makeEl('video');
+    let src = '';
+    el.srcWrites = 0;
+    Object.defineProperty(el, 'src', { get: () => src, set(value) { src = value; el.srcWrites++; } });
+    return el;
+  };
+  const context = vm.createContext({
+    selection, AbortController, LAYER_ID: 'fixture-layer', IS_EDGE: false,
+    document: { getElementById: () => null, createElement: makeVideo },
+    apiJson: async (url, opts) => {
+      requests.push({ url, signal: opts?.signal });
+      if (url.startsWith('/transcode-progress/')) return { ok: true, data: { phase: 'idle' } };
+      if (metadataHandler) return metadataHandler(url, opts);
+      return metadataFailure ? { ok: false, data: null, status: 503 }
+        : { ok: true, data: { info, transcode: { cached: false, fps: 30 } } };
+    },
+    apiFetch: async (url) => {
+      requests.push({ url });
+      return { ok: true, response: { arrayBuffer: async () => new ArrayBuffer(1) } };
+    },
+    emit() {}, persistSelection() {}, reportClientDiag() {}, cancelRotationPrepare() {},
+    disposePreparedMedia() {}, cancelLiveFrameBackfill() {}, cancelLiveMount() {},
+    releaseRotationAudioGate() {}, syncRotationTimer() {}, themeFollowOnWallpaper() {},
+    keepPlayingWallpaper: () => true, clearLiveFailure() {}, syncSceneAudio() {},
+    consumePreparedMedia: () => { const el = prepared; prepared = null; return el; },
+    consumeWarmVideo: () => { const el = warmed; warmed = null; return el; },
+    liveLog() {}, isEffectivelyPlaying: () => true, layerStillPending: () => false, weDrawFrame() {},
+    setInterval(fn) { const timer = { fn }; timers.add(timer); return timer; },
+    clearInterval(timer) { timers.delete(timer); },
+  });
+  vm.runInContext(parts, context, { timeout: 1000 });
+  return {
+    selection, requests, timers, makeVideo,
+    run: (text) => vm.runInContext(text, context, { timeout: 1000 }),
+    failMetadata: (value) => { metadataFailure = value; },
+    handleMetadata: (fn) => { metadataHandler = fn; },
+    adopt: (kind, el) => { if (kind === 'prepared') prepared = el; else warmed = el; },
+    dispose: () => vm.runInContext('abortTranscodeUpgrade(); abortMediaInfoProbe();', context),
+  };
+}
+// 只排空上述 async API 的有限 Promise 链，不依赖网络或墙钟等待。
+async function settleStateMachine() { for (let i = 0; i < 12; i++) await Promise.resolve(); }
+async function verifySelectionStateMachines() {
+  const video = readFileSync(new URL('../src/video-layer.js', import.meta.url), 'utf8');
+  const prep = readFileSync(new URL('../src/media-prep.js', import.meta.url), 'utf8');
+  for (const [label, parts] of [
+    ['source', stateMachineParts(video, prep)], ['bundle', stateMachineParts(code, code, true)],
+  ]) {
+    const checkState = (name, ok) => check(label + '：' + name, ok);
+    {
+      const h = stateMachineHarness(parts);
+      try {
+        h.run('applySelection("fixture")'); await settleStateMachine();
+        checkState('首次探测取得真实 72fps 元数据', h.selection.mediaInfo?.fps === 72);
+        h.run('applySelection("fixture")'); await settleStateMachine();
+        checkState('同 token 重应用重新探测且保留元数据',
+          h.requests.filter((r) => r.url.startsWith('/media-info/')).length === 2 && h.selection.mediaInfo?.fps === 72);
+        h.run('maybeUpgradeToTranscoded(document.createElement("video"), "fixture-token")'); await settleStateMachine();
+        checkState('重应用后仍为高帧率原生可播视频兑现抽帧决策',
+          h.selection.transcodeState === 'cached' && h.requests.some((r) => r.url.includes('/transcoded/fixture-token?fps=30')));
+      } finally { h.dispose(); }
+      checkState('卸载清除升级轮询', h.timers.size === 0);
+    }
+    {
+      const h = stateMachineHarness(parts);
+      try {
+        h.failMetadata(true); h.run('applySelection("fixture")'); await settleStateMachine();
+        checkState('失败对照：元数据保持未知', h.selection.mediaInfo === null);
+        h.failMetadata(false); h.run('applySelection("fixture")'); await settleStateMachine();
+        checkState('首次失败后重选可重试并恢复元数据',
+          h.requests.filter((r) => r.url.startsWith('/media-info/')).length === 2 && h.selection.mediaInfo?.fps === 72);
+        const count = h.requests.length;
+        await h.run('refreshMediaInfo()');
+        checkState('普通非强制调用仍按 token 去重', h.requests.length === count);
+      } finally { h.dispose(); }
+    }
+    for (const oldFirst of [false, true]) {
+      const h = stateMachineHarness(parts), pending = [];
+      try {
+        Object.assign(h.selection, { type: 'video', url: '/wallpaper-engine/media/fixture-token' });
+        h.handleMetadata((url, opts) => new Promise((resolve) => { pending.push({ resolve, signal: opts.signal }); }));
+        const first = h.run('refreshMediaInfo(true)'), second = h.run('refreshMediaInfo(true)');
+        checkState('同 token 新探测取消旧请求', pending.length === 2 && pending[0].signal.aborted && !pending[1].signal.aborted);
+        if (oldFirst) {
+          pending[0].resolve({ ok: false, data: null, aborted: true }); await first;
+          checkState('旧响应先到不释放新请求在途标记', h.run('mediaInfoInFlight') === 'fixture-token');
+        }
+        pending[1].resolve({ ok: true, data: { info: { fps: 72, codec: 'avc1' } } }); await second;
+        if (!oldFirst) {
+          pending[0].resolve({ ok: false, data: null, aborted: true }); await first;
+        }
+        checkState('旧失败对象' + (oldFirst ? '先到' : '后到') + '不覆盖新元数据', h.selection.mediaInfo?.fps === 72);
+        checkState('完成后释放元数据探测句柄', h.run('mediaInfoInFlight === "" && mediaInfoAbort === null'));
+      } finally { h.dispose(); }
+    }
+    for (const kind of ['fresh', 'warmed', 'prepared']) {
+      for (const cache of ['matching', 'wrong-token', 'wrong-fps', 'missing']) {
+        const h = stateMachineHarness(parts);
+        try {
+          Object.assign(h.selection, { type: 'video', url: '/wallpaper-engine/media/fixture-token', previewUrl: '/wallpaper-engine/video-preview/fixture-token' });
+          const cachedUrl = '/wallpaper-engine/transcoded/fixture-token?fps=30';
+          h.selection.transcodeReady = cache === 'missing' ? null : { token: cache === 'wrong-token' ? 'other-token' : 'fixture-token', fps: cache === 'wrong-fps' ? 60 : 30, url: cachedUrl };
+          const adopted = kind === 'fresh' ? null : h.makeVideo();
+          if (adopted) { adopted.src = h.selection.url; h.adopt(kind, adopted); }
+          const media = h.run('buildVideoMedia(selection, " we-media--fit")');
+          checkState(kind + '/' + cache + '：缓存选择与元素身份正确',
+            media.src === (cache === 'matching' ? cachedUrl : h.selection.url)
+            && (kind === 'fresh' || media === adopted));
+          checkState(kind + '/' + cache + '：不误标帧率且保留播放/布局契约',
+            (cache === 'matching' ? media.dataset.weTranscoded === '30' && h.selection.transcodeState === 'ready' : !media.dataset.weTranscoded)
+            && media.autoplay && media.loop && media.preload === 'auto' && media.playbackRate === 1 && media.className === 'we-media we-media--fit');
+          if (kind === 'fresh' || cache === 'matching') checkState(kind + '/' + cache + '：静态 poster 保留', media.poster === h.selection.previewUrl);
+          if (adopted && cache !== 'matching') checkState(kind + '/' + cache + '：不重赋已领养原片 src', media.srcWrites === 1);
+        } finally { h.dispose(); }
+      }
+    }
+    for (const kind of ['warmed', 'prepared']) {
+      const h = stateMachineHarness(parts);
+      try {
+        const url = '/wallpaper-engine/transcoded/fixture-token?fps=30', media = h.makeVideo();
+        Object.assign(h.selection, { type: 'video', url: '/wallpaper-engine/media/fixture-token', transcodeReady: { token: 'fixture-token', fps: 30, url } });
+        media.src = url; media.dataset.weTranscoded = '30'; h.adopt(kind, media);
+        checkState(kind + '：已匹配转码元素不重赋 src 或重载',
+          h.run('buildVideoMedia(selection, "")') === media && media.srcWrites === 1 && !media._loadCount);
+      } finally { h.dispose(); }
+    }
+  }
+}
+
 // ── Scenario ────────────────────────────────────────────────────────────────
 async function main() {
+  await verifySelectionStateMachines();
   // Let the initial apply() settle (inventory fetch etc.).
   await new Promise((r) => { setTimeout(r, 20); });
 

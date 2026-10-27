@@ -66,7 +66,7 @@
  *     来源就是它；旧断言会让修好的版本看起来"完全没作用"）。反向不清（见那里）。
  *   · **层所有权 = 本文件独占（P-D S4）**：`LAYER_ID` / `SCRIM_ID` 两层是进程内单例，只有本文件
  *     建/领养/退役（`obtainLayerNode` / `syncScrimElement` / `retireFadingLayer`），`src/client.js`
- *     的 fiber cleanup 摘净。`packages/wallpaper` 浏览器半边**不得**建层/退层/持 `#layer` 引用；
+ *     的 fiber cleanup 摘净。`packages/media-bridge` 浏览器半边**不得**建层/退层/持 `#layer` 引用；
  *     判据 = `test/verify-layer-ownership.mjs`（P1–P4，负对照含"两包各建层 / 退役后残留 iframe"）。
  *   · 本文件必须保持浏览器安全（无 import / require / Node API），且**不得有顶层可执行语句**
  *     读 client.js 的 const（会被内联到 bundle 顶部，撞 TDZ）。
