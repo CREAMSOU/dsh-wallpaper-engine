@@ -147,15 +147,16 @@
         }, weT("取消")),
       ),
     ),
-    React.createElement("div", { className: "we-picker__ctl" },
+    // #255②：「自动轮转」是**列表的**开关 —— 没选列表 / 列表编辑器展开时整行不渲染。
+    // 旧实现让这一行常驻，没列表时只能显示一句「请先选择或新建一个轮播列表」，
+    // 相当于在设置页里放了一行永远点不动的控件。
+    (sel.rotationGroupId && !editing) && React.createElement("div", { className: "we-picker__ctl" },
       ctlText(weT("自动轮转"),
-        !sel.rotationGroupId
-          ? weT("请先选择或新建一个轮播列表")
-          : playableCount < 2
-            ? weT("当前列表至少需要 2 个可播放壁纸")
-            : (group && group.trigger === "videoEnd")
-              ? weT("当前视频播完就换下一张（不看间隔）")
-              : weT("每 {min} 分钟切换一次", { min: group ? group.interval : rotationIntervalDefault })),
+        playableCount < 2
+          ? weT("当前列表至少需要 2 个可播放壁纸")
+          : (group && group.trigger === "videoEnd")
+            ? weT("当前视频播完就换下一张（不看间隔）")
+            : weT("每 {min} 分钟切换一次", { min: group ? group.interval : rotationIntervalDefault })),
       React.createElement("div", { className: "we-picker__ctl-side" },
         React.createElement("select", {
           className: "we-picker__rotation-interval",

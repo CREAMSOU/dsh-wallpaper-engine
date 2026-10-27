@@ -69,7 +69,6 @@ const WE_I18N_EN_PANEL = {
   "从 WE 播放列表导入…": "Import from a WE playlist…",
   "{name}（{count} 可播放）": "{name} ({count} playable)",
   "自动轮转": "Auto-rotate",
-  "请先选择或新建一个轮播列表": "Select or create a rotation list first",
   "当前列表至少需要 2 个可播放壁纸": "The current list needs at least 2 playable wallpapers",
   "每 {min} 分钟切换一次": "Every {min} min",
   "轮转间隔": "Rotation interval",

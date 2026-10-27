@@ -701,6 +701,31 @@ await sleep(80); // 等 loadPersisted → loadInventory → revalidateSelection 
     !crossLayerAgrees(tree, modelFromUi(tree, { search: '' })));
 }
 
+// #255③：库视图第一张「关闭」卡在有壁纸时是**暂停/继续**（保留当前画面），不是清空壁纸。
+{
+  const pickerSrc = readFileSync(new URL('../src/picker-modal.js', import.meta.url), 'utf8');
+  const clientSrc = readFileSync(new URL('../src/client.js', import.meta.url), 'utf8');
+  const closeCardShape = (t) => {
+    const m = /function renderPickerCloseCard\(ctx\) \{[\s\S]*?\n {2}\}/.exec(t);
+    if (!m) return null;
+    const body = m[0];
+    return {
+      toggle: body.includes('onTogglePlay'),
+      labels: body.includes('⏸ 暂停') && body.includes('▶ 播放'),
+      fallback: body.includes('closePicker'),
+    };
+  };
+  const shape = closeCardShape(pickerSrc);
+  check('#255③ 关闭卡有壁纸时走 pause/resume（onTogglePlay + 两种文案），无壁纸才回退 closePicker',
+    Boolean(shape && shape.toggle && shape.labels && shape.fallback), JSON.stringify(shape));
+  const oldBody = pickerSrc.replace(/function renderPickerCloseCard\(ctx\) \{[\s\S]*?\n {2}\}/,
+    'function renderPickerCloseCard(ctx) {\n    const { sel, onClear } = ctx;\n    return React.createElement("div", { onClick: onClear, title: weT("关闭壁纸") });\n  }');
+  check('#255③ negative control: 旧「直接 onClear」实现会被同一判据判红',
+    closeCardShape(oldBody) !== null && !closeCardShape(oldBody).toggle);
+  check('#255③ picker ctx forwards onTogglePlay（否则回落分支会把暂停静默变成清空）',
+    /onClear, onTogglePlay, onRatingFilterChange/.test(clientSrc));
+}
+
 console.log('');
 console.log(failures === 0 ? 'ALL PICKER MODEL CHECKS PASSED' : failures + ' CHECK(S) FAILED');
 process.exit(failures === 0 ? 0 : 1);

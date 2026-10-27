@@ -4704,7 +4704,7 @@ function WallpaperPicker() {
         cdMode, query, basePlayable, ratingCounts, typeCounts,
         gridRef: pickerGridRef, vwin: pickerVwin,
         armedConfirm: sel.armedConfirm, onArmConfirm: armConfirm, onDisarmConfirm: disarmConfirm,
-        onClear, onRatingFilterChange, onTypeFilterChange,
+        onClear, onTogglePlay, onRatingFilterChange, onTypeFilterChange,
         onShowNormalView, onShowHiddenView,
         onToggleBatchMode, onArmBatchHide, onBatchHide, onBatchCancel, onSearchInput, onPickCard,
       }) : React.createElement(React.Fragment, null,

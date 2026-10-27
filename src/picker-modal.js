@@ -122,16 +122,24 @@
   }
 
   function renderPickerCloseCard(ctx) {
-    const { sel, onClear } = ctx;
+    const { sel, onClear, onTogglePlay, closePicker } = ctx;
+    // #255③：库视图第一张卡是「当前壁纸」的快捷动作，**不是**清空开关。
+    // 有壁纸时 = 暂停 / 继续（壁纸保持当前画面）；没有壁纸时才退化成关闭库视图。
+    // 清空仍走「当前壁纸」卡上的「清除」（有二次确认）——关一张卡就黑屏是用户报障的那条。
+    const hasWallpaper = Boolean(sel.id);
+    const canToggle = hasWallpaper && typeof onTogglePlay === "function";
+    const onClick = canToggle ? onTogglePlay : (typeof closePicker === "function" ? closePicker : onClear);
+    const paused = canToggle && !sel.playing;
     return React.createElement("div", {
       className: "we-picker__card" + (sel.id ? "" : " we-picker__card--selected"),
       role: "button",
       tabIndex: 0,
-      onClick: onClear,
-      title: weT("关闭壁纸"),
+      onClick,
+      title: canToggle ? (paused ? weT("继续播放壁纸") : weT("暂停壁纸（保留当前画面）")) : weT("关闭壁纸库"),
       onKeyDown: cardKeyDown,
     },
-    React.createElement("span", { className: "we-picker__card-close" }, weT("✕ 关闭")),
+    React.createElement("span", { className: "we-picker__card-close" },
+      canToggle ? (paused ? weT("▶ 播放") : weT("⏸ 暂停")) : weT("✕ 关闭")),
     );
   }
 

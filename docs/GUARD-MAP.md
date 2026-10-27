@@ -87,7 +87,7 @@
 | `verify-pet-sidebar-rebound.mjs` | `src/client.js` `src/sidebar-right.js` |  |
 | `verify-pet-tuner-browser.mjs` | `packages/pet-link/lib/prepared.js` `packages/pet-link/src/pet-link-tuner.js` `packages/pet-link/src/pet-link.js` |  |
 | `verify-pet-tuner.mjs` | `packages/pet-link/src/pet-link-tuner.js` `packages/pet-link/src/pet-link.js` |  |
-| `verify-picker-model.mjs` | `src/picker-model.js` | ✅ |
+| `verify-picker-model.mjs` | `src/client.js` `src/picker-modal.js` `src/picker-model.js` | ✅ |
 | `verify-picker-props.mjs` | — | ✅ |
 | `verify-picker-upload.mjs` | — | ✅ |
 | `verify-playback-controls.mjs` | — | ✅ |
@@ -251,7 +251,7 @@
 | `src/client-audio-playback.js` | 2 | `verify-layer-ownership` `verify-scene-live` |
 | `src/client-media-frame.js` | 1 | `verify-scene-live` |
 | `src/client-rotation.js` | 1 | `verify-scene-live` |
-| `src/client.js` | 29 | `verify-about` `verify-adapter` `verify-api-client` `verify-avatar-interval-and-rotation` `verify-client` `verify-component-fonts` `verify-contracts` `verify-extra-glass` `verify-fontset` `verify-glass-surfaces` `verify-i18n` `verify-layer-ownership` `verify-module-layout` `verify-notice-routing` `verify-occlusion-debounce` `verify-package-publish` `verify-pet-rope-entry` `verify-pet-sidebar-diag` `verify-pet-sidebar-rebound` `verify-presets` `verify-scene-live` `verify-subpackage-client-half` `verify-subpackage-purity` `verify-subpackage-toggle-roundtrip` `verify-system-fonts` `verify-theme-follow` `verify-theme-layer` `verify-transcode-state` `verify-types` |
+| `src/client.js` | 30 | `verify-about` `verify-adapter` `verify-api-client` `verify-avatar-interval-and-rotation` `verify-client` `verify-component-fonts` `verify-contracts` `verify-extra-glass` `verify-fontset` `verify-glass-surfaces` `verify-i18n` `verify-layer-ownership` `verify-module-layout` `verify-notice-routing` `verify-occlusion-debounce` `verify-package-publish` `verify-pet-rope-entry` `verify-pet-sidebar-diag` `verify-pet-sidebar-rebound` `verify-picker-model` `verify-presets` `verify-scene-live` `verify-subpackage-client-half` `verify-subpackage-purity` `verify-subpackage-toggle-roundtrip` `verify-system-fonts` `verify-theme-follow` `verify-theme-layer` `verify-transcode-state` `verify-types` |
 | `src/effects.js` | 7 | `verify-adapter` `verify-client` `verify-component-fonts` `verify-extra-glass` `verify-glass-surfaces` `verify-scene-live` `verify-theme-layer` |
 | `src/ext-avatar.js` | 2 | `verify-avatar-interval-and-rotation` `verify-scene-live` |
 | `src/extension-registry.js` | 3 | `verify-fontset` `verify-scene-live` `verify-subpackage-toggle-roundtrip` |
@@ -292,7 +292,7 @@
 | `src/panel-tabs-mascot.js` | 11 | `e2e-web-media-origin` `verify-about` `verify-adapter` `verify-client` `verify-contracts` `verify-fontset` `verify-glass-surfaces` `verify-scene-live` `verify-system-fonts` `verify-theme-follow` `verify-theme-layer` |
 | `src/panel-tabs.js` | 14 | `e2e-web-media-origin` `verify-about` `verify-adapter` `verify-api-client` `verify-client` `verify-component-visibility` `verify-contracts` `verify-fontset` `verify-glass-surfaces` `verify-scene-live` `verify-subpackage-toggle-roundtrip` `verify-system-fonts` `verify-theme-follow` `verify-theme-layer` |
 | `src/persistence.js` | 4 | `verify-adapter` `verify-client` `verify-presets` `verify-settings-namespaces` |
-| `src/picker-modal.js` | 3 | `verify-client` `verify-fontset` `verify-scene-live` |
+| `src/picker-modal.js` | 4 | `verify-client` `verify-fontset` `verify-picker-model` `verify-scene-live` |
 | `src/picker-model.js` | 1 | `verify-picker-model` |
 | `src/picker-props-panel.js` | 2 | `verify-client` `verify-fontset` |
 | `src/preset-store.js` | 2 | `verify-client` `verify-presets` |

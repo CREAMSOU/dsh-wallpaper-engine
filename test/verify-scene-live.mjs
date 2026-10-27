@@ -3612,7 +3612,7 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
   const selBase = Object.assign({}, schema.DEFAULTS, {
     loaded: true, loading: false, id: 'w1', url: '/x', playing: true, videoPlaying: true,
     videoVolume: 0.5, videoAudioEnabled: false, videoError: '', type: 'video',
-    contentRatingFilter: 'all', hiddenIds: [], rotationGroups: [], rotationGroupId: '',
+    contentRatingFilter: 'all', hiddenIds: [], rotationGroups: [{ id: 'g1', name: 'G', interval: 10, order: 'sequence', wallpaperIds: ['w1', 'w2'] }], rotationGroupId: 'g1',
     rotationEnabled: false, qpSearch: '', qpType: 'all', url2: '',
     inventory: { wallpapers: [], error: null, installDir: '/we', uploadDir: '/up', weAssetsDir: null, sceneMediaBase: '', total: 0, portableCount: 0, playlists: [] },
     accent: '#4f8cff', glassColor: '#ffffff', glassAlpha: 0, blur: 0, border: 0,
@@ -6258,7 +6258,7 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
   const st = Object.assign({}, schemaMod.DEFAULTS, {
     loaded: true, loading: false, id: 'w1', url: '/x', type: 'video', playing: true,
     videoPlaying: true, videoVolume: 0.5, videoAudioEnabled: false, videoError: '',
-    contentRatingFilter: 'all', hiddenIds: [], rotationGroups: [], rotationGroupId: '',
+    contentRatingFilter: 'all', hiddenIds: [], rotationGroups: [{ id: 'g1', name: 'G', interval: 10, order: 'sequence', wallpaperIds: ['w1', 'w2'] }], rotationGroupId: 'g1',
     rotationEnabled: false, flip: false, objectFit: 'cover', playbackRate: 1,
     sceneLive: true, sceneLiveFailures: {}, themeFollow: false, themeFollowLine: '',
     adapterTarget: 'auto', pauseOnHidden: false, pauseOnBlur: false, pauseOnBattery: false,
@@ -6537,34 +6537,42 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
           playlists: [{ id: 'p1', name: 'P 列表', portableCount: 1 }],
         }),
       });
-      const ctx = Object.assign({}, CASES[0].ctx(sel), {
+      const ctxBase = Object.assign({}, CASES[0].ctx(sel), {
         groups: [{ id: 'g1', name: 'A 组', wallpaperIds: ['w1'], interval: 10, order: 'sequence' }],
         group: { id: 'g1', name: 'A 组', wallpaperIds: ['w1'], interval: 10, order: 'sequence' },
-        editing: { name: 'A 组', interval: 10, order: 'sequence', wallpaperIds: ['w1'] },
         armedConfirm: 'group:g1',
         uploadedList: [{ id: 'u1', title: '上传的壁纸' }],
         playableCount: 2,
       });
-      for (const name of S3B_CALLBACKS) ctx[name] = () => { fired.push(name); };
+      // #255②：轮播编辑器展开时「自动轮转」行**按设计不渲染** ⇒ 覆盖率要在两个门态下各渲染一次
+      // （编辑态覆盖编辑器回调，收起态覆盖自动轮转行回调），取并集。
+      const variants = [
+        { editing: { name: 'A 组', interval: 10, order: 'sequence', wallpaperIds: ['w1'] } },
+        { editing: null, armedConfirm: '' },
+      ];
       const prevConfirm = globalThis.renderConfirmRow;
       const prevToggle = globalThis.Toggle;
       globalThis.renderConfirmRow = stubs.renderConfirmRow;
       globalThis.Toggle = stubs.Toggle;
       try {
-        const tree = panelMod.renderWallpaperTab(ctx);
         const events = [{ target: { value: 'g1' } }, { target: { value: 'p1' } },
           { target: { value: 'random' } }, { target: { checked: true } }];
-        const walk = (node) => {
-          if (Array.isArray(node)) { node.forEach(walk); return; }
-          if (!node || typeof node !== 'object') return;
-          for (const [key, value] of Object.entries(node.props || {})) {
-            if (!/^on[A-Z]/.test(key) || typeof value !== 'function') continue;
-            // 下游替身可能先炸（例如控件 prop 形状不对）；本判据只数"回调被触达"。
-            for (const ev of events) { try { value(ev); } catch { /* 见上 */ } }
-          }
-          if (Array.isArray(node.children)) node.children.forEach(walk);
-        };
-        walk(tree);
+        for (const variant of variants) {
+          const ctx = Object.assign({}, ctxBase, variant);
+          for (const name of S3B_CALLBACKS) ctx[name] = () => { fired.push(name); };
+          const tree = panelMod.renderWallpaperTab(ctx);
+          const walk = (node) => {
+            if (Array.isArray(node)) { node.forEach(walk); return; }
+            if (!node || typeof node !== 'object') return;
+            for (const [key, value] of Object.entries(node.props || {})) {
+              if (!/^on[A-Z]/.test(key) || typeof value !== 'function') continue;
+              // 下游替身可能先炸（例如控件 prop 形状不对）；本判据只数"回调被触达"。
+              for (const ev of events) { try { value(ev); } catch { /* 见上 */ } }
+            }
+            if (Array.isArray(node.children)) node.children.forEach(walk);
+          };
+          walk(tree);
+        }
       } finally {
         globalThis.renderConfirmRow = prevConfirm;
         globalThis.Toggle = prevToggle;

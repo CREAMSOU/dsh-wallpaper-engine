@@ -420,6 +420,22 @@ const videoSrc = read('src/video-layer.js');
   }
 }
 
+// #255②：「自动轮转」行只在**选中列表且不在编辑**时渲染；旧实现常驻，没列表时只显示一句
+// 永远点不动的「请先选择或新建一个轮播列表」。
+{
+  const rotationSrc = read('packages/media-bridge/src/wallpaper-rotation-section.js');
+  // 注释里的旧文案不算代码（本文件在 #255② 的说明里引用了旧提示原文）。
+  const rotationCode = rotationSrc.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/^\s*\/\/.*$/gm, ' ');
+  const gatedCtl = (t) => t.includes('(sel.rotationGroupId && !editing) &&') && !t.includes('请先选择或新建一个轮播列表');
+  check('#255② 「自动轮转」行按 sel.rotationGroupId && !editing 门控，旧提示分支已删',
+    gatedCtl(rotationCode));
+  const oldStyle = rotationCode
+    .replace('(sel.rotationGroupId && !editing) && React.createElement("div", { className: "we-picker__ctl" },',
+      'React.createElement("div", { className: "we-picker__ctl" },')
+    .replace('ctlText(weT("自动轮转"),\n      playableCount < 2', 'ctlText(weT("自动轮转"),\n      !sel.rotationGroupId ? weT("请先选择或新建一个轮播列表") : playableCount < 2');
+  check('#255② negative control: 恢复旧常驻行会被同一 detector 判红', !gatedCtl(oldStyle));
+}
+
 if (stats.failed) {
   console.error('AVATAR-INTERVAL + ROTATION CHECKS FAILED — ' + stats.failed + ' failed, ' + stats.passed + ' passed');
   process.exitCode = 1;

@@ -2715,7 +2715,9 @@ setTimeout(async () => {
     // 判据只在**一处**定义，正判据与负对照都调它（形态规则见 docs/DEV-GUIDE.md §4.7 约定 5）。
     const cardTexts = (root) => collectCards(root).map((c) => JSON.stringify(c));
     // 关闭卡也是 `we-picker__card`（分页计数里它一直算一张）⇒ 判"只剩匹配项"时必须先摘掉它。
-    const wallpaperCardTexts = (root) => cardTexts(root).filter((s) => !s.includes('✕ 关闭'));
+    // #255③：关闭卡在有壁纸时显示「⏸ 暂停 / ▶ 播放」、无壁纸时「✕ 关闭」（关闭库视图）；
+    // 文案会随状态变，所以按它在树里的**专属类名** `we-picker__card-close` 识别（不再按文案）。
+    const wallpaperCardTexts = (root) => cardTexts(root).filter((s) => !s.includes('we-picker__card-close'));
     const onlyMatching = (root, needle) => {
       const t = wallpaperCardTexts(root);
       return t.length > 0 && t.every((s) => s.includes(needle));
@@ -3249,12 +3251,12 @@ setTimeout(async () => {
     // wallpaper-owned layers and the data-we-wallpaper marker disappear.
     // 页面玻璃同理：data-we-glass-page 是"插件在跑"的锚点，**不**跟着壁纸走 ——
     // 它一掉，整个令牌映射与对话栏玻璃就整组不匹配（用户报障：玻璃只在设了壁纸后生效）。
-    const closeCard = cards.find((card) => JSON.stringify(card).includes('✕ 关闭'));
+    // #255③：关闭卡在有壁纸时改为「暂停/继续」（保留当前画面），不再清空壁纸 ——
+    // 因此这里**不再**通过点击关闭卡来清壁纸；卡的两种形态由 test/verify-picker-model.mjs
+    // 的源码契约守卫覆盖。本节只钉"页面玻璃 / 侧栏玻璃锚点与壁纸在场与否无关"。
+    const closeCard = cards.find((card) => JSON.stringify(card).includes('we-picker__card-close'));
     assert.ok(closeCard && typeof closeCard.props.onClick === 'function', 'close-wallpaper card must be available');
-    assert.equal(bodyEl.attributes['data-we-glass-page'], 'on', '前置：页面玻璃锚点在壁纸在场时就是挂着的');
-    closeCard.props.onClick();
-    assert.equal(bodyEl.attributes['data-we-wallpaper'], undefined, 'wallpaper marker must clear');
-    assert.equal(bodyEl.attributes['data-we-glass-page'], 'on', 'page glass must stay armed without a wallpaper');
+    assert.equal(bodyEl.attributes['data-we-glass-page'], 'on', 'page glass anchor stays armed regardless of wallpaper');
     assert.equal(bodyEl.attributes['data-we-sidebar-glass'], 'on', 'sidebar glass must remain enabled');
     assert.equal(typeof p['--we-sidebar-color'], 'string', 'sidebar color variable must remain available');
     // 这里原本还有一条 `--we-sidebar-alpha`。它被删掉是因为该变量是**死码**：
@@ -3264,7 +3266,7 @@ setTimeout(async () => {
     assert.equal(typeof p['--we-sidebar-sheen'], 'string', 'sidebar sheen variable must remain available');
     assert.equal(typeof p['--we-sidebar-tint'], 'string', 'sidebar tint variable must remain available');
     assert.equal(typeof p['--we-sidebar-blur'], 'string', 'sidebar blur variable must remain available');
-    console.log('sidebar glass remains armed without an active wallpaper: true');
+    console.log('page/sidebar glass anchors are wallpaper-independent: true');
   }
 
   // ── GPU 抓帧缓存：状态提示 + 清除入口（面板）──────────────────────────
