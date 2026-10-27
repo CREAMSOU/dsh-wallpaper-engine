@@ -295,7 +295,12 @@ function fxOnPointerMove(e) {
   if (!fxOn) return;
   const st = fxSettings();
   if (!st.on || !st.trail) return;
-  fxPushTrail(e.clientX, e.clientY);
+  // #278：快速划动时浏览器会把多个采样点合并进一个 pointermove（事件频率低于屏幕刷新），
+  // 只取 `e.clientX/Y` 会让轨迹在相邻采样之间连成折线。有 `getCoalescedEvents` 就把
+  // 被合并掉的中间采样逐点补回（没有该 API 的宿主退化为单点，行为与旧版一致）。
+  const coalesced = typeof e.getCoalescedEvents === 'function' ? e.getCoalescedEvents() : null;
+  const points = coalesced && coalesced.length ? coalesced : [e];
+  for (const p of points) fxPushTrail(p.clientX, p.clientY);
   fxKick();
 }
 
