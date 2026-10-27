@@ -45,6 +45,7 @@
     "lib/host-boot.js",
     "lib/log.js",
     "lib/notice.js",
+    "lib/cache-keys.js",
     "lib/kernel/",
     "lib/kernel/data-dir.js",
     "lib/kernel/config.js",

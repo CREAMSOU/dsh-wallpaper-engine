@@ -23,7 +23,7 @@
  *                                     以引用进 `c` —— 本 fiber 单例（生命周期与一次 apply 一致）。
  *
  * 不变量：
- *   · **两把键、两个构造点**：缓存键是 `sv1_<abs 的 base64url>_<mtimeMs>`；探测键另有构造点
+ *   · **两把键、两个构造点**：缓存键是 `sv1_<abs 的短哈希>_<mtimeMs>`（#208：不放路径，见 lib/cache-keys.js）；探测键另有构造点
  *     （`sceneVideoProbeKey`，与 inventory 同键）。两者不许互相抄 —— 抄一处就少一处会漂的拼接。
  *   · **机会式缓存**：真实请求（含客户端拿到的 404）都回填探测账本 ⇒ inventory 不必自己探。
  *   · **in-flight 只按槽位键合并，settle 即摘**：并发请求共享一次提取；失败也摘（允许重试）。
@@ -39,14 +39,14 @@ import { join, dirname } from 'node:path';
 //（见 verify-module-layout ⑤）。
 
 /** 注入契约（P2-7A / ADR-0013 D12）：本族从 `c` 消费的**必需**键 —— 门面/组件行调用点必须逐键给到（判据 test/verify-inject-contracts.mjs 双向对账）。 */
-export const DEPS = ['disposers', 'base', 'mediaMap', 'serveFile', 'ensureFrameCacheDir', 'sceneVideoProbeKey', 'sceneVideoProbeSet', 'atomicWriteFileP', 'ensureSceneAudio', 'SCENE_VIDEO_INFLIGHT', 'extractSceneVideoFromDir', 'extractSceneVideoFromPkgFile'];
+export const DEPS = ['disposers', 'base', 'mediaMap', 'serveFile', 'ensureFrameCacheDir', 'sceneVideoProbeKey', 'sceneVideoProbeSet', 'atomicWriteFileP', 'ensureSceneAudio', 'SCENE_VIDEO_INFLIGHT', 'extractSceneVideoFromDir', 'extractSceneVideoFromPkgFile', 'cacheKeyFor'];
 
 export function registerSceneMediaRoutes(webServer, c) {
   const {
     disposers, base: BASE, mediaMap, serveFile,
     ensureFrameCacheDir, sceneVideoProbeKey, sceneVideoProbeSet,
     atomicWriteFileP, ensureSceneAudio, SCENE_VIDEO_INFLIGHT,
-    extractSceneVideoFromDir, extractSceneVideoFromPkgFile,
+    extractSceneVideoFromDir, extractSceneVideoFromPkgFile, cacheKeyFor,
   } = c;
 
   // 3e. Scene MP4 video: extract the scene's embedded animation and serve it as
@@ -78,7 +78,7 @@ export function registerSceneMediaRoutes(webServer, c) {
       (async () => {
         let mtime = 0;
         try { mtime = statSync(abs).mtimeMs; } catch { /* keep 0 */ }
-        const key = 'sv1_' + Buffer.from(abs, 'utf8').toString('base64url') + '_' + Math.round(mtime);
+        const key = cacheKeyFor('sv1', abs, mtime);
         const mp4Path = join(ensureFrameCacheDir(), key + '.mp4');
         // 机会式缓存：真实请求的结果回填探测缓存（与 inventory 同键：路径+mtime），
         // 让一次真实请求（含客户端拿到的 404）也「教会」缓存。状态码/响应体不变。

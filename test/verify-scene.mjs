@@ -23,6 +23,8 @@ import { createHash } from 'node:crypto';
 import { stripComments } from './tools/js-text.mjs';
 // 路由族文件面（`lib/routes/*.js` ∪ `packages/<pkg>/lib/routes/*.js`）的**同一份**发现真源。
 import { routeModuleCandidates } from './tools/host-route-index.mjs';
+// #208：缓存键的唯一派生点（本判据要与宿主实现同一份算法，不能再手拼 base64url）。
+import { cacheKeyFor } from '../lib/cache-keys.js';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -362,7 +364,9 @@ if (token) {
     // 精确匹配本次运行的 key（含 fixture mtime）—— 目录里可能有历史运行
     // 残留的其它 key 文件，不算失败。版本取自上面从源码读出的 keyVersion，
     // 写死字面量会在宿主升键后静默测到旧文件（第 514 行的注释即此意）。
-    const curKey = keyVersion + '_' + token + '_' + Math.round(statSync(join(fixtureItemDir, 'scene.pkg')).mtimeMs);
+    // #208：键里放的是 sha256(abs) 短哈希（lib/cache-keys.js），不再是 base64url(token)。
+    const fixtureAbs = join(fixtureItemDir, 'scene.pkg');
+    const curKey = cacheKeyFor(keyVersion, fixtureAbs, statSync(fixtureAbs).mtimeMs);
     // 主帧产物名：<key>_gpu.png（单槽，面积升级制 —— 只升不降，见 PUT 守卫）。
     const gpuMasterFile = curKey + '_gpu.png';
     const head0 = await runHead('/wallpaper-engine/scene-frame/' + token);
@@ -883,9 +887,13 @@ if (token) {
   //    搬进 `lib/routes/scene-media.js`。本判据守的是"每种缓存各只有一个派生点"这个
   //    **宿主级**不变量，不是"三个派生点都在主文件里"（本文件头 30–31 行的约定）。
   const hostSrc = readHostHalf();
-  /** 共享判据：阳性（宿主半）与阴性对照（宿主半 + 一条合成派生）共用同一计数函数。 */
+  /** 共享判据：阳性（宿主半）与阴性对照（宿主半 + 一条合成派生）共用同一计数函数。
+   *  #208 起键里不放 base64url(abs)，三种缓存统一调用 lib/cache-keys.js 的 cacheKeyFor；
+   *  因此"每个命名空间恰好一处派生"= cacheKeyFor( 出现 3 次，且旧拼法 0 次。 */
+  const cacheKeyDerivations = (t) => (t.match(/cacheKeyFor\(/g) || []).length;
   const base64UrlDerivations = (t) => (t.match(/Buffer\.from\(abs, 'utf8'\)\.toString\('base64url'\)/g) || []).length;
-  const derivations = base64UrlDerivations(readKeyDerivationSurface());
+  const derivationSurface = readKeyDerivationSurface();
+  const derivations = cacheKeyDerivations(derivationSurface);
   /**
    * 取一个顶层函数的函数体：起点锚 `function <name>(`，终点锚 `function <nextName>(`。
    * ⚠️ 终点锚**必须真实存在，且缺锚要判红**（返回 null）：此处此前把终点写成
@@ -908,11 +916,14 @@ if (token) {
   check('P1-6 每种缓存各只有一个键派生点（当前 3 种：帧 / 场景音频 / 场景视频）',
     derivations === 3,
     '派生点 ' + derivations + ' 处');
+  check('P1-6 键派生点里不再出现 base64url(abs)（#208：路径编码会随 checkout 深度撑破 NAME_MAX）',
+    base64UrlDerivations(derivationSurface) === 0,
+    'base64url 派生 ' + base64UrlDerivations(derivationSurface) + ' 处');
   check('P1-6 sceneFrameSlot 复用 sceneFrameCacheKey 且不再自带版本前缀',
     slotBody !== null && slotBody.includes('sceneFrameCacheKey(abs, mtime)') && !slotBody.includes('LIVE_FRAME_KEY_VERSION'),
     'reuse=' + (slotBody !== null && slotBody.includes('sceneFrameCacheKey(abs, mtime)')) + ' versionInSlot=' + (slotBody !== null && slotBody.includes('LIVE_FRAME_KEY_VERSION')));
   check('P1-6 negative control: 再写一份派生会被同一计数判据数出来',
-    base64UrlDerivations(readKeyDerivationSurface() + "\nconst x = Buffer.from(abs, 'utf8').toString('base64url');") === derivations + 1);
+    cacheKeyDerivations(derivationSurface + "\nconst x = cacheKeyFor('x', abs, 0);") === derivations + 1);
 
   // ── 槽位只给唯一产物（反向探针：删掉的死字段不许爬回来）─────────────────────
   // `sceneFrameSlot` 曾返回 `pngPath` / `jpgPath` / `gifPath` / `dir` 与一个 `_vN` 档位后缀，

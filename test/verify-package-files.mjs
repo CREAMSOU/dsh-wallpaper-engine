@@ -384,7 +384,8 @@ async function main() {
     // 再：verify 95→96 / all 108→109 —— 新增 `test/verify-tolerant-register.mjs`（#267 升级重复路由容错）。
     // 再：verify 96→97 / all 109→110 —— 新增 `test/verify-resume-repaint.mjs`（#274 遮挡恢复重绘契约）。
     // 再：verify 97→98 / all 110→111 —— 新增 `test/verify-lazy-engine-dir.mjs`（#218 运行期依赖惰性解析）。
-    const CHAIN_FLOOR = { verify: 98, docs: 6, smoke: 6, all: 111 };
+    // 再：verify 98→99 / all 111→112 —— 新增 `test/verify-cache-keys.mjs`（#208 缓存键短哈希、与 checkout 深度解耦）。
+    const CHAIN_FLOOR = { verify: 99, docs: 6, smoke: 6, all: 112 };
     /** 地板表与 GROUPS 的对齐体检：键名必须与**组名**逐一对齐（纯函数 ⇒ 负对照可直接喂）。 */
     const floorGaps = (groups, floors) => groups.map(([, g]) => g).filter((g) => !Number.isInteger(floors[g]));
     const problems = floorGaps(GROUPS, CHAIN_FLOOR).map((g) => '地板表缺组 ' + g

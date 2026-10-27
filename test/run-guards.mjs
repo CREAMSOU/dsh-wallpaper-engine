@@ -234,6 +234,8 @@ const VERIFY_STEPS = [
   step('test/verify-resume-repaint.mjs'),
   // 运行期依赖目录按请求惰性解析（#218：装上 webwallgl 不重启宿主也能出引擎文件）。
   step('test/verify-lazy-engine-dir.mjs'),
+  // 缓存产物文件名与 checkout 深度解耦（#208：键里不放 base64url(abs)，统一短哈希）。
+  step('test/verify-cache-keys.mjs'),
   // 可选桌宠联动的离线回归；安装和浏览器集成另走显式环境入口。
   step('test/verify-pet-package.mjs'),
   step('test/verify-pet-hotplug-host.mjs'),
