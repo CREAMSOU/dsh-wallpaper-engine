@@ -232,6 +232,8 @@ const VERIFY_STEPS = [
   step('test/verify-tolerant-register.mjs'),
   // 遮挡恢复后的重绘契约（#274：stale transform 残留在层上 / 媒体叶子没有重新布局 / onscreen 缺实际盒）。
   step('test/verify-resume-repaint.mjs'),
+  // 运行期依赖目录按请求惰性解析（#218：装上 webwallgl 不重启宿主也能出引擎文件）。
+  step('test/verify-lazy-engine-dir.mjs'),
   // 可选桌宠联动的离线回归；安装和浏览器集成另走显式环境入口。
   step('test/verify-pet-package.mjs'),
   step('test/verify-pet-hotplug-host.mjs'),

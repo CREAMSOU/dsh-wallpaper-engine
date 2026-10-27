@@ -70,11 +70,11 @@ function occlusionBridgeVersion(webwallglDir) {
 const ENGINE_PREFIX = 'engine/';
 
 /** 注入契约（P2-7A / ADR-0013 D12）：本族从 `c` 消费的**必需**键 —— 门面/组件行调用点必须逐键给到（判据 test/verify-inject-contracts.mjs 双向对账）。 */
-export const DEPS = ['disposers', 'base', 'WEBWALLGL_DIR', 'WEBWALLGL_PKG_DIR', 'appendDiagLine', 'traceRequests', 'serveFile', 'handleSceneFiles', 'mediaOriginInfo', 'payloadProgress', 'log'];
+export const DEPS = ['disposers', 'base', 'WEBWALLGL_DIR', 'webwallglPkgDir', 'appendDiagLine', 'traceRequests', 'serveFile', 'handleSceneFiles', 'mediaOriginInfo', 'payloadProgress', 'log'];
 
 export function registerSceneServeRoutes(webServer, c) {
   const {
-    disposers, base: BASE, WEBWALLGL_DIR, WEBWALLGL_PKG_DIR, appendDiagLine, traceRequests, serveFile,
+    disposers, base: BASE, WEBWALLGL_DIR, webwallglPkgDir, appendDiagLine, traceRequests, serveFile,
     handleSceneFiles, mediaOriginInfo, payloadProgress, log,
   } = c;
 
@@ -100,12 +100,14 @@ export function registerSceneServeRoutes(webServer, c) {
       rest = rest.replace(/^\/+/, '');
       if (!rest || rest.endsWith('/')) rest += 'index.html';
       const isEngine = rest.startsWith(ENGINE_PREFIX);
-      if (isEngine && !WEBWALLGL_PKG_DIR) {
+      // #218：按请求现解析（依赖可能在宿主启动后才装上；加载期快照会让“刚装上”一直 404）。
+      const pkgDir = typeof webwallglPkgDir === 'function' ? webwallglPkgDir() : webwallglPkgDir;
+      if (isEngine && !pkgDir) {
         log.warn('scene-live engine missing: npm dependency `webwallgl` is not installed');
         res.setHeader('Cache-Control', 'no-store');
         res.statusCode = 404; res.end('webwallgl-not-installed'); return;
       }
-      const rootDir = isEngine ? WEBWALLGL_PKG_DIR : WEBWALLGL_DIR;
+      const rootDir = isEngine ? pkgDir : WEBWALLGL_DIR;
       const abs = resolve(rootDir, isEngine ? rest.slice(ENGINE_PREFIX.length) : rest);
       // Directory fence: nothing outside the page tree / the engine package is ever served.
       if (abs === rootDir || !abs.startsWith(rootDir + sep)) {
