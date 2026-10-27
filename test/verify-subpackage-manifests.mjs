@@ -213,6 +213,15 @@ function manifestViolations({ sub, text, rootPkg, fileExists, dirExists }) {
     const clientTarget = subExports ? exportTarget(subExports['./client']) : null;
     if (!clientTarget) out.push('声明了 dsh.client 却没有 exports["./client"]（宿主按它加载浏览器半边）');
     else if (!fileExists(here + '/' + dropDot(clientTarget))) out.push('dsh.client 入口不存在：' + here + '/' + dropDot(clientTarget));
+    // #281：子包浏览器半边的工厂体在**求值期**就 `require('dsh-plugin-wallpaper-engine')` 取主包键集；
+    // 宿主 client-modules 按 `dsh.client.inject` 排装载序 ⇒ 缺主包这一条，冷启动时子包工厂可能先于
+    // 主包 materialize，报 `require(...) missed the module table`（1.4.0 真机：4 个入口全部不激活）。
+    // 只有主包自己（m.name === rootPkg.name）不需要这条自依赖。
+    const clientInject = Array.isArray(dsh.client.inject) ? dsh.client.inject : [];
+    if (m.name !== rootPkg.name && !clientInject.includes(rootPkg.name)) {
+      out.push('dsh.client.inject 没声明主包 ' + rootPkg.name + '（#281：宿主按 inject 排装载序，'
+        + '子包工厂求值期 require 主包，缺这条 = 冷启动竞态）');
+    }
   }
   if (dsh && dsh.bundle && dsh.bundle.patch) {
     if (!fileExists(here + '/' + dropDot(dsh.bundle.patch))) out.push('dsh.bundle.patch 不存在：' + here + '/' + dropDot(dsh.bundle.patch));
@@ -700,6 +709,15 @@ function packagesViolations(input) {
     if (declaresClient && !clientTarget) add(dir, 'S3.4 声明了 dsh.client 却没有 exports["./client"]');
     if (!declaresClient && clientTarget) add(dir, 'S3.4 有 exports["./client"] 却没声明 dsh.client（声明面不完整）');
     if (clientTarget && !fileExists(dir + '/' + dropDot(clientTarget))) add(dir, 'S3.4 ./client 产物不在盘：' + dir + '/' + dropDot(clientTarget));
+    // #281：子包浏览器半边的工厂体在**求值期**就 require 主包取键集；宿主 client-modules 按
+    // `dsh.client.inject` 排装载序 ⇒ 缺主包这一条，冷启动可能出现
+    // `require(...) missed the module table`（1.4.0 真机：4 个入口全部不激活）。
+    if (declaresClient && m.name !== rootPkg.name) {
+      const clientInject = Array.isArray(dsh.client.inject) ? dsh.client.inject : [];
+      if (!clientInject.includes(rootPkg.name)) {
+        add(dir, 'S3.4 dsh.client.inject 没声明主包 ' + rootPkg.name + '（#281 冷启动装载序）');
+      }
+    }
     const patchTarget = dsh.bundle && dsh.bundle.patch;
     if (patchTarget !== './cordis.patch.yml') {
       add(dir, 'S3.6 dsh.bundle.patch=' + JSON.stringify(patchTarget) + ' ≠ "./cordis.patch.yml"（守卫与宿主加载自带 patch 的共同入口）');
@@ -1189,6 +1207,14 @@ check('独立子包：登记面 / 根清单无违反（含覆盖面地板）', u
   check('negative control: 声明 dsh.client 却没有 exports["./client"] ⇒ 判红（S3.4）',
     hit(fakeClient, /S3\.4/), fakeClient.join(' | ') || '（没报出来）');
 
+  // #281：子包浏览器半边在工厂求值期 require 主包 ⇒ `dsh.client.inject` 必须声明主包（装载序）。
+  const noHostInject = vOf(mutated((o) => {
+    o.dsh = { bundle: { patch: './cordis.patch.yml' }, client: { platform: 'web', inject: ['@deepseek-ai/dsh-client-runtime'] } };
+    if (o.exports) delete o.exports['./client'];
+  }));
+  check('negative control: 子包 dsh.client.inject 缺主包 ⇒ 判红（#281 冷启动装载序）',
+    noHostInject.some((x) => /inject/.test(x)), noHostInject.join(' | ') || '（没报出来）');
+
   const badPatch = vOf(mutated((o) => { o.dsh = Object.assign({}, o.dsh, { bundle: { patch: './nope.yml' } }); }));
   check('negative control: dsh.bundle.patch 指向别处 ⇒ 判红（S3.6）',
     hit(badPatch, /S3\.6/), badPatch.join(' | ') || '（没报出来）');
@@ -1378,7 +1404,8 @@ check('独立子包：登记面 / 根清单无违反（含覆盖面地板）', u
   // 并且把"产物在盘"这一条喂成真 —— 这样才能把"配方/落点"四条从"文件还没编出来"里分离出来。
   const ofFonts = (fn) => { const o = JSON.parse(fReal); fn(o); return JSON.stringify(o, null, 2) + '\n'; };
   const declaredBase = ofFonts((o) => {
-    o.dsh = Object.assign({}, o.dsh, { client: { platform: 'web' } });
+    // #281：客户端半边必须把主包写进 inject（宿主按它排装载序），基线也要带上这条。
+    o.dsh = Object.assign({}, o.dsh, { client: { platform: 'web', inject: ['@deepseek-ai/dsh-client-runtime', rootPkg.name] } });
     o.exports = Object.assign({}, o.exports, { './client': fArtifact });
   });
   const fInput = (text, patch) => packagesViolations({

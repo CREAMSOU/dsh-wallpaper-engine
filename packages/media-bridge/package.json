@@ -17,7 +17,7 @@
       "patch": "./cordis.patch.yml"
     },
     "client": {
-      "inject": ["@deepseek-ai/dsh-client-runtime"],
+      "inject": ["@deepseek-ai/dsh-client-runtime", "dsh-plugin-wallpaper-engine"],
       "platform": "web",
       "immediately": true
     }

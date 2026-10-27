@@ -136,6 +136,10 @@
 - **S3.4 [机器判：同上]** `exports['./client']` 存在 **⟺** `dsh.client` 存在，且 `./client` 目标在盘。
   两者都没有是**合法**的 host-only 形态。**禁止**为了"看起来统一"给 host-only 包补一个空的
   `./client`：那会让"声明了 `dsh.client` 就必须有浏览器半边"这条判据失去意义。
+  **子包额外一条（#281，2026-10-27）**：子包浏览器半边的工厂体在**求值期**就
+  `require('<主包名>')` 取主包键集，而宿主 client-modules 按 `dsh.client.inject` 排装载序 ⇒
+  `dsh.client.inject` **必须**包含主包名（主包自己不需要自依赖）。缺这条 = 冷启动时子包工厂
+  可能先于主包 materialize，报 `require(...) missed the module table`，整组客户端入口不激活。
 - **S3.5 [机器判：同上]** `peerDependencies` 的每个包名都在主包 `peerDependencies` 里；
   `@deepseek-ai/*` 的范围与主包**逐字相等**（范围不一致会让宿主的整次安装被拒并回滚）。
   `dependencies` / `peerDependencies` 里**不得**出现主包名或任何子包名 —— 子包之间、子包与主包之间
