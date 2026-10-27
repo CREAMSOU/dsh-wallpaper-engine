@@ -34,6 +34,7 @@ graph TD
   MAIN -->|"同上"| S2["id=wallpaper-engine-parallax<br/>name='dsh-plugin-wallpaper-engine-parallax'"]
   MAIN -->|"同上"| S3["id=wallpaper-engine-fonts<br/>name='dsh-plugin-wallpaper-engine-fonts'"]
   MAIN -->|"真名行 —— 独立子包行（PR #5；**安装器形态** S3.8a）"| S4["id=wallpaper-engine-pet-link<br/>name='dsh-plugin-wallpaper-engine-pet-link'<br/>住 packages/pet-link/，独立清单 + 包内安装器入口 + 自出浏览器半边产物"]
+  MAIN -->|"真名行 —— 独立子包行（ADR-0016 第一刀：host-only 空壳）"| S5["id=wallpaper-engine-glass<br/>name='dsh-plugin-wallpaper-engine-glass'<br/>住 packages/glass/，独立清单；玻璃三刀出户进行中"]
 ```
 
 - **组件行**（P-F 组件行统一之后本仓已**没有**这种形态：三格全部出户 ⇒ 主包 `files` 里不再有组件代码，
@@ -63,6 +64,7 @@ graph LR
   SVC -->|"同上（P-F 批 2a）"| MA["packages/mascot-avatar 宿主半边<br/>inject ['webServer','wallpaperEngineHost']<br/>packages/mascot-avatar/lib/routes/avatar.js · mascot.js"]
   SVC -->|"同上（P-F 批 1c）"| MB["packages/media-bridge 宿主半边<br/>inject ['webServer','wallpaperEngineHost']<br/>packages/media-bridge/lib/routes/now-playing.js"]
   SVC -->|"同上（PR #5）"| PL["packages/pet-link 宿主半边<br/>inject ['webServer','wallpaperEngineHost']<br/>packages/pet-link/lib/routes/pet-link.js（仅 /pet-link/capability）"]
+  SVC -->|"只读（ADR-0016 第一刀：空壳）"| GL["packages/glass 宿主半边<br/>inject ['wallpaperEngineHost']<br/>零路由零服务（玻璃面板/运行时/CSS 三刀随包走）"]
   FX --- N1["零主包说明符"]
   PX --- N2["零主包说明符"]
   FT --- N3["零主包说明符"]
@@ -70,6 +72,7 @@ graph LR
   MA --- N5["零主包说明符"]
   MB --- N6["零主包说明符"]
   PL --- N7["零主包说明符"]
+  GL --- N8["零主包说明符"]
 ```
 
 - 每个子包能拿到**哪些键**由主包 `lib/subpackage-boot.js` 的 `SUBPACKAGE_KEY_TABLE` 按 **id**（= 行 id 去掉
@@ -105,6 +108,8 @@ graph LR
   在册的四个独立子包（`packages/fx` / `parallax` / `fonts` / `pet-link`）都带浏览器半边；三格已出户的组件行
   （`packages/about-notice` / `mascot-avatar` / `media-bridge`）仍是 host-only，浏览器半边仍内联在主包 `src/**` 内；
   **不要**为了"看起来统一"给 host-only 包补一个空的 `./client`（S3.4）。
+  `packages/glass`（ADR-0016 第一刀）今天也是 host-only：玻璃的浏览器半边（面板 / 运行时 / CSS）仍内联在
+  主包 `src/**`，第二刀起才出现在本平面上。
 - ~~**第三种形态（PR #5 引入，2026-10-16）：源码在包内、构建归主包**~~ ⇒ **已于 2026-10-17 收口成一般形态**
   （`refactor/pet-link-client-half`）：`packages/pet-link` 的浏览器半边源码仍住 `packages/pet-link/src/**`，但已补齐
   **包内配方** `client.build.json`（`entry: src/client.js` → `artifact: lib/client.pet-link.js`）、
@@ -147,27 +152,27 @@ graph LR
 
 每加一个 `packages/<pkg>/`，下表每一格都要有人负责 —— 有判据的格子会自己变红，没判据的格子靠这张表提醒。
 
-| 登记点 | fx | parallax | fonts | about-notice | mascot-avatar | media-bridge | pet-link | 依据 / 谁负责 |
-|---|---|---|---|---|---|---|---|---|
-| `packages/<pkg>/package.json` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓（含 **S3.8a 安装器形态**：`files` 八项 = 基础五项 + `tools/`·`assets/`·`src/`） | S2.1 / S3.*（含 S3.8 模板与同形态逐字对账，有判据） |
-| 包内安装器入口 `exports['./install']`（**安装器形态**，S3.8a） | — | — | — | — | — | — | ✓ | S3.8a（有判据） |
-| 自带 `cordis.patch.yml`（`(id,name)` 与主包行逐字） | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | S4.2（有判据） |
-| `icon.png` + `locale/{en,zh}.json` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | S2.1（有判据） |
-| `lib/index.js`（= `main`，宿主半边入口） | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | S2.2 / S6.1（有判据） |
-| 宿主半边路由族 `packages/<pkg>/lib/routes/<族>.js` | —（空壳：行为全在浏览器半边） | —（同上） | ✓ `fontsets` / `system-fonts` | ✓ `about-qr` / `github-stars` | ✓ `avatar` / `mascot` | ✓ `now-playing` | ✓ `pet-link`（仅 `/pet-link/capability` 一条能力路由） | S2.3（人工） |
-| 浏览器半边源码 `packages/<pkg>/src/**` | ✓ | ✓ | ✓（P-C 第一刀：入口 `src/client.js` + 外观页签字体节 + 字体集编辑器） | 无（浏览器半边仍在主包 `src/**` 内联） | 无（同上） | 无（同上） | ✓（入口 `src/client.js` + 两份内联 `pet-link-tuner.js` · `pet-link.js`；2026-10-17 起自出产物） | S1.2 / S3.4 |
-| 构建产物 `lib/client.<pkg>.js`（构建产出；被 `.gitignore` 排除，**不进 git**） | ✓ | ✓ | ✓ `lib/client.fonts.js` | 无（浏览器半边仍在主包 `src/**` 内联） | 无（同上） | 无（同上） | ✓ `lib/client.pet-link.js`（2026-10-17 收口成一般形态；收口前由主包内联） | S10.2（有判据） |
-| `exports['./client']` + `dsh.client` | ✓ | ✓ | ✓ | 无（浏览器半边仍在主包 `src/**` 内联） | 无（同上） | 无（同上） | ✓（2026-10-17 收口成一般形态） | S3.4（有判据） |
-| 主包 patch 行（`id` / `name`） | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | S4.1 / S4.3（有判据） |
-| 根清单 `devDependencies: file:packages/<pkg>` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | S8.1（有判据） |
-| 发布形态：根 `dependencies` 同号精确版 + 删 `file:` | **未执行**（七包一致） | **未执行** | **未执行** | **未执行** | **未执行** | **未执行** | **未执行** | S8.2（人工执行 + `verify-package-publish.mjs` ⑨ 钉「全有或全无」） |
-| `package-lock.json` 同一次提交重算 | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | S8.3（有判据） |
-| `lib/subpackage-boot.js` 的 `SUBPACKAGE_KEY_TABLE` 一项（键 = id 去前缀） | ✓ `fx` | ✓ `parallax` | ✓ `fonts` | ✓ `about-notice` | ✓ `mascot-avatar` | ✓ `media-bridge` | ✓ `pet-link` | S10.1（有判据） |
-| 包内配方 `packages/<pkg>/client.build.json`（`artifact` = `exports['./client']` 落点） | ✓ | ✓ | ✓（P-C 第一刀新增） | 无（浏览器半边仍在主包 `src/**` 内联） | 无（同上） | 无（同上） | ✓（2026-10-17 收口成一般形态新增） | S10.2（有判据） |
-| 生成物重算 `docs/ROUTE-INDEX.md` / `docs/GUARD-MAP.md` | 复算 | 复算 | 复算 | 复算 | 复算 | 复算 | 复算 | S10.3（生成物判据） |
-| 守卫的自动发现面（`test/tools/packages.mjs` 包发现层：磁盘枚举 + 根 patch 行；`host-route-index` / `guard-targets` / `verify-client-sync` 都读它） | 免手改 | 免手改 | 免手改 | 免手改 | 免手改 | 免手改 | 免手改 | S10.3 |
-| 注释与引用只指向稳定位置（`S*` / 实现文件头 / 判据名；不引 `docs/wip/`、`docs/archive/`） | ✓ 已收口 | ✓ 已收口 | ✓ 已收口 | ✓ 已收口 | ✓ 已收口 | ✓ 已收口 | ✓ 已收口 | S9.1 / S3.9（**人工**，无判据） |
-| **本文**（行树 / 图 / 边表 / 本矩阵） | 人工 | 人工 | 人工 | 人工 | 人工 | 人工 | 人工 | D4（**无判据**） |
+| 登记点 | fx | parallax | fonts | about-notice | mascot-avatar | media-bridge | pet-link | glass | 依据 / 谁负责 |
+|---|---|---|---|---|---|---|---|---|---|
+| `packages/<pkg>/package.json` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓（含 **S3.8a 安装器形态**：`files` 八项 = 基础五项 + `tools/`·`assets/`·`src/`） | ✓（host-only 形态：无 `./client` / 无 peer 面） | S2.1 / S3.*（含 S3.8 模板与同形态逐字对账，有判据） |
+| 包内安装器入口 `exports['./install']`（**安装器形态**，S3.8a） | — | — | — | — | — | — | ✓ | — | S3.8a（有判据） |
+| 自带 `cordis.patch.yml`（`(id,name)` 与主包行逐字） | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | S4.2（有判据） |
+| `icon.png` + `locale/{en,zh}.json` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | S2.1（有判据） |
+| `lib/index.js`（= `main`，宿主半边入口） | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | S2.2 / S6.1（有判据） |
+| 宿主半边路由族 `packages/<pkg>/lib/routes/<族>.js` | —（空壳：行为全在浏览器半边） | —（同上） | ✓ `fontsets` / `system-fonts` | ✓ `about-qr` / `github-stars` | ✓ `avatar` / `mascot` | ✓ `now-playing` | ✓ `pet-link`（仅 `/pet-link/capability` 一条能力路由） | —（第一刀空壳：玻璃面板/运行时/CSS 三刀随包走，ADR-0016） | S2.3（人工） |
+| 浏览器半边源码 `packages/<pkg>/src/**` | ✓ | ✓ | ✓（P-C 第一刀：入口 `src/client.js` + 外观页签字体节 + 字体集编辑器） | 无（浏览器半边仍在主包 `src/**` 内联） | 无（同上） | 无（同上） | ✓（入口 `src/client.js` + 两份内联 `pet-link-tuner.js` · `pet-link.js`；2026-10-17 起自出产物） | 无（第一刀仍内联主包 `src/**`；第二刀起入册） | S1.2 / S3.4 |
+| 构建产物 `lib/client.<pkg>.js`（构建产出；被 `.gitignore` 排除，**不进 git**） | ✓ | ✓ | ✓ `lib/client.fonts.js` | 无（浏览器半边仍在主包 `src/**` 内联） | 无（同上） | 无（同上） | ✓ `lib/client.pet-link.js`（2026-10-17 收口成一般形态；收口前由主包内联） | 无（第二刀 `lib/client.glass.js` 落地时 `FLOORS.clientArtifacts` 5→6） | S10.2（有判据） |
+| `exports['./client']` + `dsh.client` | ✓ | ✓ | ✓ | 无（浏览器半边仍在主包 `src/**` 内联） | 无（同上） | 无（同上） | ✓（2026-10-17 收口成一般形态） | 无（第二刀收口，同 pet-link 先例） | S3.4（有判据） |
+| 主包 patch 行（`id` / `name`） | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | S4.1 / S4.3（有判据） |
+| 根清单 `devDependencies: file:packages/<pkg>` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | S8.1（有判据） |
+| 发布形态：根 `dependencies` 同号精确版 + 删 `file:` | **未执行**（七包一致） | **未执行** | **未执行** | **未执行** | **未执行** | **未执行** | **未执行** | **未执行** | S8.2（人工执行 + `verify-package-publish.mjs` ⑨ 钉「全有或全无」） |
+| `package-lock.json` 同一次提交重算 | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | S8.3（有判据） |
+| `lib/subpackage-boot.js` 的 `SUBPACKAGE_KEY_TABLE` 一项（键 = id 去前缀） | ✓ `fx` | ✓ `parallax` | ✓ `fonts` | ✓ `about-notice` | ✓ `mascot-avatar` | ✓ `media-bridge` | ✓ `pet-link` | ✓ `glass`（壳形态 `base`/`log`，同 fx） | S10.1（有判据） |
+| 包内配方 `packages/<pkg>/client.build.json`（`artifact` = `exports['./client']` 落点） | ✓ | ✓ | ✓（P-C 第一刀新增） | 无（浏览器半边仍在主包 `src/**` 内联） | 无（同上） | 无（同上） | ✓（2026-10-17 收口成一般形态新增） | 无（第二刀新增） | S10.2（有判据） |
+| 生成物重算 `docs/ROUTE-INDEX.md` / `docs/GUARD-MAP.md` | 复算 | 复算 | 复算 | 复算 | 复算 | 复算 | 复算 | 复算（第一刀无路由变化，重算确认零漂移） | S10.3（生成物判据） |
+| 守卫的自动发现面（`test/tools/packages.mjs` 包发现层：磁盘枚举 + 根 patch 行；`host-route-index` / `guard-targets` / `verify-client-sync` 都读它） | 免手改 | 免手改 | 免手改 | 免手改 | 免手改 | 免手改 | 免手改 | 免手改（地板 `FLOORS.packages` 7→8、`rows` 8→9 已同批抬；`clientArtifacts` 第二刀再抬） | S10.3 |
+| 注释与引用只指向稳定位置（`S*` / 实现文件头 / 判据名；不引 `docs/wip/`、`docs/archive/`） | ✓ 已收口 | ✓ 已收口 | ✓ 已收口 | ✓ 已收口 | ✓ 已收口 | ✓ 已收口 | ✓ 已收口 | ✓ 已收口（引用 ADR-0016 / S* 条款） | S9.1 / S3.9（**人工**，无判据） |
+| **本文**（行树 / 图 / 边表 / 本矩阵） | 人工 | 人工 | 人工 | 人工 | 人工 | 人工 | 人工 | 人工 | D4（**无判据**） |
 
 ## 六、这张图会怎么漂（人工复核触发线）
 
@@ -175,6 +180,10 @@ graph LR
    ✅ **已发生一次（2026-10-16，PR #5 合并）**：第七个独立子包 `packages/pet-link`（可选桌宠联动）已入册 ——
    §一/§二 的图、§三 的"第三种形态"、§五 矩阵的 `pet-link` 列与新增的"包内安装器入口"行都已同步；
    `docs/ROUTE-INDEX.md` / `docs/GUARD-MAP.md` 已重算，ADR-0014 的 §S3.8a（安装器形态）是本 PR 一起写进去的。
+   ✅ **又发生一次（2026-10-27，ADR-0016 第一刀）**：第八个独立子包 `packages/glass`（液态玻璃，host-only
+   空壳先行）已入册 —— §一/§二/§三 的图与 §五 矩阵的 `glass` 列已同步；`FLOORS.packages` 7→8、
+   `FLOORS.rows` 8→9；决策记录 = [ADR-0016](./adr/0016-glass-subpackage.md)（三刀出户，第二刀起
+   `glass` 进入浏览器平面、`FLOORS.clientArtifacts` 5→6）。
 2. **行的 id / name 改名** —— 图里的标签与矩阵的行名会失真；`id` 本身是用户覆盖面锚点（S4.3），改名代价很大。
 3. **半边搬迁**（例如 fonts 的浏览器半边真拆出来）—— §三 与矩阵的"host-only"格要一起改，并同步 S3.4 的说明。
    ✅ **已发生一次（2026-10-16，P-C 第一刀）**：fonts 的浏览器半边已拆出，本文 §三、矩阵三格与 ADR-0014 的 S3.4 现状行已同步。

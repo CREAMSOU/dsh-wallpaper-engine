@@ -221,6 +221,7 @@
     "dsh-plugin-wallpaper-engine-about-notice": "file:packages/about-notice",
     "dsh-plugin-wallpaper-engine-fonts": "file:packages/fonts",
     "dsh-plugin-wallpaper-engine-fx": "file:packages/fx",
+    "dsh-plugin-wallpaper-engine-glass": "file:packages/glass",
     "dsh-plugin-wallpaper-engine-mascot-avatar": "file:packages/mascot-avatar",
     "dsh-plugin-wallpaper-engine-media-bridge": "file:packages/media-bridge",
     "dsh-plugin-wallpaper-engine-parallax": "file:packages/parallax",

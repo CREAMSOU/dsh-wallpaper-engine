@@ -13,6 +13,10 @@
 >
 > Counts such as `test/verify-scene-live.mjs` `(466)` record the **total at the moment that entry was written**, not the current total (later entries push it up — it is 502 now); they are kept verbatim so each entry still matches its own commit.
 
+### v1.5.0 (unreleased)
+
+- **Glass effects extracted into the 8th subpackage `packages/glass` (ADR-0016, cut 1 of 3: skeleton first)**: the new package ships as a host-only shell — the `wallpaper-engine-glass` row, its `SUBPACKAGE_KEY_TABLE` entry, the root manifest's `file:` dev dependency and the same-commit `package-lock` recalc are all registered (`FLOORS.packages` 7→8, `rows` 8→9; `clientArtifacts` waits for cut 2, 5→6). The glass settings panel, runtime and CSS **remain fully inlined in the main package's browser half** in this cut — zero user-visible change. Two further cuts (settings section moves into the package → runtime + CSS move in) follow the ADR-0016 cadence; the end state = disabling the `wallpaper-engine-glass` row returns the host to its native theme (ADR-0010's wallpaper-only state, now real). Decision record: [`docs/adr/0016-glass-subpackage.md`](../adr/0016-glass-subpackage.md).
+
 ### v1.3.3 (2026-10-15 · published to npm)
 
 - **One more notice line + version bump (this repo's iteration, per the user's wording)**: the update notice gains a fifth **bold** callout after the four existing ones — **"Enable dark mode + the "Author's preset" in Settings — one of this plugin's best looks!"** (same 16pt callout style, `<strong>` bold and the ❗ prefix as the other four); `package.json` `version` `1.3.2` → `1.3.3`, with the `NOTICE_VERSION` sentinel synced to `1.3.3` (machines that saw the 1.3.2 notice get it once more). The English word list gains one entry (`src/i18n-copy-ext.js`). **Client-side change ⇒ just refresh the page.**

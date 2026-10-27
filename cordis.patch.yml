@@ -1,17 +1,17 @@
 # dsh-plugin-wallpaper-engine bundle patch.
 #
-# Applied over the dsh-web-app layer. This bundle contributes EIGHT host rows:
+# Applied over the dsh-web-app layer. This bundle contributes NINE host rows:
 #   - four owned by the main package: the plugin that scans Wallpaper Engine and
 #     serves its media, the `about-notice` component row that owns the About tab's
 #     two routes, the `mascot-avatar` component row that owns the mascot image +
 #     the two session avatars, and the `media-bridge` component row that owns the
 #     system media integration;
-#   - three owned by `packages/{fx,parallax,fonts}`: the subpackages this main
-#     package depends on (BUNDLE-SPLIT §7.1). Semantics A (§2.3) — the main package
-#     owns these rows, each `name` is the subpackage's REAL package name, and this
-#     patch is the single source of truth for the row set; a subpackage's own
-#     cordis.patch.yml only takes effect when that subpackage is installed as a
-#     standalone bundle (not the shape used here).
+#   - five owned by `packages/{fx,parallax,fonts,glass,pet-link}`: the subpackages
+#     this main package depends on (BUNDLE-SPLIT §7.1). Semantics A (§2.3) — the
+#     main package owns these rows, each `name` is the subpackage's REAL package
+#     name, and this patch is the single source of truth for the row set; a
+#     subpackage's own cordis.patch.yml only takes effect when that subpackage is
+#     installed as a standalone bundle (not the shape used here).
 # The main package relies on its `dsh.client` manifest (in package.json) to load the
 # browser half that draws the wallpaper behind the DSH GUI and adds the settings UI.
 #
@@ -82,6 +82,16 @@
     # 消毒与持久化仍在主包 lib/settings-schema.js（FONTSET_KEYS）与 fontsets/<id>.json。
     - id: wallpaper-engine-fonts
       name: 'dsh-plugin-wallpaper-engine-fonts'
+    # glass：液态玻璃（ADR-0016 三刀出户的第一刀：host-only 空壳先上线）。
+    #   · 第一刀（本提交）：只登记行 + 键表 + 宿主自检可解析；玻璃的面板、运行时与 CSS 仍在
+    #     主包浏览器半边内联，用户观感零变化；
+    #   · 第二刀：外观页签「玻璃」设置节随包走；
+    #   · 第三刀：玻璃运行时与玻璃 CSS 随包走 ⇒ 停用本行 = 摘掉全部 data-we-glass-* 门控与
+    #     --dsw-* 门控改写，宿主回到原生外观（ADR-0010 D2 的 wallpaper-only 态转正）。
+    # 注意（§6.1 = A / ADR-0013 D20）：随包走的只是**渲染器与行为层**；玻璃的设置键、默认值、
+    # 消毒与持久化仍在主包 lib/settings-schema.js（预设全档案快照也依赖单一 schema）。
+    - id: wallpaper-engine-glass
+      name: 'dsh-plugin-wallpaper-engine-glass'
     # ── 内置桌宠本体：已解耦（2026-10-20）────────────────────────────────────────
     # `packages/pet`（`dsh-we-pet-builtin`）与它的 `wallpaper-engine-pet` 行**已从本包移除**：
     # 它把 `electron`（optional）带进安装树，而 electron 42+ 在缺少 `dist/` 时会在
