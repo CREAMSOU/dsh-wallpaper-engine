@@ -579,6 +579,31 @@ check('G3 本文件确实 import 了被测模块（不是隔着别的东西判�
   typeof createWallpaperScanKit === 'function' && readFileSync(SRC, 'utf8').includes('export function createWallpaperScanKit'));
 
 console.log('');
+// ── S. project.json 的 file / preview 必须留在壁纸目录内（issue #252, security）──────────
+section('S. project.json containment (issue #252)');
+{
+  const env = makeEnv('s-contain');
+  // 越界 `file` ⇒ 整条壁纸不进清单；越界 `preview` ⇒ 只丢预览图、壁纸保留。
+  project(join(env.contentA, '99010'), { file: '../../../outside.mp4', preview: 'preview.png' }, { 'preview.png': 'x' });
+  project(join(env.contentA, '99011'), { file: 'scene.pkg', preview: '../../outside.png' }, { 'scene.pkg': 'x' });
+  project(join(env.contentA, '99012'), { file: 'scene.pkg', preview: 'preview.png' }, { 'scene.pkg': 'x', 'preview.png': 'x' });
+  const list = await makeKit().enumerateWallpapersAsync(env.install, [env.libA]);
+  const byId = new Map(list.map((p) => [p.id, p]));
+  check('S1 escaping `file` is dropped from the inventory', !byId.has('99010'), 'ids=' + [...byId.keys()].join(','));
+  check('S2 in-dir `file` stays listed', Boolean(byId.get('99011')), 'ids=' + [...byId.keys()].join(','));
+  check('S3 escaping `preview` is dropped but the wallpaper stays', Boolean(byId.get('99011')) && byId.get('99011').previewAbs === null);
+  check('S4 in-dir `preview` is kept', Boolean(byId.get('99012') && byId.get('99012').previewAbs && byId.get('99012').previewAbs.endsWith('preview.png')));
+  // 负对照：把两条包含校验换回旧写法 ⇒ 越界条目重新出现（证明判据有牙）。
+  const mutantKit = await loadMutant('no-containment', (src) => src
+    .replace('const declaredSafe = typeof proj.file === \'string\' && containedInDir(resolve(dir, proj.file));', 'const declaredSafe = typeof proj.file === \'string\';')
+    .replace('if (!containedInDir(proj.fileAbs)) continue;', 'if (false) continue;')
+    .replace('proj.previewAbs = previewAbs && containedInDir(previewAbs) ? previewAbs : null;', 'proj.previewAbs = previewAbs;'));
+  const mlist = await mutantKit({ WE_APPID: APPID, ...realDeps() }).enumerateWallpapersAsync(env.install, [env.libA]);
+  const mbyId = new Map(mlist.map((p) => [p.id, p]));
+  check('S5 negative control: without containment the escaping entries come back',
+    mbyId.has('99010') && Boolean(mbyId.get('99011')) && mbyId.get('99011').previewAbs !== null);
+}
+
 if (failed) {
   console.log(`WALLPAPER-SCAN CHECKS FAILED — ${failed} failed, ${passed} passed`);
   process.exit(1);
