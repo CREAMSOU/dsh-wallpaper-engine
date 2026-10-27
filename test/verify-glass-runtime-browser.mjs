@@ -165,7 +165,27 @@ try {
       await until('document.querySelectorAll("[data-we-surface-plate=left-sidebar]").length===1');
       await evaluate("document.querySelector('#modal').remove();__glass.sync()");
       await until('document.querySelectorAll("[data-we-surface-plate]").length>=1');
-      check(tag + ' 安全侧栏玻璃实际载体存在', await evaluate(`(()=>{const plate=document.querySelector('[data-we-surface-plate="left-sidebar"]');return !!plate && getComputedStyle(plate).backdropFilter.includes('blur(') && plate.children.length===0 && plate.getBoundingClientRect().width>20;})()`));
+      // #272：<1100px 的折叠抽屉里装饰板 backdrop-filter 采样不到（宿主 transform），
+      // 产品政策是「近不透明兜底 + 显式关掉不会生效的模糊」；宽视口仍是 blur 载体。
+      const carrier = await evaluate(`(()=>{
+        const plate=document.querySelector('[data-we-surface-plate="left-sidebar"]');
+        if(!plate) return {ok:false, why:'no-plate'};
+        const w=plate.getBoundingClientRect().width;
+        const cs=getComputedStyle(plate);
+        const narrow=window.matchMedia('(max-width: 1100px)').matches;
+        if(plate.children.length!==0 || w<=20) return {ok:false, why:'geometry', w, kids:plate.children.length};
+        if(!narrow) return {ok:cs.backdropFilter.includes('blur('), why:'wide', bf:cs.backdropFilter};
+        if(cs.backdropFilter!=='none') return {ok:false, why:'narrow-bf', bf:cs.backdropFilter};
+        const seat=document.querySelector('[data-slot="sidebar"]');
+        const col=seat && seat.parentElement;
+        const bg=col && getComputedStyle(col).backgroundColor;
+        const m=/rgba?\\(([^)]+)\\)/.exec(bg||'');
+        const parts=m ? m[1].split(',').map(Number) : [];
+        const slash=/\\/\\s*([0-9.]+)\\s*\\)/.exec(bg||'');
+        const alpha=parts.length===4 ? parts[3] : (parts.length===3 ? 1 : (slash ? Number(slash[1]) : 0));
+        return {ok:alpha>=0.9, why:'narrow', seat:!!seat, bg, alpha};
+      })()`);
+      check(tag + ' 安全侧栏玻璃实际载体存在（宽视口 blur / 窄视口近不透明兜底）', Boolean(carrier && carrier.ok), JSON.stringify(carrier));
       // 宿主（ui-sidebar-right 的 RightbarRoot）给**每个被保留的会话**各渲染一份右栏面板，
       // 非当前会话那份在 `.session[hidden]` 里。旧判据按全文档 NodeList 长度要求"恰好一份"
       // ⇒ 用户开过第二个会话后右栏永远不接管、整块退回原生不透明底。隐藏的兄弟不得参与竞争。
