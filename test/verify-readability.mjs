@@ -63,7 +63,7 @@
 //       这是地板的**反向判据**：它证明"绕过地板"只能经这一个显式开关发生。
 //
 // Usage: node test/verify-readability.mjs
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { styleSources, cssBodyOf } from './tools/src-scope.mjs';
 
 const results = [];
@@ -1220,6 +1220,50 @@ function main() {
       check('negative control F10-3: 旧的九档采样面对旧实现漏判（该面最差 ≥4.5 ⇒ 全绿）—— 采样面必须连续',
         oldWorstNine >= 4.5, '旧实现九档最差=' + oldWorstNine.toFixed(2) + ':1');
     }
+  }
+
+  // ── F11 内置预设的 themeColors（light）必须在浅色面板上达到 AA（#276）─────────
+  // 字体集的 themeColors 会被写进宿主 --dsw-alias-label-*（影响所有原生插件的说明文字）。
+  // 预设此前 light/dark 写同一组亮色（#fafafa / #75e6f5 / #2de8eb …）⇒ 浅色主题下
+  // 原生界面说明文字对比度只有 1.08–1.34:1（实测背景 #ecf1fc）。本条对**每个**内置预设
+  // 的 light 值判 ≥4.5:1，防止同类漂移再回来；dark 值不判（深色底另有背景）。
+  {
+    const PANEL_BG = '#ecf1fc';
+    const relLum = (hex) => {
+      const rgb = hex2rgb(hex).map((v) => {
+        const c = v / 255;
+        return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+      });
+      return 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2];
+    };
+    const contrast = (a, b) => {
+      const [hi, lo] = relLum(a) >= relLum(b) ? [relLum(a), relLum(b)] : [relLum(b), relLum(a)];
+      return (hi + 0.05) / (lo + 0.05);
+    };
+    const presetDir = new URL('../lib/glass-presets/', import.meta.url);
+    const names = readdirSync(presetDir).filter((f) => f.endsWith('.json'));
+    const bad = [];
+    let seenPresets = 0;
+    for (const name of names) {
+      let doc;
+      try { doc = JSON.parse(readFileSync(new URL(name, presetDir), 'utf8')); } catch { continue; }
+      const colors = doc && doc.assets && doc.assets.font && doc.assets.font.values
+        && doc.assets.font.values.themeColors;
+      if (!colors || typeof colors !== 'object') continue;
+      seenPresets += 1;
+      for (const [role, pair] of Object.entries(colors)) {
+        if (!pair || typeof pair.light !== 'string' || !/^#[0-9a-f]{6}$/i.test(pair.light)) continue;
+        const r = contrast(pair.light, PANEL_BG);
+        if (r < 4.5) bad.push(name + ':' + role + '=' + pair.light + ' (' + r.toFixed(2) + ':1)');
+      }
+    }
+    check('F11 内置预设的 themeColors.light 在浅色面板上达到 AA 4.5:1（#276）',
+      seenPresets >= 2 && bad.length === 0,
+      'presets=' + seenPresets + (bad.length ? ' · ' + bad.join('; ') : ' · 全部达标'));
+    // 负对照：同一判据喂"旧作者自用亮色"必须判红（证明判据有牙）。
+    const legacy = ['#fafafa', '#75e6f5', '#2de8eb'].map((v) => contrast(v, PANEL_BG));
+    check('F11 negative control: 旧的作者自用亮色会被同一条阈值判红',
+      legacy.every((r) => r < 4.5), legacy.map((r) => r.toFixed(2) + ':1').join(' / '));
   }
 
   const failed = results.filter((r) => !r.ok);

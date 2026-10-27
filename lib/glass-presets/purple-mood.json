@@ -140,11 +140,11 @@
       "values": {
         "themeColors": {
           "secondary": {
-            "light": "#c9a8ff",
+            "light": "#6d5f94",
             "dark": "#c9a8ff"
           },
           "caption": {
-            "light": "#c4aaff",
+            "light": "#6b6093",
             "dark": "#c4aaff"
           }
         },
