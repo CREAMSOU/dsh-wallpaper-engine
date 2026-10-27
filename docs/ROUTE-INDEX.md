@@ -38,7 +38,7 @@
 | 19 | `/media-control` | packages/media-bridge/lib/routes/now-playing.js:148 | 箭头 | disposers base CONTROL_JSON_MAX_BYTES http | 3 |
 | 20 | `/api/local-assets` | packages/media-bridge/lib/routes/we-assets.js:67 | async 箭头 | disposers serveFile listWeAssetNames weAssetsAvailable WE_ASSETS_SOURCE_ID getWeAssetsDir …(+1) | 1 |
 | 21 | `/we-assets-dir` | packages/media-bridge/lib/routes/we-assets.js:115 | 箭头 | disposers base CONTROL_JSON_MAX_BYTES normalizeUserDir setWeAssetsDir listWeAssetNames …(+3) | 3 |
-| 22 | `/inventory` | packages/media-bridge/lib/routes/inventory.js:90 | async 箭头 | disposers base mediaOriginApi buildInventory componentsProbe | 27 |
+| 22 | `/inventory` | packages/media-bridge/lib/routes/inventory.js:90 | async 箭头 | disposers base mediaOriginApi buildInventory componentsProbe | 28 |
 | 23 | `/media-info` | packages/media-bridge/lib/routes/media-derived.js:61 | 箭头 | disposers base mediaMap log getMediaInfo faststartVariant …(+2) | 10 |
 | 24 | `/transcode-progress` | packages/media-bridge/lib/routes/media-derived.js:104 | 箭头 | disposers base mediaMap transcodeJobs clampNum | 2 |
 | 25 | `/transcoded` | packages/media-bridge/lib/routes/media-derived.js:157 | 箭头 | disposers base mediaMap serveFile transcodeToFps registerTranscodeWaiter …(+1) | 1 |

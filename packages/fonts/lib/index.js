@@ -63,7 +63,7 @@ export const inject = ['webServer', 'wallpaperEngineHost'];
  * @returns {() => void} 拆卸函数（同时已交 `ctx.effect`；mock ctx 无 effect 时退回返回值，见 host-boot.js:188-197）。
  */
 export function apply(ctx, _config) {
-  const webServer = ctx && ctx.webServer;
+  let webServer = ctx && ctx.webServer;
   // provider 缺席（主包没起 / 没有 webServer）：与 about-notice 同口径 —— 静默退回空拆卸，
   // 不抛异常炸掉整行（行级失败静默）。
   if (!webServer || typeof webServer.register !== 'function') return () => {};
@@ -75,6 +75,8 @@ export function apply(ctx, _config) {
   // host.http，由下方传给两条路由的 register。
   const keys = host.keys('fonts', ctx);
   assertFontsKeys(host.keyNames('fonts'), keys);
+  // issue #267：注册面容错（原地升级撞 1.3.3 残留路由时不整条抛错）。
+  webServer = keys.tolerantWebServer(webServer);
 
   // 拆卸句柄数组：照主包 lib/kernel/host-session.js:190/:257 的口径（一个数组、插入顺序、
   // 逐条兜错），两条路由族的 register 都往它 push。

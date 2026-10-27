@@ -228,6 +228,8 @@ const VERIFY_STEPS = [
   step('test/verify-layer-ownership.mjs'),
   // pauseOnHidden 的持续期防抖契约（#288：宿主可见性误判会让 6.4MB scene 包每次抖动全量冷重载）。
   step('test/verify-occlusion-debounce.mjs'),
+  // 注册面容错（#267：原地升级撞 1.3.3 残留的 duplicate route，不能让整条 apply 抛错回滚）。
+  step('test/verify-tolerant-register.mjs'),
   // 可选桌宠联动的离线回归；安装和浏览器集成另走显式环境入口。
   step('test/verify-pet-package.mjs'),
   step('test/verify-pet-hotplug-host.mjs'),

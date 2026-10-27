@@ -107,7 +107,7 @@ export function applyImpl(root, _rawConfig, c) {
   // 两条装载路径都能这么读：① 子包行自己声明了 `inject = ['webServer', 'wallpaperEngineHost']`；
   // ② 门面路径的 `root` 就是门面的 ctx，而门面同样声明了 `inject = ['webServer']`（主行
   // `lib/index.js` 的 `inject` 声明）。
-  const webServer = root && root.webServer;
+  const webServer = keys.tolerantWebServer(root && root.webServer);
   // 与门面 `apply()` 同款早退：服务在、但 register 面还没挂上（或换成了别的 webServer 实现）。
   if (!webServer || typeof webServer.register !== 'function') return () => {};
 
