@@ -50,7 +50,7 @@
 | 31 | `/custom-frame` | packages/media-bridge/lib/routes/scene-frame.js:271 | 箭头 | disposers base serveFile CUSTOM_FRAME_EXT CUSTOM_FRAME_MAX_BYTES armBodyIdleTimeout …(+4) | 3 |
 | 32 | `/scene-live` | packages/media-bridge/lib/routes/scene-serve.js:87 | 箭头 | disposers base WEBWALLGL_DIR WEBWALLGL_PKG_DIR appendDiagLine traceRequests …(+3) | 10 |
 | 33 | `/scene-files` | packages/media-bridge/lib/routes/scene-serve.js:154 | 箭头 | disposers base handleSceneFiles | 5 |
-| 34 | `/media-origin` | packages/media-bridge/lib/routes/scene-serve.js:162 | 箭头 | disposers base mediaOriginInfo | 1 |
+| 34 | `/media-origin` | packages/media-bridge/lib/routes/scene-serve.js:162 | 箭头 | disposers base mediaOriginInfo | 2 |
 | 35 | `/scene-payload-progress` | packages/media-bridge/lib/routes/scene-serve.js:182 | 箭头 | disposers base payloadProgress | 1 |
 | 36 | `/props` | packages/media-bridge/lib/routes/props.js:46 | 箭头 | disposers base mediaMap userPropsFor parseUserPropDefs entryDirPrefix …(+2) | 8 |
 | 37 | `/live-frame` | packages/media-bridge/lib/routes/live-frame.js:44 | 箭头 | disposers base mediaMap serveFile traceRequests liveFrameFile …(+3) | 3 |

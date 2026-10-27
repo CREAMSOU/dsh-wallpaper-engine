@@ -5,7 +5,7 @@
 > 口径：只统计守卫**代码**里真正碰到的模块（先剥注释），并区分"直接读源文件"与"隔着产物 `lib/client.js`"。
 > 写法：字面量路径 / `join(...)` 拼接 / 唯一 basename / 产物配方 / **前缀族读法** `scopeFiles|scopeText(<前缀>)` / **经共享族助手读**（`import { panelText } from './tools/src-scope.mjs'` + 真调用；族口径封在那个库里，见 DEV-GUIDE §4.6「同时是守卫的库」）/ **真源定位读**（`locate('符号')` / `locateFile('文件名')`，`test/tools/source-locator.mjs`：符号唯一声明在哪就是读了哪个模块）。
 
-模块面 178 个 · 守卫 115 个
+模块面 178 个 · 守卫 116 个
 
 ## 守卫 → 模块
 
@@ -54,7 +54,7 @@
 | `verify-guard-chain.mjs` | — |  |
 | `verify-host-diag.mjs` | `lib/diag-trace.js` |  |
 | `verify-host-paint-scope.mjs` | — | ✅ |
-| `verify-host-teardown.mjs` | `lib/index.js` |  |
+| `verify-host-teardown.mjs` | `lib/index.js` `lib/media-origin.js` `packages/media-bridge/lib/legacy.js` `packages/media-bridge/lib/occlusion/index.js` `packages/media-bridge/lib/supervisor.js` `packages/pet-link/lib/routes/official-pet.js` |  |
 | `verify-i18n.mjs` | `src/client.js` `src/i18n-copy.js` `src/i18n.js` `src/nav-icon.js` `src/quick-panel.js` `src/sidebar-right.js` `src/styles-base.js` `src/styles-chrome.js` `src/styles-ext.js` `src/styles-panel.js` `src/styles-quick.js` `src/styles-settings.js` `src/styles-shell.js` `src/styles-sidebar.js` `src/styles.js` | ✅ |
 | `verify-inject-contracts.mjs` | `lib/subpackage-boot.js` |  |
 | `verify-inventory-index.mjs` | `lib/inventory.js` |  |
@@ -93,6 +93,7 @@
 | `verify-reachability.mjs` | `lib/index.js` | ✅ |
 | `verify-readability.mjs` | `src/styles-base.js` `src/styles-chrome.js` `src/styles-ext.js` `src/styles-panel.js` `src/styles-quick.js` `src/styles-settings.js` `src/styles-shell.js` `src/styles-sidebar.js` `src/styles.js` | ✅ |
 | `verify-release-set.mjs` | `lib/index.js` `lib/subpackage-boot.js` |  |
+| `verify-resume-repaint.mjs` | `src/layer-core.js` |  |
 | `verify-retired-lines.mjs` | — |  |
 | `verify-route-families.mjs` | — |  |
 | `verify-route-index.mjs` | `lib/index.js` `lib/kernel/component-session.js` `packages/media-bridge/lib/routes/inventory.js` `packages/media-bridge/lib/routes/media-bytes.js` |  |
@@ -149,7 +150,7 @@
 | `lib/kernel/host-kernel.js` | 5 | `verify-bundle-rows` `verify-component-face` `verify-contracts` `verify-logging` `verify-scene` |
 | `lib/kernel/host-session.js` | 4 | `verify-logging` `verify-mp4-vfs` `verify-scene` `verify-token-domain` |
 | `lib/log.js` | 1 | `verify-logging` |
-| `lib/media-origin.js` | 1 | `verify-scene-live` |
+| `lib/media-origin.js` | 2 | `verify-host-teardown` `verify-scene-live` |
 | `lib/media/frame-store.js` | 2 | `verify-cache-dir` `verify-scene` |
 | `lib/media/image-preview.js` | 1 | `verify-avatar-interval-and-rotation` |
 | `lib/media/media-dirs.js` | 4 | `verify-asset-paths` `verify-cache-dir` `verify-contracts` `verify-presets` |
@@ -202,8 +203,8 @@
 | `packages/media-bridge/lib/backend.js` | 3 | `verify-cache-dir` `verify-contracts` `verify-media-bridge` |
 | `packages/media-bridge/lib/client.media-bridge.js` | 8 | `live-frame-backfill-smoke` `verify-client-sync` `verify-client` `verify-picker-model` `verify-picker-props` `verify-picker-upload` `verify-playback-controls` `verify-transcode-state` |
 | `packages/media-bridge/lib/index.js` | 5 | `verify-contracts` `verify-scene-live` `verify-scene` `verify-token-domain` `verify-transcode-state` |
-| `packages/media-bridge/lib/legacy.js` | 4 | `verify-cache-dir` `verify-child-kill` `verify-contracts` `verify-scene-live` |
-| `packages/media-bridge/lib/occlusion/index.js` | 1 | `verify-occlusion-hub` |
+| `packages/media-bridge/lib/legacy.js` | 5 | `verify-cache-dir` `verify-child-kill` `verify-contracts` `verify-host-teardown` `verify-scene-live` |
+| `packages/media-bridge/lib/occlusion/index.js` | 2 | `verify-host-teardown` `verify-occlusion-hub` |
 | `packages/media-bridge/lib/provision.js` | 3 | `e2e-web-media-origin` `verify-media-bridge` `verify-scene-live` |
 | `packages/media-bridge/lib/routes/inventory.js` | 3 | `verify-avatar-interval-and-rotation` `verify-component-visibility` `verify-route-index` |
 | `packages/media-bridge/lib/routes/live-frame.js` | 1 | `verify-scene` |
@@ -217,7 +218,7 @@
 | `packages/media-bridge/lib/routes/scene-serve.js` | 2 | `verify-logging` `verify-scene-live` |
 | `packages/media-bridge/lib/routes/upload.js` | 1 | `verify-body-caps` |
 | `packages/media-bridge/lib/routes/we-assets.js` | 1 | `verify-scene-live` |
-| `packages/media-bridge/lib/supervisor.js` | 3 | `verify-contracts` `verify-media-bridge` `verify-scene-live` |
+| `packages/media-bridge/lib/supervisor.js` | 4 | `verify-contracts` `verify-host-teardown` `verify-media-bridge` `verify-scene-live` |
 | `packages/media-bridge/src/client.js` | 0 | **（无）** |
 | `packages/media-bridge/src/playback-rate-section.js` | 3 | `verify-client` `verify-fontset` `verify-scene-live` |
 | `packages/media-bridge/src/wallpaper-current-section.js` | 2 | `verify-client` `verify-scene-live` |
@@ -234,7 +235,7 @@
 | `packages/pet-link/lib/index.js` | 4 | `verify-pet-hotplug-host` `verify-pet-hotplug-integration` `verify-pet-official` `verify-pet-package` |
 | `packages/pet-link/lib/official-provider.js` | 1 | `verify-pet-hotplug-host` |
 | `packages/pet-link/lib/prepared.js` | 1 | `verify-pet-tuner-browser` |
-| `packages/pet-link/lib/routes/official-pet.js` | 1 | `verify-pet-hotplug-host` |
+| `packages/pet-link/lib/routes/official-pet.js` | 2 | `verify-host-teardown` `verify-pet-hotplug-host` |
 | `packages/pet-link/src/client.js` | 0 | **（无）** |
 | `packages/pet-link/src/official-pet.js` | 3 | `verify-pet-hotplug-client` `verify-pet-hotplug-host` `verify-pet-official` |
 | `packages/pet-link/src/pet-link-tuner.js` | 2 | `verify-pet-tuner-browser` `verify-pet-tuner` |
@@ -271,7 +272,7 @@
 | `src/i18n-copy-picker.js` | 2 | `verify-about` `verify-presets` |
 | `src/i18n-copy.js` | 3 | `verify-about` `verify-i18n` `verify-presets` |
 | `src/i18n.js` | 1 | `verify-i18n` |
-| `src/layer-core.js` | 2 | `verify-layer-ownership` `verify-scene-live` |
+| `src/layer-core.js` | 3 | `verify-layer-ownership` `verify-resume-repaint` `verify-scene-live` |
 | `src/live-layer-diag.js` | 5 | `verify-glass-surfaces` `verify-logging` `verify-occlusion-client` `verify-scene-live` `verify-theme-follow` |
 | `src/live-layer-gate.js` | 5 | `verify-glass-surfaces` `verify-logging` `verify-occlusion-client` `verify-scene-live` `verify-theme-follow` |
 | `src/live-layer-pointer.js` | 6 | `verify-glass-surfaces` `verify-layer-ownership` `verify-logging` `verify-occlusion-client` `verify-scene-live` `verify-theme-follow` |

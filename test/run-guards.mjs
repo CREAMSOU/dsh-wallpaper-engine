@@ -230,6 +230,8 @@ const VERIFY_STEPS = [
   step('test/verify-occlusion-debounce.mjs'),
   // 注册面容错（#267：原地升级撞 1.3.3 残留的 duplicate route，不能让整条 apply 抛错回滚）。
   step('test/verify-tolerant-register.mjs'),
+  // 遮挡恢复后的重绘契约（#274：stale transform 残留在层上 / 媒体叶子没有重新布局 / onscreen 缺实际盒）。
+  step('test/verify-resume-repaint.mjs'),
   // 可选桌宠联动的离线回归；安装和浏览器集成另走显式环境入口。
   step('test/verify-pet-package.mjs'),
   step('test/verify-pet-hotplug-host.mjs'),

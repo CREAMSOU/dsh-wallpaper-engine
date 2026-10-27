@@ -14,7 +14,31 @@ function nudgeWallpaperRepaint() {
     if (typeof document === "undefined" || !document) return;
     const node = document.getElementById(LAYER_ID);
     if (!node || !node.classList) return;
+    // #274：上一次的微推可能**没收干净** —— 遮挡期间 rAF 停摆 ⇒ drop 永不执行，层会带着
+    // translateZ(0) 停一整个遮挡期。先摘类再加，保证这一次的合成微推真的发生。
+    try { node.classList.remove("we-layer--repaint"); } catch { /* ignore */ }
     node.classList.add("we-layer--repaint");
+    // #274：只给层微推不够 —— 媒体叶子没有任何重新布局/提交。用与现值相同的内联 object-fit
+    // 触发一次指定值变化 + 强制读一次几何，两帧后撤回（最终样式不变）。
+    try {
+      const leaf = node.querySelector ? node.querySelector(".we-media") : null;
+      const st = leaf && leaf.style;
+      if (st && typeof st.setProperty === "function") {
+        const prev = st.getPropertyValue("object-fit");
+        let now = "cover";
+        try {
+          const cs = typeof getComputedStyle === "function" ? getComputedStyle(leaf) : null;
+          now = (cs && cs.getPropertyValue("object-fit")) || "cover";
+        } catch { /* 取不到就按 cover 触发，一样能让叶子重排 */ }
+        st.setProperty("object-fit", now);
+        try { void leaf.getBoundingClientRect(); } catch { /* ignore */ }
+        const restore = () => {
+          try { prev ? st.setProperty("object-fit", prev) : st.removeProperty("object-fit"); } catch { /* ignore */ }
+        };
+        if (typeof requestAnimationFrame === "function") requestAnimationFrame(() => requestAnimationFrame(restore));
+        else if (typeof window !== "undefined" && window.setTimeout) window.setTimeout(restore, 32);
+      }
+    } catch { /* 叶子面失败不影响层微推 */ }
     const drop = () => { try { node.classList.remove("we-layer--repaint"); } catch { /* ignore */ } };
     if (typeof requestAnimationFrame === "function") requestAnimationFrame(() => requestAnimationFrame(drop));
     else if (typeof window !== "undefined" && window.setTimeout) window.setTimeout(drop, 32);
@@ -39,7 +63,14 @@ function onScreenBrief(node) {
       const px = kind === "VIDEO" ? dim(el.videoWidth, el.videoHeight)
         : kind === "IMG" ? dim(el.naturalWidth, el.naturalHeight)
           : dim(el.clientWidth, el.clientHeight);
-      leaf = "leaf=" + kind + " " + px + " rs=" + (el.readyState === undefined ? "-" : el.readyState)
+      // #274：videoWidth × videoHeight 是**固有尺寸**（永远 1920×1080），回答不了"层满屏、
+      // 但画面只画了一截 / 一帧都没出来"。补一个**实际盒**，让 onscreen 行能区分几何问题与出帧问题。
+      let box = "-";
+      try {
+        const b = el.getBoundingClientRect();
+        box = Math.round(b.width) + "x" + Math.round(b.height) + "@" + Math.round(b.left) + "," + Math.round(b.top);
+      } catch { /* ignore */ }
+      leaf = "leaf=" + kind + " " + px + " box=" + box + " rs=" + (el.readyState === undefined ? "-" : el.readyState)
         + " paused=" + (el.paused === undefined ? "-" : (el.paused ? 1 : 0));
     }
   } catch { /* ignore */ }

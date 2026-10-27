@@ -641,6 +641,14 @@
         {
           "kind": "guard",
           "npm": null,
+          "file": "test/verify-resume-repaint.mjs",
+          "args": [],
+          "tier": "hard",
+          "probe": false
+        },
+        {
+          "kind": "guard",
+          "npm": null,
           "file": "test/verify-pet-package.mjs",
           "args": [],
           "tier": "hard",
@@ -1527,6 +1535,14 @@
           "kind": "guard",
           "npm": null,
           "file": "test/verify-tolerant-register.mjs",
+          "args": [],
+          "tier": "hard",
+          "probe": false
+        },
+        {
+          "kind": "guard",
+          "npm": null,
+          "file": "test/verify-resume-repaint.mjs",
           "args": [],
           "tier": "hard",
           "probe": false
