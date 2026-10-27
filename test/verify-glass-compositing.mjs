@@ -700,7 +700,9 @@ function main() {
   //    两边都不重映射**（落回宿主）——"都没写"也要计入六条清单的比对：将来只给暗档顶栏
   //    补上其中一条就会与暗档左栏产生色差，本判据立刻抓到。
   const s2cLeftColDarkRule = rules.find((r) => r.header.includes('div:has(> [data-slot="sidebar"])')
-    && r.header.includes('data-ds-dark-theme') && declValue(r.body, 'background-color'));
+    && r.header.includes('data-ds-dark-theme') && !/@media|max-width/.test(r.header)
+    && /--we-readability-floor/.test(r.body)
+    && declValue(r.body, 'background-color'));
   const tbDarkColorDecls = COLOR_DECLS.filter((k) => k !== 'background-image');
   const tbDarkNorm = (s) => tbNorm(s)
     .replace(/--we-surface-tint-light/g, 'TINT').replace(/--we-surface-tint-dark/g, 'TINT')
@@ -1018,6 +1020,22 @@ function main() {
       JSON.stringify({ clearPanel, clearDivider, clearDock }));
     check('RT2 negative control: 删掉面板 box-shadow 清除 ⇒ 同一判据判红',
       clearPanel && !clearPanelOf(CSS.replace(/body\[data-we-sidebar-glass\] \[data-sidebar-right-panel\]\[data-sidebar-right-open\]\s*\{[^}]*box-shadow:\s*none\s*!important/, '')));
+  }
+
+  // ── G12: 窄视口（折叠抽屉）下侧栏的近不透明兜底（issue #272）────────────────
+  // 宿主 <1100px 把侧栏折叠成 transform 抽屉 ⇒ 装饰板的 backdrop-filter 采样不到/被废掉，
+  // 抽屉全透明、正文压壁纸。兜底 = 92% 近不透明底 + 显式关掉不会生效的模糊（与 #95 同政策）。
+  {
+    const mediaBlock = ruleBlocks(CSS).find((r) => /@media\s*\(max-width:\s*1100px\)/.test(r.header));
+    const narrowFallback = (block) => Boolean(block)
+      && /data-we-surface-runtime="left-sidebar"/.test(block.body)
+      && /92%/.test(block.body)
+      && /backdrop-filter:\s*none/.test(block.body);
+    check('G12 narrow-viewport sidebar uses a near-opaque plate fallback (issue #272)',
+      narrowFallback(mediaBlock));
+    const mutated = CSS.replace(/@media\s*\(max-width:\s*1100px\)/, '@media (max-width: 9999px)');
+    check('G12 negative control: moving the breakpoint away makes the detector falsy',
+      narrowFallback(ruleBlocks(mutated).find((r) => /@media\s*\(max-width:\s*1100px\)/.test(r.header))) === false);
   }
 
   const failed = results.filter((r) => !r.ok);

@@ -88,6 +88,12 @@ const CSS_SIDEBAR = `  /* ── 左侧栏液态玻璃（宿主原生左栏的�
     -webkit-backdrop-filter: blur(var(--we-sidebar-blur)) saturate(var(--we-sidebar-saturate)) brightness(var(--we-glass-brightness, 1.04)) contrast(1.01);
     backdrop-filter: blur(var(--we-sidebar-blur)) saturate(var(--we-sidebar-saturate)) brightness(var(--we-glass-brightness, 1.04)) contrast(1.01);
   }
+  /* ── issue #272：窄视口（手机远程适配层 / 折叠抽屉）下的不依赖模糊的兜底 ─────────
+     宿主在 <1100px 把侧栏折叠成抽屉、用 transform 做位移；此时装饰板的 backdrop-filter
+     要么采样不到有效矩形、要么被祖先的 transform/filter 静默废掉 ⇒ 抽屉全透明、正文直接
+     压在壁纸上。这里按「#95：文字绝不直接落在壁纸上」的同一政策给近不透明底（92%），
+     并把不会生效的模糊显式关掉 —— 与软件光栅回退那组逐字同口径。
+     ⚠️ 只影响窄视口；桌面布局（≥1100px）逐字节不变。 */
   /* 深色：同一张表、同一组层权重，只有玻璃色缺省与高亮mix 不同（与设置窗口深色那条同形）。 */
   body[data-ds-dark-theme][data-we-glass-page][data-we-left-sidebar] div:has(> [data-slot="sidebar"]):where([data-we-surface-runtime="left-sidebar"]) {
     background-color: color-mix(in srgb,
@@ -108,6 +114,19 @@ const CSS_SIDEBAR = `  /* ── 左侧栏液态玻璃（宿主原生左栏的�
     }
     body[data-ds-dark-theme][data-we-glass-page][data-we-left-sidebar] div:has(> [data-slot="sidebar"]):where([data-we-surface-runtime="left-sidebar"]) {
       background-color: color-mix(in srgb, var(--we-surface-tint-dark, #0d1524) 92%, transparent);
+    }
+  }
+  @media (max-width: 1100px) {
+    body[data-we-glass-page][data-we-left-sidebar] div:has(> [data-slot="sidebar"]):where([data-we-surface-runtime="left-sidebar"]) {
+      background-color: color-mix(in srgb, var(--we-surface-tint-light, #ffffff) 92%, transparent) !important;
+      background-image: none !important;
+    }
+    body[data-ds-dark-theme][data-we-glass-page][data-we-left-sidebar] div:has(> [data-slot="sidebar"]):where([data-we-surface-runtime="left-sidebar"]) {
+      background-color: color-mix(in srgb, var(--we-surface-tint-dark, #0d1524) 92%, transparent) !important;
+    }
+    body[data-we-glass-page] [data-we-surface-plate] {
+      -webkit-backdrop-filter: none !important;
+      backdrop-filter: none !important;
     }
   }
 
