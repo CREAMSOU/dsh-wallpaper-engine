@@ -1,11 +1,12 @@
 # 发布：八包发布集（npm 与 GitHub Release）
 
-本插件在 [BUNDLE-SPLIT](../adr/) 之后由**一个主包 + 七个子包**组成，八个包版本锁步、主包把七个子包
+本插件由**一个主包 + 七个子包**组成（多包形态的取舍见 [`adr/0013`](./adr/0013-bundle-multi-component-rows.md)
+与 [`adr/0014`](./adr/0014-subpackage-contract.md)），八个包版本锁步、主包把七个子包
 声明成**精确版本运行依赖**。所以"发布"从来不是发一个包，而是发**一个发布集**：
 
 | 通道 | 用户侧入口 | 需要先满足 |
 |---|---|---|
-| npm（推荐，DSH 桌面"添加插件"直接可用） | 包名 `dsh-plugin-wallpaper-engine`（可带 `@1.4.0`） | 八个包**同版本**全部在 registry 上 |
+| npm（推荐，DSH 桌面"添加插件"直接可用） | 包名 `dsh-plugin-wallpaper-engine`（可带 `@<版本>`） | 八个包**同版本**全部在 registry 上 |
 | GitHub Release（镜像 / 离线） | 八个 tarball + `release-set.json` | Release 资产**必须是八件套**，离线安装用 `scripts/install-release.mjs` |
 
 两条通道共用同一份产物：`npm run pack:release`。
@@ -14,8 +15,8 @@
 
 ## 1. 为什么"只挂母包"必然失败（实测，别再试）
 
-发布形态的主包 `dependencies` 里是七条裸精确版本（如 `dsh-plugin-wallpaper-engine-fx: "1.3.3"`）。
-pnpm 会拿这些版本去 **registry** 解析，与"主包 tgz 从哪来"无关。2026-10-22 在隔离 profile 上实测：
+发布形态的主包 `dependencies` 里是七条裸精确版本（如 `dsh-plugin-wallpaper-engine-fx: "<版本>"`）。
+pnpm 会拿这些版本去 **registry** 解析，与"主包 tgz 从哪来"无关。在隔离 profile 上实测过：
 
 ```text
 # 探针 A：只装发布形态主包 tarball
@@ -38,10 +39,8 @@ ALL 8 top-level packages present; createRequire(profile/cordis.yml).resolve() OK
 
 - 顶层 `file:` **不能满足**传递依赖的 registry 版本范围（探针 B）⇒ "把八个 tgz 一次 `pnpm add`"不是安装办法。
 - 唯一能让离线八件套装上的机制是 profile 的 `overrides:`（探针 C2）。这也是 DSH 自己的兼容性
-  实跑走的路（`test/compat-harness-live.mjs:207-219`）。
-- 2026-10-15 发布的 `v1.3.3` 就是**旧形态**：Release 只有一个 3.37 MB 的主包 tgz、npm 上也只有主包
-  （`npm view` 七个子包全部 E404），当时能装只是因为那时还没有子包。这一份资产**不能**作为今后
-  Release 的模板。
+  实跑走的路（`test/compat-harness-live.mjs` 的 `main()`：tarball 通道把 `overrides` 段写进 profile 的
+  `pnpm-workspace.yaml`）。
 
 ---
 
@@ -50,8 +49,9 @@ ALL 8 top-level packages present; createRequire(profile/cordis.yml).resolve() OK
 ### 2.1 升版本（八处，锁步）
 
 根 `package.json` 与 `packages/*/package.json` 八处版本必须逐字相等，子包之间、子包对主包都不得
-声明版本依赖（`test/verify-subpackage-manifests.mjs` 会拦版本漂离）。`1.3.3` 与 `1.4.0` 都已被占用：
-`npm publish` 会以 `EPUBLISHCONFLICT` 拒绝，Release 也不该覆盖同名 tag。八处一起改完还要
+声明版本依赖（`test/verify-subpackage-manifests.mjs` 会拦版本漂离）。**版本号一旦在 npm 上存在就不能
+覆盖**：`npm publish` 会以 `EPUBLISHCONFLICT` 拒绝，Release 也不该覆盖同名 tag；发布前先
+`npm view <包>@<版本> version` 确认未被占用（见 §3.2）。八处一起改完还要
 `npm install --package-lock-only --ignore-scripts` 重算锁（`test/verify-package-publish.mjs` ⑧ 逐字比
 根清单与锁的 version / 依赖规格，只改清单不重锁必红）。
 
@@ -62,8 +62,9 @@ npm run pack:release                      # → .test-cache/release/set-<随机>
 npm run pack:release -- --output <目录>    # 指定输出目录
 ```
 
-产物（2026-10-22 实测，版本 1.3.3）：主包 4.29 MB、`pet-link` 19.60 MB（带 `assets/`）、其余五个
-0.19–0.22 MB。`release-set.json` 的 `publishOrder` 即发布顺序：**七个子包在前，主包最后**。
+产物体积随版本变化，不在文档里记数：打包后用 `npm pack --dry-run` 看清单，或对
+`.test-cache/release/set-<随机>/` 下的 tgz 直接 `ls -l` 现场看。`release-set.json` 的
+`publishOrder` 即发布顺序：**七个子包在前，主包最后**。
 
 `pack:release` 只打包、绝不发布；源码根目录直接 `npm pack` 得到的是**开发清单**（带 scripts 与
 devDependencies，`files` 不含子包），不能当发布集用。
@@ -108,14 +109,15 @@ Windows PowerShell 等价写法见 §5 的脚本片段（Git Bash 不可用时�
 看到的是"这个插件装不上"。已发布的主包**不能**靠重发同版本修好（同版本不可覆盖）——只能补发子包
 （补发后立刻恢复可用），或升版本重发主包。
 
-本轮发布前请先 `npm view <每个包>@<版本> version` 确认八个包都还没被占用；中断后恢复时只补发缺的。
+发布前先 `npm view <每个包>@<版本> version` 确认八个包都还没被占用；中断后恢复时只补发缺的。
 
 ### 3.3 发布后自证（三步都要过）
 
 ```sh
-# ① registry 上八个版本都在
+# ① registry 上八个版本都在（VERSION 换成本次发布版本）
+VERSION=<本次版本>
 for p in dsh-plugin-wallpaper-engine dsh-plugin-wallpaper-engine-{about-notice,fonts,fx,mascot-avatar,media-bridge,parallax,pet-link}; do
-  npm view "$p@1.4.0" version || echo "MISSING $p"
+  npm view "$p@$VERSION" version || echo "MISSING $p"
 done
 ```
 
@@ -146,10 +148,12 @@ DSH 安装源可选 `registry.npmjs.org` / `registry.npmmirror.com` / 自定义�
 ### 4.1 资产必须是八件套 + 清单
 
 ```sh
-gh release create v1.4.0 \
+# VERSION 与 §3.3 同一个值
+VERSION=<本次版本>
+gh release create "v$VERSION" \
   .test-cache/release/set-XXXXXX/*.tgz \
   .test-cache/release/set-XXXXXX/release-set.json \
-  --title v1.4.0 --notes-file CHANGELOG.md
+  --title "v$VERSION" --notes-file CHANGELOG.md
 ```
 
 选配 `SHA256SUMS.txt`（`sha256sum *.tgz > SHA256SUMS.txt`）。**不要**只挂主包 tgz —— 那是一个装不上的

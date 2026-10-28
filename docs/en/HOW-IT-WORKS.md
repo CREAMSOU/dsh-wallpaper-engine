@@ -6,7 +6,7 @@
 > happens when it fails). **Code structure** is in [`CODE-STRUCTURE.md`](../CODE-STRUCTURE.md);
 > **why it was designed that way** is in [`adr/`](../adr/). It deliberately **carries no drifting
 > numbers** — counts, sizes and timeout thresholds point at the implementation or give a way to
-> recompute them (see [`README.md`](../README.md) §写作纪律 4).
+> recompute them (see [`adr/0016`](../adr/0016-code-is-truth-docs-reference-source.md) D1).
 
 ### The default form for scene / web wallpapers: WebWallGL live rendering
 
@@ -30,7 +30,7 @@ with the document.
   renderer decides from `project.json`'s `file` suffix, so the host only has to answer "is this a scene".
   **The first-frame timeout is not a fixed wall clock**: the first
   frame **cannot exist before the whole package has arrived**, so the budget is computed from the
-  **package size** by `liveFirstFrameBudget()` (`src/live-layer.js`) and carries a ceiling; and the host
+  **package size** by `liveFirstFrameBudget()` (`src/live-layer-watch.js`) and carries a ceiling; and the host
   keeps a **payload ledger**
   (`GET /wallpaper-engine/scene-payload-progress?token=…`, see [`ROUTE-INDEX.md`](../ROUTE-INDEX.md))
   that resets the clock every tick while bytes are still arriving — "still downloading" is no longer
@@ -41,9 +41,9 @@ with the document.
   **When there really is no first frame, the cause decides the bookkeeping**: the ledger saying
   "transferred but never completed" ⇒ only a **session-local** soft failure (never the shared failure
   memory every window reads), with an automatic retry after a cooldown and a bounded number of attempts
-  (both are constants in `src/live-layer.js`: `LIVE_TRANSFER_RETRY_DELAY_MS` / `LIVE_TRANSFER_RETRY_LIMIT`); only a
+  (both are constants in `src/live-layer-watch.js`: `LIVE_TRANSFER_RETRY_DELAY_MS` / `LIVE_TRANSFER_RETRY_LIMIT`); only a
   renderer that genuinely never produces a frame, or loses its heartbeat, is persisted.
-- **Out-figure sources (the one authoritative order; code in `packages/media-bridge/lib/routes/scene-frame.js` — moved out of the main package's `lib/routes/` in P-D S5c, 2026-10-18)**:
+- **Out-figure sources (the one authoritative order; code in `packages/media-bridge/lib/routes/scene-frame.js`)**:
   ① live-render iframe → ② the author-embedded MP4 (`sceneVideo`) → ③ **live-captured frame**
   (`<key>_gpu.png`, PUT back by the live page once the first frame lands) → ④ **custom frame** (a
   screenshot the user imported) → ⑤ **empty state** (404 with a machine-readable reason).
@@ -54,12 +54,12 @@ with the document.
   placeholder and is **never treated as "this wallpaper's out-figure"**.
   `?v=4` forces the custom frame and is **exempt** from the captured frame (an explicit pin is never
   displaced by a capture); `?v=1/2/3` are retired and clamped to 0.
-- **Why there is no CPU fallback image any more (the P2-12 design decision)**: 0.6–0.7.x fell back to an
-  offline scene renderer / main-texture extraction / the workshop preview image. All three could
-  **"succeed" by producing a poor image** — bypassing the quality gate, caching a blurry frame, and
+- **Why there is no CPU fallback image**: any "guessed" picture shares one flaw — it can
+  **"succeed" by producing a poor image**: bypassing the quality gate, caching a blurry frame, and
   turning a decidable fact ("this wallpaper has no usable picture") into something that looks like a
-  normal frame. The whole line (renderer + extraction + compositor, ~10k lines) is gone; the contract
-  now is **either a real picture or an honest blank** (the status row names the reason).
+  normal frame, so the user sees "the wallpaper is blurry" instead of "it has no picture". The
+  server-side contract is therefore **either a real picture or an honest blank** (the status row names
+  the reason).
   ⚠️ **That ruling governs the server-side "out-figure"**: `/scene-frame` never produces a guessed
   image. The client's **pre-first-frame / empty-frame placeholder** still uses the **author's packaged
   preview** (the author's own image, not one this plugin synthesised) — it only holds until the live
@@ -94,8 +94,7 @@ and pointer injection go through the renderer page's `postMessage` channel. On l
 runtime the wallpaper is remembered and degrades to the legacy plain iframe (no WE API).
 
 > **Payload origin (separate media origin)**: **a web wallpaper's entry HTML plus all of its subresources**,
-> and **a scene wallpaper's `scene.pkg` (measured at 336 MB on the reporter's machine; the earlier
-> "often 70–90 MB" is out of date)**, are served by a **dedicated loopback media
+> and **a scene wallpaper's `scene.pkg`**, are served by a **dedicated loopback media
 > origin the host opens itself** (a random port on `127.0.0.1`, reported by
 > `GET /wallpaper-engine/media-origin`) — *not* by the plugin's HTTP routes (the app origin stays the
 > fallback for when that origin cannot start). Why: DSH Desktop
@@ -113,9 +112,9 @@ runtime the wallpaper is remembered and degrades to the legacy plain iframe (no 
 >
 > **When that second listener is actually opened** (adapter mode, set under 「高级 → 适配」): **the scene
 > payload is independent of the adapter form** — its reason for a separate origin is **bandwidth**, which
-> holds in a plain browser too, so `inventory.sceneMediaBase` no longer collapses to an empty string just
-> because the surface looks like a browser (that old behaviour sent big packages down the path that
-> starves; fixed 2026-09). The **web wallpaper** half is still gated on the capability header (the fence
+> holds in a plain browser too, so `inventory.sceneMediaBase` does not collapse to an empty string just
+> because the surface looks like a browser (an empty string would send big packages down the path that
+> starves). The **web wallpaper** half is still gated on the capability header (the fence
 > only exists on desktop shells): the host observes
 > the **capability header** and **`Electron/` in the UA** per request — either one marks a desktop surface and
 > the media origin starts as before; when neither is present (**a plain web browser**) there is no fence, so the
@@ -145,15 +144,15 @@ runtime the wallpaper is remembered and degrades to the legacy plain iframe (no 
 
 ### Host / client split
 
-- **Host half** (`lib/index.js` + its four remaining route families in `lib/routes/*.js` — `settings` / `presets` / `diag` / `cache-dir`; the wallpaper domain's twelve families live in `packages/media-bridge/lib/routes/*.js`): a Cordis plugin that
+- **Host half** (`lib/index.js` + its own route families in `lib/routes/*.js` — `settings` / `presets` / `diag` / `cache-dir`; the wallpaper domain's families live in `packages/media-bridge/lib/routes/*.js`): a Cordis plugin that
   1. locates the Wallpaper Engine install by reading Steam's `libraryfolders.vdf` (so it works even when Steam is on a non-default drive),
   2. enumerates wallpapers from `projects/defaultprojects`, `projects/myprojects`, and `steamapps/workshop/content/431960/*`,
-  3. registers same-origin HTTP routes on the DSH webserver so the browser half can fetch data and stream media directly. They are grouped by responsibility — **assets** · **transcode** · **live rendering** · **out-figure & capture** · **settings & system**; most of them now live in `packages/media-bridge/lib/routes/*.js` (P-D), while the main package keeps `settings` / `presets` / `diag` / `cache-dir`.
-     **The authoritative list (each route's source line, registration shape and context contract) is [`ROUTE-INDEX.md`](../ROUTE-INDEX.md)** — this file no longer hand-writes the path table *or a route count* (hand-writing always rots: that table long listed `/scene-runtime`, `/scene-manifest` and `/scene-resource`, **all three deleted**, while missing most of the routes that existed; the count drifted the same way).
+  3. registers same-origin HTTP routes on the DSH webserver so the browser half can fetch data and stream media directly. They are grouped by responsibility — **assets** · **transcode** · **live rendering** · **out-figure & capture** · **settings & system**; the wallpaper domain's routes live in `packages/media-bridge/lib/routes/*.js`, while the main package keeps `settings` / `presets` / `diag` / `cache-dir`.
+     **The authoritative list (each route's source line, registration shape and context contract) is [`ROUTE-INDEX.md`](../ROUTE-INDEX.md)** — this file does not hand-write the path table *or a route count* (hand-written copies rot).
 - **Client half** (`lib/client.js`): a browser module that fetches the inventory and renders the selected
   wallpaper into a fixed layer *behind* the app columns; it registers the first-level settings page
-  **「壁纸引擎」** (Wallpaper Engine) with six tabs (library / appearance / playback / system /
-  extensions / about — **extensions** is the module container for later features: its registry comes
+  **「壁纸引擎」** (Wallpaper Engine) with tabs (library / appearance / playback / system /
+  extensions / about — **extensions** is the module container: its registry comes
   lazily from `extensionModules()` in `src/panel-tabs.js` (never a top-level reference to a sibling
   module's symbol — importing that source file on its own would throw a ReferenceError), an empty
   registry renders an empty state, and the modules registered today are **click & trail effects**: descriptor `packages/fx/src/ext-fx.js` (the island — one master
@@ -188,15 +187,13 @@ runtime the wallpaper is remembered and degrades to the legacy plain iframe (no 
   m02697-①: with the cursor in a screen corner |displacement| is exactly p% x diagonal), so the per-frame
   formula is `displacement = 2 x pct/100 x (cursor - screen center)`, written in the layer as
   `PARALLAX_STEP_DIV = 50`. The wallpaper and the
-  mascot each multiply their own percentage (1% for the wallpaper by default, the mascot sharing the
-  wallpaper's value); the interface groups (composer / conversation text area (user bubbles inside
+  mascot each multiply their own percentage (the wallpaper's default is `parallaxBg` in
+  `lib/settings-schema.js`; the mascot shares the wallpaper's value); the interface groups (composer / conversation text area (user bubbles inside
   included) / sidebar) are governed by a
-  separate sub-switch `parallaxUi` (off by default) and the four regions **each store their own absolute
+  separate sub-switch `parallaxUi` (off by default) and those regions **each store their own absolute
   percentage** (`parallaxUiChatDepth` / `parallaxUiComposerDepth` / `parallaxUiSidebarDepth` /
-  `parallaxUiBubbleDepth`, KINDS `num 0..10`, step 0.1, shipping at 1.2 / 1.8 / 1.6 / 1.4 (user request m04159 pinned those four to the values he had tuned; source of truth = `lib/settings-schema.js`)): the old **total factor**
-  `parallaxUiDepth` and the whole "panel x100 / stored factor" chain are retired, so the panel and the
-  stored value now **share one unit** and setting a region to 0 means that region does not move at all
-  (user ruling m02697-③). **Front-end element groups registered by other plugins** (user wording m02697-②)
+  `parallaxUiBubbleDepth` — ranges, step and shipping values all live in `lib/settings-schema.js`): the panel and the
+  stored value **share one unit**, and setting a region to 0 means that region does not move at all. **Front-end element groups registered by other plugins** (user wording m02697-②)
   have **their own switch**, `parallaxPlugin` (user request m03549: **independent of `parallaxUi`, off by
   default**, because it moves the real interface drawn by other plugins): while it is off the layer does
   **not even scan** for them (rather than computing a coefficient of 0) and that panel card shows only the
@@ -206,22 +203,22 @@ runtime the wallpaper is remembered and degrades to the legacy plain iframe (no 
   runs a second filter `parallaxPluginEffectiveGroups()`: an outlet that sits **inside one of the four native
   group boxes** or **inside another discovered plugin group** does not count (that filter only applies while
   "Interface follows" is **on**), and reads the distance from `parallaxPluginDepths` (slot key -> %, a `map`
-  entry) where **a missing key means the 1% default and an explicit 0 means that group does not move**
+  entry) where **a missing key means `PARALLAX_PLUGIN_DEFAULT` and an explicit 0 means that group does not move**
   (that table only counts while the switch is on); the panel's list comes from the layer's
   `parallaxDiscoveredGroups()` through `ctx` (**same source as what actually
   moves**: it and the target rescan share the one `parallaxPluginEffectiveGroups()`, so every row has a
   landing spot; the single exception - a group with a `position: fixed` descendant stays put - is spelled
   out in that row's tooltip), and the panel splits it into three cards ("Background" / "Native front end" /
   "Plugin front end"). User bubbles stack one more layer on top of the
-  text area, and only the 24 most recent ones move; `PARALLAX_UI_SIGN = 1` makes the interface move the
+  text area, and only the most recent ones move (capped by `PARALLAX_GROUP_BUBBLE_MAX`); `PARALLAX_UI_SIGN = 1` makes the interface move the
   **same way as** the wallpaper - the near interface travels a little further than the far wallpaper, a
   camera pan - and the displacement itself lands on the anchor itself when it owns a box, or else on the
   nearest ancestor that does (`parallaxGroupBox()`, at most 3 levels up), because the host's slot outlets hard-code `display: contents` and generate none). The
   direction of the wallpaper leg is negated so the shift is **mirrored about the screen center**
   (cursor to the top right moves everything to the bottom left), the easing is an exponential approach per
   frame (`parallaxSmooth`, 0 = instant), and the loop stops itself as soon as the displacement left on
-  screen no longer shows (zero frames while idle; frames now follow the display's real refresh rate, since
-  the old 60Hz cap is gone, "arrived" is judged from the remaining step times the largest multiplier and
+  screen no longer shows (zero frames while idle; frames follow the display's real refresh rate,
+  "arrived" is judged from the remaining step times the largest multiplier and
   loosened to 1px once the cursor has been still for 180ms, no frame is scheduled at all when every
   multiplier is 0, nothing is scheduled while the page is hidden, and the moving layers are promoted to
   compositor layers only while the loop runs, the hint being dropped the moment it settles — this repo
@@ -298,7 +295,7 @@ switches all of them at once, which is what "one look" means here.
   `lib/settings-schema.js` and shared by the client and the host, so both sides sanitise the same way.
 - **Guards**: `test/verify-fontset.mjs` (the whole feature) + `test/fontset-load-smoke.mjs` (loading).
   The three font channels and their invariants live in the file headers under `src/font/` — see
-  [`FONT-SYSTEM.md`](../FONT-SYSTEM.md) for the index.
+  [`CODE-STRUCTURE.md`](../CODE-STRUCTURE.md) §3.3 for the index.
 
 ### The installed-font list: ask the OS, then cache it
 
@@ -338,10 +335,10 @@ A byte-size threshold is unreliable (measured black PNGs from a headless run: 96
 downsampled to `LIVE_FRAME_SAMPLE` and its brightness distribution inspected: near-black or almost no
 contrast means "nothing has been rendered yet" and the capture is abandoned (the CPU frame stays), plus a
 resolution-scaled size floor.
-**The sampling edge and the four thresholds are constants in `src/live-layer.js`**
+**The sampling edge and every threshold are constants in `src/live-layer-watch.js`**
 (`LIVE_FRAME_SAMPLE` · `LIVE_FRAME_LIT_RATIO` · `LIVE_FRAME_MIN_VARIANCE` · `LIVE_FRAME_BYTES_PER_PX`);
 this document does not copy their values — they are **tunable parameters**, and a copy here would drift
-away from the implementation. When a capture is unsatisfactory there are three entries under
+away from the implementation. When a capture is unsatisfactory there are entries under
 **Settings → Effects → Picture → 「实时帧」**: the **thumbnail preview** (the very still shown during a
 switch / before the live first frame, same URL as the one in use — with its pixel dimensions),
 **「重新截」** (re-capture the **current** picture and replace the cache; if it fails the old frame stays,
@@ -402,18 +399,81 @@ After a switch the plugin decides the global light/dark theme (`src/theme-follow
    `Access-Control-Allow-Origin: *`), so the canvas is never tainted.
 3. **Neither available ⇒ leave the theme alone** — no switch, no thrashing.
 
-Verdict: WCAG relative luminance (the same coefficients as `test/verify-readability.mjs`) with a threshold of
-**0.40** — "only clearly bright colours get a light UI" (not mid grey 0.2159: the author colours in this
-library have a median luminance of 0.214, so that threshold cuts through the densest part of the distribution
-and calls saturated mid-tones light while the eye reads them as dark).
+Verdict: WCAG relative luminance (the same coefficients as `test/verify-readability.mjs`) with the
+**"clearly bright"** threshold (`THEME_FOLLOW_LIGHT_ABOVE` in `src/theme-follow.js`; this document does
+not copy the value) — deliberately not mid grey: the author colours in a real library have a median
+luminance right at the densest part of the distribution, so a mid-grey threshold calls saturated
+mid-tones light while the eye reads them as dark.
 
 The write goes through the host's client Cordis service `theme` (`setTheme('dark' | 'light')`, same API on the
 official and community clients) and uses **the same handle** as our token layer (both come from that one
 `ctx.get('theme')` poll; deliberately no `inject` declaration, see the token-layer block in src/client.js).
-Three self-imposed rules live in the module header: **nothing is written when the verdict already matches**
+Self-imposed rules live in the module header: **nothing is written when the verdict already matches**
 (`setTheme` persists the preference into the profile's `cordis.patch.yml`), **a manual change makes it yield**
 (re-evaluating the same wallpaper will not take it back; the next switch resumes), and **no theme service ⇒
 the whole feature stays inert**.
+
+### Coexistence: glass surfaces vs. other UI plugins
+
+#### Ownership Boundaries
+
+Wallpaper and glass remain independent. Turning wallpaper off does not disable glass. The skin-centre marker `html[data-dsh-skin]` still makes the plugin yield as a whole and restore after the skin leaves.
+
+While a wallpaper is active, the two page-let-through tokens (`--dsw-alias-bg-base`, `--dsw-specific-sidebar-fill`) are declared with author `!important` (`src/styles-base.js`, the `body[data-we-wallpaper]` and dark-theme blocks). This is a **cross-plugin contract**, not defensive coding: DSH's theme API lets a plugin (DS Bot's Bot mode, for example) colour the host through `ctx.theme.overrideTokens`, and the host writes the composed tokens as **inline styles** on `<body>`; a normal author declaration always loses to an inline one, so the wallpaper layer stays hidden behind the opaque page base ([#282](https://github.com/elysia395/dsh-wallpaper-engine/issues/282), the same "another plugin covers the wallpaper" class as [#279](https://github.com/elysia395/dsh-wallpaper-engine/issues/279)). The `!important` only applies inside the wallpaper gate; with no wallpaper this plugin declares nothing and the host's inline values apply unchanged — a one-way takeover that reads and writes no other plugin's state. A third-party panel that needs its own backing should paint its own surface background or use `data-we-surface-preserve` instead of rewriting these two page-background tokens.
+
+The **page-level background-layer token mapping** (`--dsw-alias-bg-layer-1/2/3`, `--dsw-alias-button-elevated-fill`, `--dsw-alias-bg-overlay`, …) applies on `body[data-we-glass-page]` to the **whole page**: the host's own sidebar buttons, right-panel tab strip and settings-window cards all read that family, so scoping it to the chat flow alone makes those surfaces fall back to the host's solid fills. Every mapping still carries the readability floor (`--we-readability-floor`), so it is not unbounded transparency. Frost and backing plates for the settings window, sidebars and declared surfaces are still claimed per surface by the shared ownership runtime; unknown third-party panels keep their own background declarations, button semantics, syntax colours and terminal ANSI colours.
+
+| Surface | Adaptation | Fallback |
+|---|---|---|
+| Native sidebars | Geometry-checked decorative leaves behind the page | Native background; no ancestor positioning or layer escalation |
+| Settings window | Unused `::before` in an existing positioned stacking context | Native if blur, an occupied pseudo-element or unsafe structure prevents adaptation |
+| Right-sidebar CodeMirror / xterm | Known canvases inside the expanded native sidebar | Ownership removed on native policy, preserve or sidebar close |
+| Declared third-party surfaces | Explicit declaration and carrier safety checks | No guessing for undeclared or unsafe content |
+| Extra selectors | Frost in an unused pseudo-element within an existing context | No new context or forced content-background removal |
+
+Outer host-shell wallpaper transparency is separate from glass adaptation. These boundaries are not certification of every third-party plugin.
+
+#### Per-Surface Fallback
+
+**Glass compatibility** in appearance settings offers **Automatic** and **Keep native** for each surface. `glassSurfacePolicy` controls adaptation eligibility; existing inherited/custom `glassMode` parameters keep their meaning. Missing policies mean automatic. Policies participate in settings and profile preset persistence, import and export.
+
+Surface IDs: `left-sidebar`, `right-sidebar`, `settings-window`, `content`, `declared`, `extra`. The advanced list shows ownership records as `id / mode / reason`, without collecting plugin text or arbitrary styles. It is a panel-render snapshot, not compatibility certification.
+
+This is not a global glass-off switch. Chat, title-bar and other independent gates are outside this table. See [ADR-0010](../adr/0010-glass-off-revisit-four-states.md).
+
+#### Author Declarations
+
+```html
+<section data-we-surface="v1" style="position:relative;z-index:1">
+  <div data-we-surface-layout>Layout allowed to lose its background</div>
+  <div data-we-surface-preserve>Content that must stay native</div>
+</section>
+```
+
+- `data-we-surface="v1"` requests adaptation, not guaranteed ownership. Do not add a stacking context to shared ancestors merely for glass; the example assumes this positioning already exists.
+- `data-we-surface-layout` permits background removal inside an owned declared surface, without crossing nested ownership boundaries.
+- `data-we-surface-preserve` opts a node and descendants out, taking precedence over built-in adapters and extra selectors.
+- Runtime attributes such as `data-we-surface-runtime` and `data-we-layout-runtime` are private. Third-party plugins must not set or depend on them.
+
+No third-party nodes are moved, no third-party z-index is changed, and no top-layer escalation is used. While an external modal is visible, WE's rope, repository panel, update notice and automatic introduction hide. Ordinary non-modal `role="dialog"` does not trigger yielding.
+
+#### Troubleshooting
+
+| Symptom | Check |
+|---|---|
+| A surface stays opaque | Inspect policy and reason; preserving unknown content can be intentional fallback. |
+| Extra frost does not appear | Check existing positioning, non-auto z-index, blur, occupied `::before` and preserve. |
+| A popup is covered or fixed content moves | Compare geometry and actual hit targets with WE disabled. Inspect transform, filter, contain and stacking ancestors, rather than raising z-index. |
+| A plate survives sidebar collapse | Record sidebar mode, policy and reason; closing should revoke ownership and decorative leaves. |
+| Glass does not restore after a skin leaves | Allow yield observation to settle; include versions, reproduction and diagnostics if it persists. |
+
+#### Verification and Limits
+
+`node test/verify-glass-runtime-browser.mjs` runs actual bundle CSS and runtime in isolated Chromium. It checks themes, narrow screens, hit testing, focus, fixed geometry, pixels, fallback and cleanup. Set `WE_TEST_BROWSER` to an executable when necessary. A missing browser fails rather than silently skipping. This regression is in `npm run verify`.
+
+Host-structure fixtures do not replace testing each real third-party window, prove a native crash fix, or establish long-term stability. Untested platforms and independent-review status must be reported separately.
+
+Further reading: [surface ownership](../adr/0015-glass-surface-ownership.md), [token ledger](../TOKEN-CONTRACT.md), [troubleshooting](../TROUBLESHOOTING.md).
 
 ### Client-side errors also leave a trace (`client-error`)
 
@@ -431,5 +491,6 @@ never changes what the user sees, and it is the same ring the host's own `diag` 
 `npm run smoke` (node-level behaviour: rotation, live-frame backfill and identity, font-set loading, and more).
 Every assertion has a failure channel (a non-zero exit when it does not hold);
 `npm run verify:all` = build + both suites + the soft tier.
-**How many entries each chain has is not written here**: the source of truth is the `verify` / `smoke` /
-`verify:docs` scripts in `package.json` — hard-coding a number here makes it drift.
+**How many entries each chain has is not written here**: the source of truth is the `MANIFEST` in
+`test/run-guards.mjs` (the `verify` / `smoke` / `verify:docs` scripts in `package.json` merely point at
+it) — hard-coding a number here makes it drift.

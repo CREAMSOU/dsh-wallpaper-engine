@@ -6,7 +6,7 @@
 ## 关联 issue 与认领审批 / Issue & Claim Approval
 
 > 外部贡献者必须先等维护者受理 issue，本人在该 issue `/assign` 申请，获得维护者 `/approve @login` 或有事前申请记录的 UI 手动指派，确认已成为 assignee 后才能创建 PR。`/assign` 不会立刻分配；不能直接开 PR，draft 也不例外。
-> 仅仓库 owner 和实时 GitHub 权限为 `write` / `maintain` / `admin` 的协作者豁免认领门禁；`contributor` 徽章或标签不算。详细规则见 CONTRIBUTING.md 与 docs/TRIAGE.md。
+> 仅仓库 owner 和实时 GitHub 权限为 `write` / `maintain` / `admin` 的协作者豁免认领门禁；`contributor` 徽章或标签不算。详细规则见 CONTRIBUTING.md 的「Approval before opening a PR」与「Issue triage & labels」两节。
 
 <!--
 External contributors must request with /assign and receive maintainer approval and assignment BEFORE creating this PR, including drafts. Only the owner or collaborators with live write/maintain/admin permission are exempt; contributor badges or labels are not exemptions.

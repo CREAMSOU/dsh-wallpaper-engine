@@ -93,28 +93,32 @@ generation-install: installed in 436ms
 generation-install: generation peer validation failed: @deepseek-ai/dsh-client-runtime does not resolve from the installation closure
 ```
 
-**Your DSH core is older than this plugin's tested floor.** The plugin declares
-`engines.dsh >= 0.1.5-rc.1` and `@deepseek-ai/dsh-client-runtime >= 0.1.0-rc.6`
-(`package.json` `engines` / `peerDependencies`; the tested floor is kernel **0.1.5**) — a kernel
-older than **0.1.5-rc.1** (e.g. `0.1.2-rc.1` / DSH Desktop 2.0.5) ships a runtime below that floor,
-so pnpm rejects the dependency graph at generation time. This is not a network / mirror /
-pnpm-state problem, and **installing an older plugin version will not help**: kernels predating
-0.1.5-rc.1 are outside the tested support range — loosening the peer range would only produce an
-install that is broken at runtime.
+**Your DSH core is older than this plugin's supported floor.** The plugin declares **two**
+floors in `package.json`: `engines.dsh` (the release manifest — the host uses it to decide
+whether the plugin can be installed at all) and `@deepseek-ai/dsh-client-runtime` under
+`peerDependencies` (the **runtime capability surface** — the interfaces the code actually
+calls start at that tier). Take the current values from the manifest (check with
+`node -e "console.log(require('./package.json').engines, require('./package.json').peerDependencies)"`)
+and compare `dsh --version` against `engines.dsh`. The usual trigger is a kernel older than
+the `engines.dsh` floor (e.g. an old DSH Desktop / the `0.1.x` line): the runtime it brings
+into the install closure is below the peer floor, so pnpm rejects the dependency graph at
+generation time. This is not a network / mirror / pnpm-state problem, and loosening the peer
+range would only produce an install that is broken at runtime — so the install gate is not
+meant to be bypassed.
 
 **Fix: upgrade the host first, then install** (both steps):
 
 ```sh
-# 1) Bring the DSH kernel to >= 0.1.5-rc.1 (updating the official desktop app to the latest is
-#    enough; the old DSH Desktop line needs at least 2.0.7). Self-check: `dsh --version` >= 0.1.5-rc.1
+# 1) Bring the DSH kernel to the engines.dsh floor (updating the official desktop app
+#    to the latest is enough). Self-check: `dsh --version` is within engines.dsh
 dsh --version
 # 2) Install again
 dsh plugin --profile web add dsh-plugin-wallpaper-engine
 ```
 
 > "The desktop app says v0.10.0" is the **app's own** version number, not the bundled **DSH core**
-> version — the verdict comes from `dsh --version` (issue #116: a v0.10.0 desktop app bundling a
-> 0.1.7-rc.2 core; that kernel now satisfies ≥ 0.1.5-rc.1 and can install this plugin).
+> version — the verdict comes from `dsh --version`, compared against `engines.dsh` in `package.json`;
+> if it is below the floor, upgrade the kernel first.
 
 ### Symptom → where to look first
 
@@ -122,7 +126,7 @@ dsh plugin --profile web add dsh-plugin-wallpaper-engine
 |---|---|
 | The panel shows 「宿主里没有字体集路由…」 or 「宿主返回 404 / 405」 | The host is stale: **host-side code loads once at startup**, so a page refresh only swaps the client bundle. **Restart DSH** (`dsh web` again, or quit and reopen the desktop app). Two self-checks: ① `~/.dsh-wallpaper-engine/build-stamp.json`'s `at` must be later than `lib/index.js`'s mtime; ② search `diag/http.jsonl` for `fontsets` — **zero hits** means the request never reached the plugin (a bare status code can only come from another layer) |
 | The settings panel suddenly goes blank / the whole UI whites out | Search the client-exception trace first: `client-error` (the message plus the first three stack frames, all in one diagnostics line). One known class is **React #31** (an array of objects rendered as a child) — the `client-error` text points straight at the line |
-| After confirming something (a delete / hide) the wallpaper stays paused and inputs stop responding | A native `confirm` hands focus to its own window, so with "pause on window blur" the wallpaper stops; the modal also blocks the render thread, and the `focus` event on dismissal is not guaranteed to arrive (on older builds only a reload recovered). The occlusion decision is re-checked every 3 s and logs an `occlusion-recheck` line (a lost event heals itself), and deleting a font set uses an in-panel confirmation. On older builds, click the window or switch away and back |
+| After confirming something (a delete / hide) the wallpaper stays paused and inputs stop responding | A native `confirm` hands focus to its own window, so with "pause on window blur" the wallpaper stops; the modal also blocks the render thread, and the `focus` event on dismissal is not guaranteed to arrive (on older builds only a reload recovered). The occlusion decision is re-checked on a low-frequency timer (`OCCLUSION_RECHECK_MS` in `lib/client.js`) and logs an `occlusion-recheck` line (a lost event heals itself), and deleting a font set uses an in-panel confirmation. On older builds, click the window or switch away and back |
 | The wallpaper picker is empty | Wallpaper Engine installed with at least one wallpaper; restart `dsh web` (see [`../../README.beginner.md`](../../README.beginner.md), FAQ 1 — Chinese only) |
 | A solid white flash (light grey under the default dimming) when minimizing / restoring the window, and a white taskbar thumbnail | What shows through is the **window base plate**. **Current branch**: while a wallpaper is active the root element carries an opaque wallpaper representative colour (picture dominant colour → author scheme colour, `--we-wallpaper-underlay`), so a dropped layer degrades to a tone-matched solid instead of a white flash; becoming visible again also triggers a two-frame re-composite nudge. If it is **still pure white** (no tone at all), the window submitted **no frame at all** at that moment — that is the shell's base plate (the win32 `BrowserWindow` sets no transparent `backgroundColor`) and cannot be changed from the plugin side; please attach the `onscreen` line from the diagnostics |
 | Video wallpaper is black / frozen | The card's play button and message: 「播放」 means it is not actually playing — click to retry; an "cannot decode" hint means re-export as **H.264** MP4 |
@@ -130,7 +134,7 @@ dsh plugin --profile web add dsh-plugin-wallpaper-engine
 | A web wallpaper turned black / 403 after picking an adapter target | The manual pick in 「System → Advanced → 适配」 **wins over detection**: picking 「原生浏览器」 while running in a desktop client that enforces the capability-header fence makes the web payload switch to the app origin and get rejected with `403`. Switch back to 「自动检测」 (or any desktop target) to recover; the section's status line states what was detected and warns directly when the pick contradicts it |
 | A custom upload is not visible | The **content rating** filter above the grid (defaults to Everyone; unrated uploads count as Everyone) |
 | Scene wallpaper shows a still image | **It should not by default** — scene wallpapers are rendered **live** by WebWallGL (particles / scripts / parallax all animate). First check whether 「场景实时渲染」 under **Playback → Effects** was turned off, and whether a failure reason (first-frame timeout / runtime stall) is shown under that switch: re-enabling it clears the failure memory and retries. Only when live rendering is unavailable does it fall back to the chain (author-embedded MP4 → live capture → custom frame → empty state; before the first frame it shows the **author's preview**, so there is no black screen); browsers without WebGL2 **always** take that chain (a **loose `scene.json` directory does not** — it renders live too) — there, use 「出图来源」 to pick another frame source or import a 「自定义画面」 (see [`HOW-IT-WORKS.md`](./HOW-IT-WORKS.md)) |
-| Scene / web wallpaper is black, and ~15 s later it falls back to a static frame (or just the poster) | That is the live renderer's **watchdog degrading**: no first frame within 15 s ⇒ the failure is remembered and it degrades automatically. Check that the file is readable and the GPU driver works (WebGL2 is required); re-enabling 「场景实时渲染」/「网页实时渲染」 clears the memory and retries. **Current behaviour**: that extraction/compositing chain is gone entirely — the host **only serves a frame that already exists** (otherwise an honest 404 empty state; it neither generates nor prewarms anything) — and the client's pre-first-frame poster takes **live-captured frame → the author's preview → the theme colour**, so **even a wallpaper that never captures a frame is not black before the first frame**. If you still see nothing but a flat colour for a long time, **not even the author's preview** could be read (no preview in the project, or a read failure) — please attach the diagnostics lines |
+| Scene / web wallpaper is black, and after the watchdog budget runs out it falls back to a static frame (or just the poster) | That is the live renderer's **watchdog degrading**: no first frame ⇒ it degrades (and decides, by cause, whether the failure is remembered — see below). Check that the file is readable and the GPU driver works (WebGL2 is required); re-enabling 「场景实时渲染」/「网页实时渲染」 clears the memory and retries. **The first-frame budget is computed from the package size** (`liveFirstFrameBudget()`: base + `scenePkgBytes` ÷ throughput floor, capped by a hard ceiling; constants and formula in `LIVE_FIRST_FRAME_*` / `LIVE_PAYLOAD_FLOOR_BPS` in `lib/client.js`), and **time never counts while payload bytes are still arriving** (the host payload ledger `GET /wallpaper-engine/scene-payload-progress?token=…`, polled by the client heartbeat) — so "a huge package downloading slowly" is no longer misjudged as "cannot render". **When the first frame really does not arrive there are two cases**: ① the ledger says "transferred but not completed" (stalled download / starved by another instance) ⇒ only a **session-local** soft failure, never the failure memory shared by all windows, and it retries after a cooldown (cooldown and retry cap: `LIVE_TRANSFER_RETRY_*`); ② the renderer really produces no frame **and this window has whole-package completion evidence** (or the renderer page reports a load error) ⇒ only then is the failure written to disk for that wallpaper; a **runtime stall (no frames while it should be playing) is likewise only a session-local soft failure**, retried after a cooldown. **Current behaviour**: that extraction/compositing chain is gone entirely — the host **only serves a frame that already exists** (otherwise an honest 404 empty state; it neither generates nor prewarms anything) — and the client's pre-first-frame poster takes **live-captured frame → the author's preview → the theme colour**, so **even a wallpaper that never captures a frame is not black before the first frame**. If you still see nothing but a flat colour for a long time, **not even the author's preview** could be read (no preview in the project, or a read failure) — please attach the diagnostics lines |
 | The frame-rate cap does nothing | It needs ffmpeg (the encoder prefers NVENC, falling back to libx264 software encoding without an NVIDIA GPU); with no ffmpeg at all the feature disables itself (see 「Limitations」 in `../README.en.md`) |
 | A mid-grey / light slab appears to the right of the conversation area once the right sidebar is closed | The right-panel container keeps its width and only hides its children, while the plugin's frosted background applies to that container in every state (guarded by `verify-host-paint-scope`); workaround: turn off the 「侧栏液态玻璃」 master switch, or drag that session's right-sidebar width to 0 |
 | Settings revert after a restart | Settings live in a host-side file (see "Where are my settings stored?" below) — check `~/.dsh-wallpaper-engine/config.json` is writable and that you did not roll back to an older version. Also: a host log line reading 「settings PUT 丢弃了白名单外的键」 means the client's and host's field lists have drifted — please report that line |
@@ -186,7 +190,7 @@ $env:DSH_WE_NOTICE = "1"   # set before launching DSH; "0" silences it permanent
 
 All three are the unavoidable price of one trade-off: **keep the old picture rather than show the base
 colour.** They are listed here so that a "looks stuck / flashed for a moment" symptom has an explanation.
-Criteria and readings for all three are in `docs/CHANGELOG.md` (the unreleased section).
+The criteria are below; readings are in the matching `docs/CHANGELOG.md` entries.
 
 ### After switching to a wallpaper: "nothing happened" and the old wallpaper stays
 
@@ -205,9 +209,8 @@ of base colour for a second or two).
 ### The first wallpaper after a page load shows a short stretch of base colour
 
 There is **no old layer to hold** at that moment, so the gate is not armed at all ⇒ the base colour is on
-screen until the first frame arrives. Measured (one-off; readings and conditions in the unreleased section of
-`docs/CHANGELOG.md`): for the same 729 MB 4K120 source, `loadedmetadata` on that "first wallpaper" path takes
-only a bit over a hundred milliseconds.
+screen until the first frame arrives. Measured (one-off; readings and conditions in the matching
+`docs/CHANGELOG.md` entry): on that "first wallpaper" path `loadedmetadata` arrives quickly.
 
 **Current state (not done)**: the fix is to give video wallpapers a **real still frame** as their face
 (reusing the existing frame-extraction path) instead of waiting for the `<video>`'s first frame.

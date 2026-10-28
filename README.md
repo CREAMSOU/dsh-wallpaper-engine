@@ -120,7 +120,7 @@ node scripts/install-source.mjs --profile desktop --dsh-home "<DSH 数据目录>
 - Windows / macOS / Linux 使用同一份源码；macOS 没有 WE 客户端，可上传图片 / 视频或指向 WE 项目目录。
 - Scene 渲染依赖浏览器 WebGL 与显卡驱动，复杂工坊项目可能存在兼容差异；失败会逐级降级。
 - 遮挡暂停、窗口失焦暂停与音频回环采集按平台适配；在线歌词默认关闭。
-- 与其他皮肤 / 插件同时启用时，先看 [共存说明](docs/COEXISTENCE.md)。
+- 与其他皮肤 / 插件同时启用时，先看 [共存说明](docs/HOW-IT-WORKS.md#共存玻璃表面与其他-ui-插件)。
 
 <a href="https://github.com/elysia395/dsh-wallpaper-engine/releases/download/media-v1/better-sidebar-font.png">
   <img src="https://github.com/elysia395/dsh-wallpaper-engine/releases/download/media-v1/better-sidebar-font.png" alt="侧栏玻璃与字体适配">
@@ -131,7 +131,7 @@ node scripts/install-source.mjs --profile desktop --dsh-home "<DSH 数据目录>
 欢迎提交 Bug 复现、平台兼容反馈、文档修正和功能 PR。反馈时请附宿主 / 插件版本、操作系统、壁纸类型、复现步骤与脱敏日志。
 
 - [工作原理](docs/HOW-IT-WORKS.md) · [故障排查](docs/TROUBLESHOOTING.md) · [升级指南](docs/UPGRADING.md)
-- [更新记录](docs/CHANGELOG.md) · [共存说明](docs/COEXISTENCE.md) · [代码结构](docs/CODE-STRUCTURE.md)
+- [更新记录](docs/CHANGELOG.md) · [共存说明](docs/HOW-IT-WORKS.md#共存玻璃表面与其他-ui-插件) · [代码结构](docs/CODE-STRUCTURE.md)
 - [贡献指南](CONTRIBUTING.md) · [发布流程](docs/RELEASING.md)
 
 <h2 id="联系方式"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme/section-community-dark.png"><img src="assets/readme/section-community-light.png" alt="联系方式" width="1440"></picture></h2>

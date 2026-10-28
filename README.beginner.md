@@ -15,8 +15,8 @@
 ### 安装前准备
 
 - Windows、macOS 或 Linux 上能正常运行的 DSH。
-- **DSH 0.2 内核**，包括 `0.2.0-rc.1/rc.2`；桌面应用版本号与内核版本号不是一回事。
-- **Node.js >=22.12.0、pnpm 和目标宿主的 DSH CLI**。
+- **DSH 内核**：安装门槛看 `package.json` 的 `engines.dsh`（0.2 线可装；桌面应用版本号与内核版本号不是一回事）。
+- **Node.js（下限见 `package.json` 的 `engines.node`）、pnpm 和目标宿主的 DSH CLI**。
 - 目标 DSH 的**数据目录**和 **profile**。网页版通常是 `web`；桌面版为 `desktop`。数据目录从目标应用确认，不要照猜 `~/.dsh`。
 - 下载并解压本仓库的完整源码，不要只下载主包、某个子目录或临时链接。
 
@@ -59,7 +59,7 @@ node scripts/install-source.mjs --profile web --dsh-home "<目标 DSH 数据目�
 | 自动轮播 | 轮播列表 → 新建；至少选择两张可播放壁纸 |
 | 改配色、玻璃或字体 | 外观；侧栏有独立参数，不是所有表面共用一根滑条 |
 | 调亮度、取景、倍速或翻转 | 播放 → 效果 |
-| 换吉祥物 | 系统 → 吉祥物；内置十只，也可导入 |
+| 换吉祥物 | 系统 → 吉祥物；内置若干只（具体见设置页），也可导入 |
 | 开会话头像、拖尾或视差 | 扩展；按需启用 |
 | 移动缓存 | 系统 → 高级 → 缓存位置 |
 | 移动自定义上传 | 壁纸库 → 自定义壁纸 → 存储位置 |
@@ -101,7 +101,7 @@ node scripts/install-source.mjs --profile web --dsh-home "<目标 DSH 数据目�
 先等首帧。大场景要传输资源包；渲染失败后会降级为可用的预览图或实时帧。并非每个工坊项目都与原版引擎完全兼容。没有可用画面时会说明原因，不会伪造成功。
 
 **文字不好读 / 想关玻璃？**
-先调暗化、底色与边框。玻璃按表面管理，可在对应设置回退原生；未知插件表面不保证自动兼容，见 [共存说明](docs/COEXISTENCE.md)。
+先调暗化、底色与边框。玻璃按表面管理，可在对应设置回退原生；未知插件表面不保证自动兼容，见 [共存说明](docs/HOW-IT-WORKS.md#共存玻璃表面与其他-ui-插件)。
 
 **插件会把壁纸上传到网上吗？**
 不会。壁纸在本机读取和保存。不过下载运行时、查询仓库数据，以及开启在线歌词后的曲目信息查询会联网。系统频谱采集的是输出回环，不是麦克风。
@@ -120,7 +120,7 @@ This guide covers a **source deployment**, not the published npm version. The cu
 
 ### Prepare and install
 
-You need a working **DSH 0.2 kernel** (including `0.2.0-rc.1/rc.2`), **Node.js >=22.12.0**, pnpm, the target host's CLI, and its actual data-directory / profile identifiers. Wallpaper Engine is optional if you use custom images / videos. Application wallpapers are unsupported.
+You need a working **DSH kernel** within the ranges declared in `package.json`'s `engines` (the 0.2 line qualifies), plus **Node.js** (range: `engines.node`), pnpm, the target host's CLI, and its actual data-directory / profile identifiers. Wallpaper Engine is optional if you use custom images / videos. Application wallpapers are unsupported.
 
 1. Download and extract the complete repository source; do not use only the main package, a subpackage or temporary links.
 2. Fully close the target DSH host. Open a terminal in the folder containing `package.json`.

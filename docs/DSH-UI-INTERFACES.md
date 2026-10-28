@@ -31,7 +31,7 @@ DSH 桌面端把整份客户端 + node 宿主打进 `resources/app.asar`（Elect
 
 > ⇒ 一张台账必须**按层**记，否则很容易把"第三方插件的私有属性"当成"DSH 的接口"来赌稳定性。
 
-## 2. 台账（截至本次核查；DSH = 0.2.0-rc.2）
+## 2. 台账（宿主版本以 `package.json` 的 `peerDependencies` 与 `engines.dsh` 为准）
 
 ### 2.1 设计令牌（`--dsw-*`）——**目前唯一"完全对上"的一类**
 
@@ -46,7 +46,7 @@ DSH 桌面端把整份客户端 + node 宿主打进 `resources/app.asar`（Elect
 | `--dsw-static-neutral-bluish-*` | `dsh-client-ui-theme` | 浅/深底色的取值来源 |
 | `--dsw-mask-blur` | `dsh-client-ui-theme`（在**裸 `body`** 上定义，默认 `none`）→ 消费方 `dsh-client-ui-primitives` 的 Modal 遮罩（`.mask{backdrop-filter:var(--dsw-mask-blur)}`） | 宿主**自己的**浮层模糊通道：在 `body[data-we-glass-page]` 上重声明一次，就能一次覆盖该通道上的所有宿主浮层（#156① 的修法）。⚠️ 调用方若显式传 `backdropBlur=false`，遮罩上会带**行内** `backdropFilter:none`，那条能压过非 `!important` 的样式表规则 |
 | `--dsw-alias-markdown-code-block-banner` | `dsh-client-ui-primitives`（声明在 `.md-code-block` 根上，`.banner` 消费） | 代码块吸顶条的内层底色。⚠️ 真正的吸顶载体是**外层 `.bannerWrap`**，它的底板读 `--dsw-alias-bg-base`（被本插件置成 `transparent`）⇒ 光改这个令牌铺不出板（#156④） |
-| `--dsw-alias-scrollbar-bg-l1/l2` · `--dsw-alias-scrollbar-hover-l1/l2` | `dsh-client-ui-theme`（主题块里定义成静态中性色；`body` 上的滚动条基座把它们接成 `--dsh-scrollbar-thumb: var(--dsw-alias-scrollbar-bg-l1)` 等） | 滚动条拇指色（#157）。**关键结构性事实**：宿主另有约 17 处局部重声明，写的都是 `--dsh-scrollbar-thumb: var(--dsw-alias-scrollbar-bg-l2)` 这一层**间接**（`agent-preset` / `conversation` ×3 / `plugin-manager` / `input-trigger` / `primitives` 等）⇒ 在 `body[data-we-glass-page]` 上换掉这四个**底层** `--dsw-*` 令牌，全部局部重声明都会解析到本插件的值（自定义属性按**元素**解析，不是按声明处），一处覆盖全应用、不需要逐锚点补。⚠️ `--dsh-scrollbar-*` 是宿主自己那一层（宽度 / 边框 / 轨道留白），**不在**接口棘轮的抽取口径里（`test/compat-harness-surfaces.mjs` 的正则只收 `--dsw-`） |
+| `--dsw-alias-scrollbar-bg-l1/l2` · `--dsw-alias-scrollbar-hover-l1/l2` | `dsh-client-ui-theme`（主题块里定义成静态中性色；`body` 上的滚动条基座把它们接成 `--dsh-scrollbar-thumb: var(--dsw-alias-scrollbar-bg-l1)` 等） | 滚动条拇指色（#157）。**关键结构性事实**：宿主另有多处局部重声明，写的都是 `--dsh-scrollbar-thumb: var(--dsw-alias-scrollbar-bg-l2)` 这一层**间接**（例：`agent-preset` / `conversation` / `plugin-manager` / `input-trigger` / `primitives`；条数与归属按 §0 的 asar 直读 + 偏移→包索引复算，搜这条声明即可）⇒ 在 `body[data-we-glass-page]` 上换掉这四个**底层** `--dsw-*` 令牌，全部局部重声明都会解析到本插件的值（自定义属性按**元素**解析，不是按声明处），一处覆盖全应用、不需要逐锚点补。⚠️ `--dsh-scrollbar-*` 是宿主自己那一层（宽度 / 边框 / 轨道留白），**不在**接口棘轮的抽取口径里（`test/compat-harness-surfaces.mjs` 的正则只收 `--dsw-`） |
 
 **稳定性判定：高。** 令牌是宿主"给主题用的公开面"，改名会比改类名慎重得多；但**语义**（某令牌代表哪一层）
 仍可能被宿主重新分配 ⇒ 只对"值"稳定，不对"观感"作保。
@@ -59,7 +59,7 @@ DSH 桌面端把整份客户端 + node 宿主打进 `resources/app.asar`（Elect
 | `data-chat-flow-kind`（+ `data-chat-*` 一族） | ✅ | `dsh-client-ui-schedule` | 聊天流条目盒子上的**语义化**锚点；取值来自节点种类（`user` / `steering` / `context` / `turn-trigger` / `turn-process` / `assistant-text` …）⇒ `user` / `steering` 即用户气泡那一行，**稳**（类名是构建哈希，只能兜底） |
 | `data-question-key` / `data-plan-review-key` / `data-approval-key` | ✅ | `dsh-client-ui-user-questions` / `-approval` / `-conversation` | 工具弹卡的**容器**属性，稳 |
 | `data-turn-trigger` | ✅ | `dsh-client-ui-chat`（`TurnTriggerNodeView`） | 思考触发条的锚点，稳 |
-| `data-composer-seat`（+ `data-conversation-region="composer"`、`data-content-phase`、`data-phase`） | ✅ | `dsh-client-ui-conversation` | 输入**座位**（sticky 底板）的锚点，稳。⚠️ 它和 `[data-chat-flow]` **不在同一棵子树**里（座位是 ChatView 那一列在 `[data-conversation-scroll]` 里的兄弟）⇒ 会话流作用域在这一面用不了（#156③）。**插件当前不使用这个锚点**：#156③ 曾在座位上补一块底板，用户口径先后两次否定（先是「很高的灰色遮罩条」，收窄成贴底一条后仍嫌多余）⇒ 令牌与规则**整条撤回**（见 148+ 审计 §10）。宿主里这个锚点仍在，将来重开这一面可直接取用本行的宿主事实 |
+| `data-composer-seat`（+ `data-conversation-region="composer"`、`data-content-phase`、`data-phase`） | ✅ | `dsh-client-ui-conversation` | 输入**座位**（sticky 底板）的锚点，稳。⚠️ 它和 `[data-chat-flow]` **不在同一棵子树**里（座位是 ChatView 那一列在 `[data-conversation-scroll]` 里的兄弟）⇒ 会话流作用域在这一面用不了（#156③）。**插件当前不使用这个锚点**：输入座位不需要额外底板（多一块会被读成多余的遮罩条），所以本插件不为它保留令牌或规则；宿主里这个锚点仍在，将来重开这一面可直接取用本行的宿主事实 |
 | `data-composer-stats`（+ `data-composer-card` / `data-composer-input` … 一族） | ✅ | `dsh-client-ui-chat` | 底部统计行 / 输入卡片的锚点，稳 |
 | `data-install-registry` | ✅ | `dsh-client-ui-plugin-manager` | 插件源浮层：写在 `<fieldset>` 上、portal 到 `document.body` ⇒ **body 的直接子节点**（不在 `[data-chat-flow]` 里，也不走宿主的半透明菜单通道 `[data-menu-material]`）（#156②） |
 | `data-code-block-banner` | ✅ | `dsh-client-ui-primitives`（`CodeBlock` 的 `.banner`） | 代码块吸顶条的内层行；**吸收顶的是它的父 `.bannerWrap`**（只有哈希类、没有 data-*）⇒ 用 `.md-code-block > :has(> [data-code-block-banner])` 认父（#156④） |
@@ -107,7 +107,7 @@ DSH 桌面端把整份客户端 + node 宿主打进 `resources/app.asar`（Elect
 | **`dsh.client.platform` / `.immediately` / `.inject`** | 声明 `platform: "web"`、`immediately: true`、`inject: ["@deepseek-ai/dsh-client-runtime"]` | 宿主文档（`ui-plugin.md`）：`dsh.client` 段就这三项 + `./client` 导出；`practices.md` 另说 `dsh.client.inject` 条目**"only order activation"**，且 **"They change without notice"** | **明确不保证稳定**（但我们只用它排序激活 ⇒ 风险有限） |
 | `dsh.client.external` | **未使用** | 同一文档：非基线的运行时 import 要在这里声明 | 与我们无关（客户端半边没有外部 import） |
 | `exports["./client"]` | 导出 `lib/client.js` | 宿主文档：浏览器产物注册一个 **id 等于包名的 lazy factory**；React 由浏览器模块表提供 | 我们符合（有 `./client` 导出 ✓） |
-| **peer 包** | `@deepseek-ai/cordis` ^4.0.1 · `dsh-client-runtime` ≥0.1.5-rc.1 · `dsh-client-ui-slots` ≥0.1.5-rc.1 · `dsh-host-webserver` ≥0.1.5-rc.1 · `react` ^18.2.0（v1.3.0 起三个 `dsh-*` peer 为 ≥0.1.5-rc.1，与 `engines.dsh` 同串——发布前徽章复核后对齐，约束等价） | 已装：cordis **4.0.4** ✓ · slots **0.2.0-rc.2** ✓ · host-webserver **0.2.0-rc.2** ✓ | 版本都满足；⚠️ `dsh-client-runtime` / `react` 在产物里**找不到同名磁盘包** ⇒ 它们是**客户端模块表里的运行时 id**（文档："React comes from the browser module table"），我们声明它是**激活排序**用途 |
+| **peer 包** | `@deepseek-ai/cordis` · `@deepseek-ai/dsh-client-runtime` · `@deepseek-ai/dsh-client-ui-slots` · `@deepseek-ai/dsh-host-webserver` · `react`（范围以 `package.json` 的 `peerDependencies` 为准；宿主要求另见 `engines.dsh`） | 已装版本按 §0 从目标宿主产物复算（`dsh-client-runtime` / `react` 的形态见右列） | 是否满足以现读结果为准；⚠️ `dsh-client-runtime` / `react` 在产物里**找不到同名磁盘包** ⇒ 它们是**客户端模块表里的运行时 id**（文档："React comes from the browser module table"），我们声明它是**激活排序**用途 |
 | **cordis 服务注入** | `ctx.effect` / `ctx.on`（注册即清理，官方要求的形状）· `ctx.slots` · `ctx.webServer` · `ctx.logger` · `ctx.locale` | 宿主文档（`ui-plugin.md` / `practices.md`）："register styles, timers, listeners… inside `apply` with `ctx.effect`/`ctx.on` and return their cleanup functions" | **官方机制**，稳 |
 
 ⚠️ 统计口径的一个坑：`lib/**` 里还有 `ctx.canvas` / `ctx.drawImage` / `ctx.getImageData` / `ctx.fit` ——
@@ -126,7 +126,6 @@ DSH 桌面端把整份客户端 + node 宿主打进 `resources/app.asar`（Elect
   与 `ctx.slots.inject("sidebar.right.pane.tab", …)`，随后 `ctx.slots.register(…)`），
   宿主把注册内容渲染进那个槽出口，我们的 CSS 再对**同一个出口**（`[data-slot="…"]`）上色 ——
   这条链是自洽的：**锚点对着的是我们自己注册的槽**。
-  ⚠️ 订正：本文件早期版本写过"我们没注册进任何槽"，那是错的（只看了 CSS 侧就下了结论）。
 
 **怎么拿到权威槽名**（复算）：槽名在 TS 里是类型（运行期被擦除），所以**调用点的字符串字面量才是权威** ——
 在产物里抽 `renderSlot("…")` / `renderSlotChain("…")` / `entriesOf("…")` / `slotKey: "…"` /
@@ -172,9 +171,8 @@ DSH 桌面端把整份客户端 + node 宿主打进 `resources/app.asar`（Elect
 
 ### 3.4 宿主**自带权威文档**（这是本次核查最大的收获）
 
-asar 里带着宿主自己的插件编写文档：`@deepseek-ai/dsh-agent-preset/references/` 下 **7 份**
-（`packages.md` 可加载包总表 · `host-plugin.md` bundle 与宿主插件 · `ui-plugin.md` **Web 页里的 UI 插件** ·
-`practices.md` 插件实践 · `user-actions.md` · `mcp-bundle.md` · `verification.md`）。
+asar 里带着宿主自己的插件编写文档：`@deepseek-ai/dsh-agent-preset/references/` 下有一组
+（`host-plugin.md` bundle 与宿主插件 · `ui-plugin.md` **Web 页里的 UI 插件** · `practices.md` 插件实践 · `verification.md` 等）。
 复算：按路径 `**/references/*.md` 从产物里抽（这几份是**宿主的**文档，不入本仓 —— 需要时按 §0 的方法自己抽出来读）。
 
 与我们直接相关的三条**官方口径**（原文引用，出自 `ui-plugin.md` / `practices.md`）：
@@ -182,7 +180,7 @@ asar 里带着宿主自己的插件编写文档：`@deepseek-ai/dsh-agent-preset
 1. **主题令牌是官方路线**："Plugin UI is part of the Harness UI… a plugin **uses the host's theme tokens,
    locale, and layout patterns**"；"Style with the theme tokens that `cordis_inspect_query` `Theme` lists
    (`--dsw-alias-*`); **literal colors are for artwork only**"。
-   ⇒ 本插件大量接管 / 消费 `--dsw-alias-*` 与 `--dsw-specific-*`（**52 个全部存在**，见 §2.1）**正落在官方路线上**；
+   ⇒ 本插件大量接管 / 消费 `--dsw-alias-*` 与 `--dsw-specific-*`（存在性逐条见 §2.1 的复算）**正落在官方路线上**；
    我们那些字面量 `rgba(255,255,255,…)`（釉面高光）属于"artwork"，也在允许范围内。
    ⚠️ 宿主还提供一个**查询令牌清单的服务** `cordis_inspect_query`（`Theme`）—— 比我们"按字节翻产物"更正的做法，
    将来要补令牌应当先问它。
@@ -263,8 +261,8 @@ asar 里带着宿主自己的插件编写文档：`@deepseek-ai/dsh-agent-preset
   `registerFactory` / `inject`）⇒ 插件运行期可以调 `ctx.slots.snapshot()` 拿到 `{ name, kind, scope, declaredBy,
   occupants: [{ registrant, key, id, order, priority, active }], children }` 这棵树。**但**注册时的 `registrant`
   默认值就是 `options.registrant ?? this.ctx.fiber?.name`，宿主骨架与第三方 bundle 的 fiber 名**都是 `mf`**
-  ⇒ 实况里 `settings.section` 那 10 个占用者（宿主五页 + `bili` / `better-sidebar` / `wallpaper-engine` /
-  `market` / `cost-meter`）**registrant 全是 `mf`**，认不出谁是宿主、谁是插件。能带身份的只有占用者自己的
+  ⇒ 实况里 `settings.section` 的占用者（宿主自带页 + `bili` / `better-sidebar` / `wallpaper-engine` /
+  `market` / `cost-meter` 等；身份与条数按 `ctx.slots.snapshot()` 的 `occupants` 现读）**registrant 全是 `mf`**，认不出谁是宿主、谁是插件。能带身份的只有占用者自己的
   `key` / `id`（常是包名或 section id），而那是**别的插件的自由命名**，不是接口。
 - **子槽的注册不会向上冒泡。** `subscribe(key, fn)` 是按 key 订阅、microtask 批量；`snapshot()` 不给 root 时
   返回的只是**顶层槽 + factories** ⇒ 订阅 `'root'` 察觉不到某个已挂载插件后来又声明了一个子槽。
@@ -300,18 +298,15 @@ asar 里带着宿主自己的插件编写文档：`@deepseek-ai/dsh-agent-preset
 ⇒ 机器判据只能证明"名字还在"（§5），语义仍要靠人复核。最后一条性质不同：它约束的是**我们该用哪种 CSS 形态**
 （不许 `transform`），而不是"宿主某个名字还在不在"。
 
-## 4. 状态与待办
+## 4. 复核时机
 
-1. ~~确认 `[data-slot="sidebar"]` 的槽名归属~~ ✅ **已确认**（`sidebar` 是宿主真实槽名；`settings.section` 同样确认）——
-   见 §3.1 的复算方法；
-2. ✅ **接口棘轮已落地**（下面 §5）；node 侧宿主接口清单（插件清单 / 设置持久化 / 路由 / URL 参数）**待做**；
-3. 台账随 DSH 升级**重跑复算**（§0），把结论差异记进本文件。
+宿主接口的取舍会随宿主版本变（本文记的是当前取舍与判定口径）：升级前照 §0 的复算方法重跑，结论差异写回本文件。
 
-## 5. 机器判据：接口棘轮（已落地）
+## 5. 机器判据：接口棘轮
 
-`test/compat-harness-surfaces.mjs` 原来只做两件事：**面清单棘轮**（有哪些 `dsh-client-ui-*` 面）
-与 **sidebar 活判据**（某个面的锚点还在不在）。它们回答不了"**我们钉的那个令牌 / 槽名还在不在**" ——
-而本插件钉的接口散在 `src/**` 里。本次加了**第 ③ 组：接口棘轮**：
+`test/compat-harness-surfaces.mjs` 做三组判定：**面清单棘轮**（有哪些 `dsh-client-ui-*` 面）、
+**sidebar 活判据**（某个面的锚点还在不在）与**接口棘轮**（我们钉的那个令牌 / 槽名还在不在）。第三组
+针对的是本插件钉的、散在 `src/**` 里的接口：
 
 - **依赖清单从我们自己的源码抽**（不手抄 ⇒ 不会与实现漂移）：`--dsw-*` 令牌 · `[data-*]` 属性 ·
   `[class*="_x"]` 后缀 · `data-slot` 的取值（槽名）；
@@ -319,7 +314,7 @@ asar 里带着宿主自己的插件编写文档：`@deepseek-ai/dsh-agent-preset
 - **槽名按调用形状判定**（`renderSlot("x")` / `entriesOf("x")` / `slotKey: "x"` …）——
   值本身在多处出现，裸子串会把普通字符串误判成槽；
 - **第三方接口走台账豁免**（`test/fixtures/harness-ui-surfaces.json` 的 `interfaces.exempt`，每条必须写理由）：
-  目前是 better-sidebar 的私有属性与八个类名后缀、以及桌面壳的 `data-dsh-desktop-mode`；
+  目前是 better-sidebar 的私有属性与一批类名后缀、以及桌面壳的 `data-dsh-desktop-mode`；
 - 两类**不能进清单**的东西（否则是假红）：我们自己写的属性（`data-we-*` / `data-webwallgl-gl` /
   `data-plugin-css`）、以及**动态拼名**的前缀（源码里写成 `--dsw-font-${x}`）与注释里引用的写法。
 
@@ -329,8 +324,8 @@ asar 里带着宿主自己的插件编写文档：`@deepseek-ai/dsh-agent-preset
 # ① 有真 harness 时：直接指过去（需要 @deepseek-ai/dsh 的包目录）
 DSH_WE_HARNESS_ROOT=<...>/node_modules/@deepseek-ai/dsh node test/compat-harness-surfaces.mjs
 # ② 没有真 harness 时：搭一个"假根"——建 <root>/package.json 与 <root>/node_modules/dsh-client-ui-* 目录，
-#    把依赖清单里的接口字符串写进其中一两个 .js 即可（本次就是这么验的：正测全绿；从假根里删掉
-#    一个令牌 ⇒ 该条变红并报出名字，证明判据有牙）。
+#    把依赖清单里的接口字符串写进其中一两个 .js 即可（正测应全绿；从假根里删掉
+#    一个令牌 ⇒ 该条变红并报出名字，即判据有牙）。
 ```
 
 ⚠️ 与 §3.3 同一口径：**棘轮只保证"接口名还在"，不保证"语义没变"** —— 令牌被重新分配给别的层、
