@@ -60,7 +60,7 @@ graph LR
   SVC -->|"同上"| MA["packages/mascot-avatar 宿主半边<br/>inject ['webServer','wallpaperEngineHost']<br/>packages/mascot-avatar/lib/routes/avatar.js · mascot.js"]
   SVC -->|"同上"| MB["packages/media-bridge 宿主半边<br/>inject ['webServer','wallpaperEngineHost']<br/>packages/media-bridge/lib/routes/（族名见 docs/ROUTE-INDEX.md）"]
   SVC -->|"同上"| PL["packages/pet-link 宿主半边<br/>inject ['webServer','wallpaperEngineHost']<br/>packages/pet-link/lib/routes/pet-link.js（仅 /pet-link/capability）"]
-  SVC -->|"只读"| GL["packages/glass 宿主半边<br/>inject ['wallpaperEngineHost']<br/>零路由零服务（纯浏览器族，与 fx 同形；行为与样式都在浏览器半边）"]
+  SVC -->|"只读"| GL["packages/glass 宿主半边<br/>inject ['webServer', 'wallpaperEngineHost']<br/>注册 glass-row 状态路由（/glass-row-state 一条；路由存在 = 行启用，ADR-0016）"]
   FX --- N1["零主包说明符"]
   PX --- N2["零主包说明符"]
   FT --- N3["零主包说明符"]
@@ -139,9 +139,11 @@ graph LR
 需要人做的只有 `(id, name)` / `icon.png` / `locale` / `client.build.json` —— 契约见
 [`adr/0014`](./adr/0014-subpackage-contract.md) S3–S10。
 
-`glass` 是最近的完整样例：宿主半边是零路由空壳，浏览器半边由 `client.build.json` 自出
-`lib/client.glass.js`（`exports['./client']` + `dsh.client` 三方对账），运行时与 CSS 都在该包内；
-行 / 键表项 / 根清单 `file:` 依赖 / 同批重算的 `package-lock` 齐全即入册。
+`glass` 是最近的完整样例：宿主半边有一个 `glass-row` 状态路由族（`/glass-row-state`，路由存在性 = 行启用，
+供浏览器半边在停行后即时中性化，ADR-0016），浏览器半边由 `client.build.json` 自出 `lib/client.glass.js`
+（`exports['./client']` + `dsh.client` 三方对账），运行时与 CSS 都在该包内；行 / 键表项 / 根清单 `file:`
+依赖 / 同批重算的 `package-lock` 齐全即入册。登记点矩阵不在这里维护 —— 按本节开头的生成物 / 守卫自动
+发现口径即得（ADR-0016 D2）。
 
 ## 六、这张图会怎么漂
 

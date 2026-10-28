@@ -203,6 +203,10 @@ function loadClient({
       matchMedia: () => ({ matches: false, addEventListener: () => {}, removeEventListener: () => {} }),
       setTimeout: (fn, ms) => { const t = { fn, ms, cleared: false }; timers.push(t); return t; },
       clearTimeout: (t) => { if (t) t.cleared = true; },
+      // ADR-0016：玻璃客户端入口的行状态轮询（每 3s 探测 glass-row-state）在求值期挂 interval
+      // ⇒ 沙箱必须供给收集型桩，否则求值即 ReferenceError（不执行 fn ⇒ 探测不跑，行为判据不受影响）。
+      setInterval: (fn, ms) => { const t = { fn, ms, cleared: false, interval: true }; timers.push(t); return t; },
+      clearInterval: (t) => { if (t) t.cleared = true; },
       innerWidth: 1280,
       innerHeight: 800,
       outerWidth: 1280,
@@ -222,6 +226,10 @@ function loadClient({
   sandbox.location = { search, href: 'http://127.0.0.1:43120/' + search, pathname: '/' };
   if (provideURLSearchParams) sandbox.URLSearchParams = URLSearchParams;
 
+  // ADR-0016：玻璃客户端入口在求值期裸调 setInterval（行状态轮询）——浏览器里裸全局就是
+  // window 上的 ⇒ 沙箱顶层必须同样供给（收集型桩，不执行 fn，行为判据不受影响）。
+  sandbox.setInterval = (fn, ms) => { const t = { fn, ms, cleared: false, interval: true }; timers.push(t); return t; };
+  sandbox.clearInterval = (t) => { if (t) t.cleared = true; };
   vm.createContext(sandbox);
   new vm.Script(CODE, { filename: 'client.js' }).runInContext(sandbox);
   if (!cap.handoff || typeof cap.handoff.factory !== 'function') {

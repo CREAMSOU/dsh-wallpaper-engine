@@ -24,7 +24,8 @@
  *     （panelGlassPair 原是 glass-panel 的本地副本；第二刀发现主包写路径也要它 ⇒ 归位
  *     lib/settings-schema.js 的显示口径，与 readGlassColors 同族，经桥接取同一份防漂移。）
  *   · 运行时半边（第三刀）：selection · skinYieldActive · weClampSurfaceColor · glassColorOf
- *     · sanitizeExtraGlassSelectors · GLASS_SATURATE · useLegacySaturateCoupling
+ *     · sanitizeExtraGlassSelectors · GLASS_SATURATE · useLegacySaturateCoupling · apiUrl
+ *     （apiUrl = 行状态轮询的同一源地址，见下方「行状态机」）
  *     （weClampSurfaceColor / glassColorOf 的家留主包 effects.js —— verify-readability 从主包
  *     产物抽它们复算 ⇒ 主包同作用域直取、本包经这里取同一份防漂移。）
  *   ⇒ 其中 React / weT / switchRow / SliderRow / swatchRow / ctlText / sectionHead /
@@ -48,9 +49,9 @@ const GLASS_HOST_REQUIRED = [
   'moduleResetButtonNode', 'renderConfirmRow',
   'GLASS_CHILDREN', 'childGlassKey', 'GLASS_COLOR_PRESETS', 'panelGlassPair',
   'ROPE_FORMS', 'ROPE_FORM_VALUES',
-  // 运行时半边（第三刀）：store 活绑定 + 主包侧的纯函数内核与常量
+  // 运行时半边（第三刀）：store 活绑定 + 主包侧的纯函数内核与常量 + 状态路由轮询的同源地址
   'selection', 'skinYieldActive', 'weClampSurfaceColor', 'glassColorOf',
-  'sanitizeExtraGlassSelectors', 'GLASS_SATURATE', 'useLegacySaturateCoupling',
+  'sanitizeExtraGlassSelectors', 'GLASS_SATURATE', 'useLegacySaturateCoupling', 'apiUrl',
   // 贡献面（主 bundle 的收件箱）：面板节 + 行为层 + 状态投影回传
   'registerPanelSection', 'registerLayerHooks', 'registerGlassStatus',
 ];
@@ -66,7 +67,7 @@ const {
   GLASS_CHILDREN, childGlassKey, GLASS_COLOR_PRESETS, panelGlassPair,
   ROPE_FORMS, ROPE_FORM_VALUES,
   selection, skinYieldActive, weClampSurfaceColor, glassColorOf,
-  sanitizeExtraGlassSelectors, GLASS_SATURATE, useLegacySaturateCoupling,
+  sanitizeExtraGlassSelectors, GLASS_SATURATE, useLegacySaturateCoupling, apiUrl,
   registerPanelSection, registerLayerHooks, registerGlassStatus,
 } = host;
 
@@ -103,10 +104,65 @@ function ensureGlassCss() {
 }
 ensureGlassCss();
 
+/* ===== 行状态机（ADR-0016：行级开关「即时生效」，无需重启宿主）===== */
+
+// 桌面宿主的行开关不触发运行中页面的客户端重载 ⇒ 停用玻璃行后，本 bundle（样式表 + 行为层）
+// 会留在内存里继续生效。宿主半边为此注册了 `glass-row` 状态路由（GET <base>/glass-row-state）：
+// **路由的存在性 = 本行启用**（行停用 ⇒ fiber 被宿主 prune ⇒ 路由 404）。本状态机每 3 秒探测
+// 一次，按结果自行挂载 / 中性化：
+//   停用 ⇒ 撤样式表 + disposeGlassLayer()（门控属性与 --we-* 变量整族摘除）⇒ 宿主回原生，
+//           设置节停渲染、状态投影清空；
+//   重新启用 ⇒ 原样恢复（样式表回注 + sync 重跑）。
+// 探测失败（宿主重启中 / 网络抖动）⇒ 保持现状等下一轮，不许抖动。页面隐藏时暂停轮询。
+let glassRowDisabled = false;
+let glassRowProbeBusy = false;
+
+function applyGlassRowState(disabled) {
+  if (disabled === glassRowDisabled) return;
+  glassRowDisabled = disabled;
+  try {
+    if (disabled) {
+      // 撤样式表 + 跑行为层的 dispose（门控属性 / --we-* 变量 / 额外补雾化标签成对收走）
+      // ⇒ 宿主立即回到原生外观；sync 在停用期间是空操作，不会再写任何东西。
+      const tag = document.querySelector('style[data-plugin-css="dsh-wallpaper-engine/glass"]');
+      if (tag) tag.remove();
+      disposeGlassLayer();
+    } else {
+      ensureGlassCss();
+      applyGlassLayer();
+    }
+  } catch { /* 状态切换失败不抛出轮询外层：下一轮探测会再对时。 */ }
+}
+
+async function probeGlassRowState() {
+  if (glassRowProbeBusy || typeof document === 'undefined') return;
+  if (document.visibilityState === 'hidden') return; // 页面不可见时暂停轮询
+  glassRowProbeBusy = true;
+  try {
+    const res = await fetch(apiUrl('/glass-row-state'), { cache: 'no-store', signal: AbortSignal.timeout(2500) });
+    if (res.status === 200) {
+      let enabled = true;
+      try { enabled = (await res.json()).enabled === true; } catch { /* 应答体异常按启用处理 */ }
+      applyGlassRowState(!enabled);
+    } else if (res.status === 404) {
+      applyGlassRowState(true); // 路由消失 = 行停用（宿主 prune 了本行 fiber）
+    }
+    // 其它状态码（宿主重启中 5xx 等）⇒ 保持现状，等下一轮。
+  } catch { /* 探测失败保持现状：不许因为一次网络抖动翻转观感。 */ }
+  finally { glassRowProbeBusy = false; }
+}
+probeGlassRowState();
+setInterval(probeGlassRowState, 3000);
+if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') probeGlassRowState();
+  });
+}
+
 registerPanelSection('appearance', 'glass', {
   id: 'glass',
   get title() { return weT("玻璃 UI"); },
-  render: (ctx) => renderAppearanceGlassSection(ctx),
+  render: (ctx) => (glassRowDisabled ? null : renderAppearanceGlassSection(ctx)),
 });
 
 /* ===== 跨包登记 #2：玻璃行为层（ADR-0016 第三刀）===== */
@@ -116,7 +172,10 @@ registerPanelSection('appearance', 'glass', {
 // applyGlassLayer / disposeGlassLayer 在本包 client.build.json 的 inline[] glass-layer.js 里
 // （同工厂作用域，裸名可达）。sync 幂等：全量按当前 selection 重写，迟到注册由主包
 // attacher 立刻补接 + emit 一次（见 src/client.js 的 weSetLayerAttacher）。
-registerLayerHooks('glass', { sync: applyGlassLayer, dispose: disposeGlassLayer });
+registerLayerHooks('glass', {
+  sync: () => { if (!glassRowDisabled) applyGlassLayer(); }, // 行停用期间空操作（状态机已 dispose）
+  dispose: disposeGlassLayer,
+});
 
 /* ===== 跨包登记 #3：表面策略状态投影（回传主包）===== */
 
@@ -124,4 +183,4 @@ registerLayerHooks('glass', { sync: applyGlassLayer, dispose: disposeGlassLayer 
 // 在本包 glass-surfaces.js ⇒ 与 petLink 的 registerPetLink 同款反向通道：求值期把只读投影
 // 送回主包槽位（缺席 = 空列表，缺的是状态不是页面）。迟到登记的兜底：本包同一次求值里的
 // registerLayerHooks 已触发注册表 listener ⇒ 主包 emit() 重画，状态自然补上。
-registerGlassStatus({ status: weGlassSurfaceStatus });
+registerGlassStatus({ status: () => (glassRowDisabled ? [] : weGlassSurfaceStatus()) });

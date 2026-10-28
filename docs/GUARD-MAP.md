@@ -5,7 +5,7 @@
 > 口径：只统计守卫**代码**里真正碰到的模块（先剥注释），并区分"直接读源文件"与"隔着产物 `lib/client.js`"。
 > 写法：字面量路径 / `join(...)` 拼接 / 唯一 basename / 产物配方 / **前缀族读法** `scopeFiles|scopeText(<前缀>)` / **经共享族助手读**（`import { panelText } from './tools/src-scope.mjs'` + 真调用；族口径封在那个库里，见 DEV-GUIDE §4.6「同时是守卫的库」）/ **真源定位读**（`locate('符号')` / `locateFile('文件名')`，`test/tools/source-locator.mjs`：符号唯一声明在哪就是读了哪个模块）。
 
-模块面 183 个 · 守卫 119 个
+模块面 184 个 · 守卫 119 个
 
 ## 守卫 → 模块
 
@@ -203,6 +203,7 @@
 | `packages/fx/src/fx-layer.js` | 2 | `verify-layer-ownership` `verify-scene-live` |
 | `packages/glass/lib/client.glass.js` | 11 | `e2e-web-media-origin` `verify-client-sync` `verify-client` `verify-glass-compositing` `verify-glass-runtime-browser` `verify-glass-runtime` `verify-glass-surfaces` `verify-host-paint-scope` `verify-readability` `verify-softrender` `verify-windows-caption` |
 | `packages/glass/lib/index.js` | 0 | **（无）** |
+| `packages/glass/lib/routes/glass-row.js` | 0 | **（无）** |
 | `packages/glass/src/client.js` | 0 | **（无）** |
 | `packages/glass/src/glass-css.js` | 5 | `verify-adapter` `verify-glass-surfaces` `verify-i18n` `verify-readability` `verify-titlebar-anchor` |
 | `packages/glass/src/glass-extra.js` | 1 | `verify-extra-glass` |
