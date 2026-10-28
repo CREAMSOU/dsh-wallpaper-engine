@@ -1,12 +1,12 @@
-# 发布：八包发布集（npm 与 GitHub Release）
+# 发布：九包发布集（npm 与 GitHub Release）
 
-本插件在 [BUNDLE-SPLIT](../adr/) 之后由**一个主包 + 七个子包**组成，八个包版本锁步、主包把七个子包
+本插件在 [BUNDLE-SPLIT](../adr/) 之后由**一个主包 + 八个子包**组成（ADR-0016 起含 glass），九个包版本锁步、主包把八个子包
 声明成**精确版本运行依赖**。所以"发布"从来不是发一个包，而是发**一个发布集**：
 
 | 通道 | 用户侧入口 | 需要先满足 |
 |---|---|---|
-| npm（推荐，DSH 桌面"添加插件"直接可用） | 包名 `dsh-plugin-wallpaper-engine`（可带 `@1.4.0`） | 八个包**同版本**全部在 registry 上 |
-| GitHub Release（镜像 / 离线） | 八个 tarball + `release-set.json` | Release 资产**必须是八件套**，离线安装用 `scripts/install-release.mjs` |
+| npm（推荐，DSH 桌面"添加插件"直接可用） | 包名 `dsh-plugin-wallpaper-engine`（可带 `@<版本>`） | 九个包**同版本**全部在 registry 上 |
+| GitHub Release（镜像 / 离线） | 九个 tarball + `release-set.json` | Release 资产**必须是九件套**，离线安装用 `scripts/install-release.mjs` |
 
 两条通道共用同一份产物：`npm run pack:release`。
 
@@ -24,7 +24,7 @@ This error happened while installing the dependencies of dsh-plugin-wallpaper-en
 ```
 
 ```text
-# 探针 B：把八个 tarball 全部当顶层 file: 依赖一次装
+# 探针 B：把九个 tarball 全部当顶层 file: 依赖一次装
 [ERR_PNPM_FETCH_404] GET https://registry.npmjs.org/dsh-plugin-wallpaper-engine-fonts: Not Found - 404
 ```
 

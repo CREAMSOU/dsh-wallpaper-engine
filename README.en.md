@@ -33,7 +33,7 @@ Bring local **Wallpaper Engine Scene, Web and Video wallpapers** into the DSH ch
 
 Scene and Web compatibility depends on the project, WebGL support and browser capabilities. Rendering failures degrade rather than guaranteeing parity with every Wallpaper Engine workshop item. **Application wallpapers are not supported**: this plugin does not launch third-party executables. Custom JPG / PNG / MP4 files stay on your machine.
 
-The current suite has **one main package and seven subpackages, eight packages in total**. A local compressed release-set comparison decreased from approximately **84.88 MiB to 25.12 MiB, about 70.4%**, after removing the bundled pet. This excludes the separately installed official pet and is not a memory-use or Git-repository-size measurement.
+The current suite has **one main package and eight subpackages, nine packages in total** (ADR-0016 added `glass`). A local compressed release-set comparison decreased from approximately **84.88 MiB to 25.12 MiB, about 70.4%**, after removing the bundled pet. This excludes the separately installed official pet and is not a memory-use or Git-repository-size measurement.
 
 ## Install
 
@@ -56,9 +56,9 @@ The installer installs source dependencies, builds clients, registers all eight 
 
 ### npm: only after the complete release set is published
 
-The publisher must build the eight-package set with `npm run pack:release`, publish the seven subpackages first and publish the main package last. The release main manifest declares exact subpackage versions. It does not bundle pet or Electron. A plain root `npm pack` is not a substitute for this complete release set.
+The publisher must build the nine-package set with `npm run pack:release`, publish the eight subpackages first and publish the main package last. The release main manifest declares exact subpackage versions. It does not bundle pet or Electron. A plain root `npm pack` is not a substitute for this complete release set.
 
-**From `1.4.0` on, all eight packages are on npm** — one command installs the whole set (the main package resolves the seven children at exact versions):
+**From `1.4.0` on, the release set is on npm** (`1.5.0` on: nine packages) — one command installs the whole set (the main package resolves the eight children at exact versions):
 
 ```sh
 dsh plugin --profile web add dsh-plugin-wallpaper-engine

@@ -49,7 +49,7 @@
 |---|---|
 | 源码入口 | [Fish-under-sea 维护仓库](https://github.com/Fish-under-sea/dsh-wallpaper-engine)，灰测请下载这里的完整源码 |
 | 正式版本与贡献记录 | 以 [正式主仓 Release](https://github.com/elysia395/dsh-wallpaper-engine/releases)、[Contributors](https://github.com/elysia395/dsh-wallpaper-engine/graphs/contributors) 和 npm 页面为准；相同源码版本号不表示代码完全相同 |
-| 部署闭包 | 主包加七个子包，共八包；完整源码安装器登记依赖，更新后不会因临时链接被包管理器清除而丢失子包 |
+| 部署闭包 | 主包加八个子包，共九包（含可单独停用的「液态玻璃」子包）；完整源码安装器登记依赖，更新后不会因临时链接被包管理器清除而丢失子包 |
 | 官方 pet 联动 | 通过 dsh-pet 公开接口接入，不再捆绑 pet、Electron 或第三方文件补丁；官方 pet 自行安装 |
 | 外观预设与深浅 | 「作者自用」预设携带深色偏好，套用即把界面一并切到深色；全新安装默认套用它。发布版仍是「一次性二选一」弹窗询问，且套用预设不改深浅 |
 | 体积变化 | 本次本地发布集压缩体积实测约 84.88 MiB → 25.12 MiB，减少约 70.4%；不含另装的官方 pet，不是内存或 Git 仓库体积 |
@@ -100,7 +100,7 @@ node scripts/install-source.mjs --profile desktop --dsh-home "<目标 DSH 数据
 
 网页宿主将 `desktop` 改为 `web`。完成后重启对应宿主，打开 **设置 → Wallpaper Engine → 壁纸库**。目标目录和 CLI 说明见 [安装](#安装)。
 
-**前置条件**：DSH 0.2 内核（包括 `0.2.0-rc.1/rc.2`）、Node.js `>=22.12.0` 和 pnpm。**自 `1.4.0` 起八包已发布到 npm**，可直接按包名安装（见 [npm 通道](#npm-通道仅适用于整套包已发布的版本)）；`dsh-better-sidebar` 是可选配套插件，不是必装依赖。
+**前置条件**：DSH 0.2 内核（包括 `0.2.0-rc.1/rc.2`）、Node.js `>=22.12.0` 和 pnpm。**自 `1.4.0` 起发布集已在 npm**（`1.5.0` 起为九包：主包 + 八个子包），可直接按包名安装（见 [npm 通道](#npm-通道仅适用于整套包已发布的版本)）；`dsh-better-sidebar` 是可选配套插件，不是必装依赖。
 
 没用过命令行？从 [新手指南](README.beginner.md) 开始。
 
@@ -152,11 +152,11 @@ node scripts/install-source.mjs --profile desktop --dsh-home "<目标 DSH 数据
 
 ### npm 通道（`1.4.0` 起可用）
 
-正式发布者必须先运行 `npm run pack:release`，生成含构建产物的八个 tarball，并按生成清单先发布子包、最后发布主包。主包发布清单以七个子包的**真实精确版本**声明运行依赖，不包含 pet 或 Electron。单独在源码根目录执行 `npm pack` 得到的开发形态主包不能代表完整发布集。
+正式发布者必须先运行 `npm run pack:release`，生成含构建产物的九个 tarball，并按生成清单先发布子包、最后发布主包。主包发布清单以八个子包的**真实精确版本**声明运行依赖，不包含 pet 或 Electron。单独在源码根目录执行 `npm pack` 得到的开发形态主包不能代表完整发布集。
 
 子包没发全时，主包在用户机器上会以 `ERR_PNPM_FETCH_404` 失败并回滚——"只拿到母包"就是这个形态。发布顺序、GitHub Release 的八件套资产、发布后自证与回滚办法见 **[`docs/RELEASING.md`](docs/RELEASING.md)**；离线安装发布集用 `npm run install:release -- --set <目录> --profile <name> --dsh-home <目录> --app-closed`。
 
-**自 `1.4.0` 起**，直接执行（一条命令即装齐八个包，主包会把七个子包按精确版本解析下来）：
+**自 `1.4.0` 起**，直接执行（一条命令即装齐九个包，主包会把八个子包按精确版本解析下来）：
 
 ```sh
 dsh plugin --profile web add dsh-plugin-wallpaper-engine
@@ -166,8 +166,9 @@ dsh plugin --profile web add dsh-plugin-wallpaper-engine
 
 ### 插件行与启停
 
-插件管理器中的主包、关于、吉祥物与头像、媒体联动、桌宠联动、特效、视差和字体分别由对应行管理。**行级开关需要重新加载或重启对应宿主，不是即时切换**。
+插件管理器中的主包、关于、吉祥物与头像、媒体联动、桌宠联动、特效、视差、字体和**液态玻璃**分别由对应行管理。**行级开关需要重新加载或重启对应宿主，不是即时切换**。
 
+- **液态玻璃行**停用 = 宿主回到原生主题（壁纸不受影响，外观设置里的玻璃节随之隐藏）；重新启用后恢复全部玻璃观感。见 [COEXISTENCE](docs/COEXISTENCE.md)。
 - 关于、吉祥物与头像行停用后，相应宿主能力及浏览器区块一起退出；不会隐藏无关的整个设置页签。
 - 特效、视差和字体由各自子包提供；桌宠联动可独立停用，不影响壁纸主体。
 - 媒体联动行是例外：停用会撤下媒体路由，当前没有与其他组件完全相同的界面整块隐藏语义。
