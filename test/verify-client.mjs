@@ -280,8 +280,8 @@ assert.ok(/setAttribute\("data-we-glass-page", "on"\)/.test(writeFace)
   'the page-glass anchor must be mounted by glass.js and removed on dispose (paired; both halves in the glass bundle since ADR-0016 cut 3)');assert.ok(glassCode.includes('body[data-we-sidebar-glass] :where([data-we-surface-runtime="content"])'),
   'sidebar content surfaces must follow both the sidebar switch and runtime ownership',
 );
-assert.ok(code.includes('body[data-we-wallpaper] {') && code.includes('body[data-we-wallpaper]:not([data-ds-dark-theme])'),
-  'wallpaper-only effects (base let-through, light-scheme text boost) must remain wallpaper-gated');
+assert.ok(code.includes('body[data-we-wallpaper] {') && code.includes('body[data-we-wallpaper][data-we-glass-page]:not([data-ds-dark-theme])'),
+  'wallpaper-only effects (base let-through) stay wallpaper-gated; the light-scheme text boost follows the glass row too (ADR-0016: glass off = native labels)');
 // 宿主清底保留双门控，但只匹配挂载点外壳；未知插件的同名类不得被命中。
 const clearGated = (suffix) => 'body[data-we-wallpaper][data-we-adapter="browser"]' + suffix;
 const hostFrame = ' > #root > [class*="_frame"]:not([data-we-surface-preserve])';

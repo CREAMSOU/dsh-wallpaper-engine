@@ -212,7 +212,10 @@ const CSS_BASE = `
      push the whole gray ramp darker while a wallpaper is active. Primary text
      is already near-black; we still pin it to pure black for max legibility.
      (Dark mode is untouched: its white-on-dark text already reads fine.) */
-  body[data-we-wallpaper]:not([data-ds-dark-theme]) {
+  /* ADR-0016 第四刀勘误：文字提亮也是「壁纸让位」的一部分（为了在壁纸上读清），
+     改挂壁纸+玻璃页双门——停玻璃行时全部文字令牌回宿主原生值（用户口径：除内容区壁纸外
+     其他所有还原为原生主题）。 */
+  body[data-we-wallpaper][data-we-glass-page]:not([data-ds-dark-theme]) {
     --dsw-alias-label-primary: rgb(0, 0, 0);
     --dsw-alias-label-primary-dimmed: rgb(10, 10, 12);
     --dsw-alias-label-secondary: rgb(40, 42, 46);

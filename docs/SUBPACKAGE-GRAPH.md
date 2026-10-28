@@ -159,7 +159,7 @@ graph LR
 | 自带 `cordis.patch.yml`（`(id,name)` 与主包行逐字） | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | S4.2（有判据） |
 | `icon.png` + `locale/{en,zh}.json` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | S2.1（有判据） |
 | `lib/index.js`（= `main`，宿主半边入口） | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | S2.2 / S6.1（有判据） |
-| 宿主半边路由族 `packages/<pkg>/lib/routes/<族>.js` | —（空壳：行为全在浏览器半边） | —（同上） | ✓ `fontsets` / `system-fonts` | ✓ `about-qr` / `github-stars` | ✓ `avatar` / `mascot` | ✓ `now-playing` | ✓ `pet-link`（仅 `/pet-link/capability` 一条能力路由） | —（第一刀空壳：玻璃面板/运行时/CSS 三刀随包走，ADR-0016） | S2.3（人工） |
+| 宿主半边路由族 `packages/<pkg>/lib/routes/<族>.js` | —（空壳：行为全在浏览器半边） | —（同上） | ✓ `fontsets` / `system-fonts` | ✓ `about-qr` / `github-stars` | ✓ `avatar` / `mascot` | ✓ `now-playing` | ✓ `pet-link`（仅 `/pet-link/capability` 一条能力路由） | ✓ `glass-row`（仅 `/glass-row-state` 一条状态路由：存在性 = 行启用，行停用 ⇒ fiber prune ⇒ 404 = 浏览器半边即时中性化信号，ADR-0016） | S2.3（人工） |
 | 浏览器半边源码 `packages/<pkg>/src/**` | ✓ | ✓ | ✓（P-C 第一刀：入口 `src/client.js` + 外观页签字体节 + 字体集编辑器） | 无（浏览器半边仍在主包 `src/**` 内联） | 无（同上） | 无（同上） | ✓（入口 `src/client.js` + 两份内联 `pet-link-tuner.js` · `pet-link.js`；2026-10-17 起自出产物） | 无（第一刀仍内联主包 `src/**`；第二刀起入册） | S1.2 / S3.4 |
 | 构建产物 `lib/client.<pkg>.js`（构建产出；被 `.gitignore` 排除，**不进 git**） | ✓ | ✓ | ✓ `lib/client.fonts.js` | 无（浏览器半边仍在主包 `src/**` 内联） | 无（同上） | 无（同上） | ✓ `lib/client.pet-link.js`（2026-10-17 收口成一般形态；收口前由主包内联） | ✓ `lib/client.glass.js`（2026-10-28 第二刀；`FLOORS.clientArtifacts` 同批 5→6） | S10.2（有判据） |
 | `exports['./client']` + `dsh.client` | ✓ | ✓ | ✓ | 无（浏览器半边仍在主包 `src/**` 内联） | 无（同上） | 无（同上） | ✓（2026-10-17 收口成一般形态） | ✓（2026-10-28 第二刀收口，同 pet-link 先例） | S3.4（有判据） |
