@@ -89,8 +89,9 @@ const mutant = harness(true, mutantSource);
 mutant.setActive(true);
 assert.ok(!gateOn(mutant) && mutant.attributes.get(`${ATTR}-typo`) === 'on',
   'the gate predicate rejects an attribute-rename mutant');
-const drawerInsetSelector = 'html[data-windows-titlebar] body[data-we-glass-floaters] .we-repo-panel';
-const css = stripCssComments(cssBodyOf(bundle));
+const drawerInsetSelector = 'html[data-windows-titlebar] .we-repo-panel'; // ADR-0016 第四刀：该规则无门化（基础层）
+const glassBundle = readFileSync(new URL('../packages/glass/lib/client.glass.js', import.meta.url), 'utf8');
+const css = stripCssComments(cssBodyOf(bundle + glassBundle));
 function drawerInsetContract(text) {
   const rules = [...text.matchAll(/([^{}]+)\{([^{}]*)\}/g)];
   const rule = rules.find((match) => match[1].trim() === drawerInsetSelector);

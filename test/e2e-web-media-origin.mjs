@@ -97,7 +97,7 @@ let wrapperHtml = '';
 let pluginCss = '';
 let cssError = '';
 try {
-  pluginCss = cssBodyOf(styleText());
+  pluginCss = cssBodyOf(styleText() + readFileSync(new URL('../packages/glass/lib/client.glass.js', import.meta.url), 'utf8')); // ADR-0016
 } catch (err) {
   cssError = err instanceof Error ? err.message : String(err);
 }

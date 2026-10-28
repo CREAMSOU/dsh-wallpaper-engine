@@ -2537,7 +2537,7 @@ function onSidebarAllCorners(side, square) {
   emit();
 }
 // 标题栏液态玻璃（titlebarGlass）：与左侧栏同一形状的**乙类**总开关 —— 门控属性挂在
-// src/glass.js（本文件只翻存储键，切换不重建任何东西）。
+// 玻璃后端（现 packages/glass/src/glass.js，ADR-0016 第三刀出户；本文件只翻存储键，切换不重建任何东西）。
 function onTitlebarGlass(e) { setSetting("titlebarGlass", e.target.checked); emit(); }
 // 「思考块液态玻璃」三挡分段（关 / 液态玻璃 / 原生）：一次写两键 —— 原生挡赢过玻璃挡的
 // 互斥由 effects.js 的门控属性保证（thinkingNative ⇒ 不挂 data-we-thinking-glass），
@@ -3518,7 +3518,7 @@ const onUiColorElement = (field, hex, live) => {
 };
 // #159②：玻璃颜色**内部永远是一对** `{light, dark}`（见 lib/settings-schema.js 的 readGlassColors）。
 // 色板行只写"当前在设的那一侧"；开关关着时两侧写同一个色 —— 与颜色角色的 onThemeColor 同构。
-// 读那一对用 `panelGlassPair`（住在 src/glass-panel.js）：它**自带归一、不引用工厂作用域里的兄弟**，
+// 读那一对用 `panelGlassPair`（家在 lib/settings-schema.js，ADR-0016 第二刀归位；**自带归一、不引用工厂作用域里的兄弟**，
 // 因为 test/verify-scene-live.mjs 把 glass-panel.js 当真模块 import；这里不另存一份口径，
 // 免得"读的一侧"和"画的一侧"漂开（走到这儿的值可能仍是标量：老预设定档直传 / 台架 selection）。
 const onGlassColor = (mode, hex, live) => {
@@ -5851,74 +5851,6 @@ function useLegacySaturateCoupling() {
   return legacySaturateCoupling;
 }
 
-// ── 软件光栅化探测 ─────────────────────────────────────────────────────────
-// 某些第三方桌面外壳（增强 / 扩展窗口模式，通常是软件合成）里 `backdrop-filter`
-// 被静默忽略：属性语法仍然被接受，所以 `@supports not (backdrop-filter: …)`
-// 永远为真 —— 那条回退根本不会启用，玻璃面板就变成「过透」（全透）。因此这里做
-// 运行时探测：真的去建一个 WebGL 上下文并读渲染器字符串，如果它是软件光栅器
-// （或连上下文都建不出来），就把 body[data-we-glass-fallback] 挂上，让 CSS 用
-// 既有的近不透明配方接管（见 CSS 里那一段）。
-// 手动覆盖（用户排障 / 维护者无 GPU 环境复现）：
-//   ?we-glassfallback=on|1  → 强制回退 · off|0 → 强制关闭 · 其他值 = 自动探测
-// 只探测一次并缓存 —— applyEffects 每次设置变动都会读它。
-// 全程 typeof 守卫 + try/catch：非浏览器 / 验证沙箱里绝不抛出，也绝不改变行为。
-const SOFT_RENDER_RE = /swiftshader|software|llvmpipe|softpipe|microsoft basic render|angle \(software|stack-gl/i;
-let softRenderFallback; // undefined = 未探测 · true = 软件/无 WebGL · false = 硬件
-function detectSoftwareRender() {
-  if (softRenderFallback !== undefined) return softRenderFallback;
-  softRenderFallback = false;
-  try {
-    // 手动覆盖优先于一切探测（缓存最终决定）。
-    if (typeof location !== "undefined" && location && typeof location.search === "string") {
-      let raw = "";
-      if (typeof URLSearchParams === "function") {
-        raw = new URLSearchParams(location.search).get("we-glassfallback") || "";
-      } else {
-        const m = /[?&]we-glassfallback=([^&]*)/.exec(location.search);
-        raw = m ? decodeURIComponent(m[1]) : "";
-      }
-      const flag = String(raw).toLowerCase();
-      if (flag === "on" || flag === "1") return (softRenderFallback = true);
-      if (flag === "off" || flag === "0") return (softRenderFallback = false);
-    }
-    if (typeof document === "undefined" || !document
-        || typeof document.createElement !== "function") return softRenderFallback;
-    const canvas = document.createElement("canvas");
-    if (!canvas || typeof canvas.getContext !== "function") return (softRenderFallback = true);
-    let gl = null;
-    try { gl = canvas.getContext("webgl"); } catch { /* ignore */ }
-    if (!gl) { try { gl = canvas.getContext("experimental-webgl"); } catch { /* ignore */ } }
-    // 连 WebGL 上下文都拿不到 → 没有硬件合成，backdrop-filter 必定不生效。
-    if (!gl) return (softRenderFallback = true);
-    let renderer = "";
-    let vendor = "";
-    try {
-      const dbg = typeof gl.getExtension === "function" && gl.getExtension("WEBGL_debug_renderer_info");
-      if (dbg && typeof gl.getParameter === "function") {
-        renderer = gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) || "";
-        vendor = gl.getParameter(dbg.UNMASKED_VENDOR_WEBGL) || "";
-      }
-      // 没有调试扩展（或被隐私设置屏蔽）时退回公开的 RENDERER / VENDOR。
-      if (!renderer && typeof gl.getParameter === "function" && gl.RENDERER !== undefined) {
-        renderer = gl.getParameter(gl.RENDERER) || "";
-      }
-      // VENDOR 只是同一判定的第二个可读串（实测：本仓库自带的 supreium-headless-gl
-      // 是软件光栅器，但 RENDERER 只报裸 "ANGLE"，软件线索只出现在 VENDOR="stack-gl"，
-      // 且它不暴露 WEBGL_debug_renderer_info）—— 浏览器硬件链路不会因此误判。
-      if (!vendor && typeof gl.getParameter === "function" && gl.VENDOR !== undefined) {
-        vendor = gl.getParameter(gl.VENDOR) || "";
-      }
-    } catch { /* 读不到渲染器字符串：不判定为软件渲染 */ }
-    softRenderFallback = SOFT_RENDER_RE.test(String(renderer) + " " + String(vendor));
-    // 礼貌释放：只探测一次，但也不给页面永久占一个 WebGL 槽位。
-    try {
-      const lose = typeof gl.getExtension === "function" && gl.getExtension("WEBGL_lose_context");
-      if (lose && typeof lose.loseContext === "function") lose.loseContext();
-    } catch { /* ignore */ }
-  } catch { /* 探测异常：保持 false（不改变既有行为） */ }
-  return softRenderFallback;
-}
-
 // ── 跨包扩展注册（P-A）：三项「扩展」里有两项（点击拖尾 packages/fx、3D packages/parallax）
 //    从 P-A 起各自住在自己的包里 —— 它们的描述符与行为层**不再出现在本 bundle 的作用域里**，
 //    唯一通道是 src/extension-registry.js 这张共享注册表。本文件是**组装根**：
@@ -6462,6 +6394,21 @@ const petLink = {
 // `DEFAULTS` 整张表**不进** host 键面 ⇒ 只给这一格显式绑定。真源仍是
 // lib/settings-schema.js 的 DEFAULTS.rotationInterval（verify-client 有同源判据 + 负对照）。
 const ROTATION_INTERVAL_DEFAULT = DEFAULTS.rotationInterval;
+// ── 玻璃运行时状态门面（ADR-0016 第三刀）────────────────────────────────────
+// weGlassSurfaceStatus（表面策略诊断投影）的真实现住 packages/glass 的 glass-surfaces.js ——
+// 本 bundle 的作用域里没有那个函数名。外观 ctx 的组装点要它 ⇒ 与 petLink 同款「门面 + 缓冲登记」：
+// 真实现经桥键 registerGlassStatus 由玻璃包在求值期送进来；缺席（玻璃行没装 / 被关）时返回 []，
+// 面板的状态列表空着 —— 缺的是那一节的状态，不是页面。迟到登记由玻璃包同一次求值里的
+// registerLayerHooks 触发注册表 listener ⇒ emit() 重画，状态自然补上。
+let glassStatusApi = null;
+function weGlassSurfaceStatus() {
+  return glassStatusApi ? glassStatusApi.status() : [];
+}
+/** 子包登记入口（桥键 registerGlassStatus）：入槽即可 —— 状态是纯投影，无补做动作。 */
+function glassStatusRegister(api) {
+  glassStatusApi = api;
+  return api;
+}
 
 const HOST_BRIDGE_BINDINGS = {
   selection: () => selection,
@@ -6518,11 +6465,6 @@ const HOST_BRIDGE_BINDINGS = {
   uploadWallpaperFile: () => uploadWallpaperFile,
   removeUploadWallpaper: () => removeUploadWallpaper,
   renderConfirmRow: () => renderConfirmRow,
-  // ── 壁纸子包浏览器半边（packages/media-bridge）的显式键集 ─────────────────────────────
-  // 来源 = 两个渲染器（packages/media-bridge/src/wallpaper-{transition,rotation}-section.js）
-  // 里的**自由标识符**逐个点名；
-  // 动作体 / 默认值 / 持久化全留主包（ADR-0013 D20）⇒ 这里给活绑定 getter，不是值拷贝。
-  // 轮播间隔走窄键 rotationIntervalDefault（同源 = DEFAULTS.rotationInterval，见上方常量）。
   switchTransitionOf: () => switchTransitionOf,
   SWITCH_TRANSITIONS: () => SWITCH_TRANSITIONS,
   SWITCH_DIRS: () => SWITCH_DIRS,
@@ -6536,19 +6478,40 @@ const HOST_BRIDGE_BINDINGS = {
   importPlaylistIntoDraft: () => importPlaylistIntoDraft,
   Toggle: () => Toggle,
   rotationIntervalDefault: () => ROTATION_INTERVAL_DEFAULT,
-  // ── 壁纸子包浏览器半边（packages/media-bridge，P-D S3c：当前壁纸节）的显式键集 ─────────────
-  // 来源 = packages/media-bridge/src/wallpaper-current-section.js 的**自由标识符**逐个点名：
-  //   VinylRecord / vinylSpinVisible（src/client.js 工厂作用域）· liveFailReasonOf（src/live-layer.js，
-  //   同一内联工厂作用域）。播放态 / 失败原因计算 / 动作体全留主包（ADR-0013 D20）⇒ 活绑定 getter。
+  // 当前壁纸节：VinylRecord / vinylSpinVisible（本作用域）· liveFailReasonOf（src/live-layer.js，
+  // 同一内联工厂作用域）。播放态 / 失败原因计算 / 动作体全留主包（ADR-0013 D20）。
   VinylRecord: () => VinylRecord,
   vinylSpinVisible: () => vinylSpinVisible,
   liveFailReasonOf: () => liveFailReasonOf,
-  // ── 壁纸子包浏览器半边（packages/media-bridge，P-D S3d：播放配置两节）的显式键集 ─────────
-  // 来源 = packages/media-bridge/src/playback-rate-section.js / wallpaper-fit-section.js 的自由标识符：
-  //   FPS_CAP_VALUES（lib/settings-schema.js）· codecLabel（src/client-audio-playback.js）—— 两者都在
-  //   主 bundle 的内联工厂作用域里。倍速 / 帧率 / 适配 / 翻转的动作体全留主包（ADR-0013 D20）⇒ 活绑定。
+  // 播放配置两节：FPS_CAP_VALUES（schema）· codecLabel（client-audio-playback）都在主 bundle 内。
   FPS_CAP_VALUES: () => FPS_CAP_VALUES,
   codecLabel: () => codecLabel,
+  // ── 玻璃半边（packages/glass，ADR-0016 第二刀）的显式键集 ───────────────────────────
+  // 来源 = packages/glass/src/glass-panel.js 的**自由标识符**逐个点名（键集真源 = 本表；
+  // 子包侧 *_HOST_REQUIRED 由 verify-subpackage-client-half 双向对账）。
+  // React / weT / switchRow / SliderRow / swatchRow / ctlText / sectionHead / renderConfirmRow
+  // 是 fx / fonts / media-bridge 已登记过的键，glass 复用、**不重复登记**。新增八键如下；
+  // 反面同样严格：多一个键就是多一条没人维护的隐式契约（多一个都不给）。
+  moduleResetButtonNode: () => moduleResetButtonNode,
+  GLASS_CHILDREN: () => GLASS_CHILDREN,
+  childGlassKey: () => childGlassKey,
+  GLASS_COLOR_PRESETS: () => GLASS_COLOR_PRESETS,
+  ROPE_FORMS: () => ROPE_FORMS,
+  ROPE_FORM_VALUES: () => ROPE_FORM_VALUES,
+  panelGlassPair: () => panelGlassPair,
+  // 第三刀（运行时随包走）新增五键 + 两个登记入口（registerLayerHooks 已有）：
+  //   · skinYieldActive —— 让路态判定（applyGlass 门控与思考块/侧栏跟随共用）；
+  //   · weClampSurfaceColor / glassColorOf —— 染色地板钳制与分主题取色（家留主包，子包经此共享）；
+  //   · sanitizeExtraGlassSelectors —— #200 选择器消毒（settings-schema 具名导出）；
+  //   · GLASS_SATURATE / useLegacySaturateCoupling —— 饱和耦合常量与 A/B 旧斜坡；
+  //   · registerGlassStatus —— 表面状态投影登记（本文件 glassStatusRegister）。
+  skinYieldActive: () => skinYieldActive,
+  weClampSurfaceColor: () => weClampSurfaceColor,
+  glassColorOf: () => glassColorOf,
+  sanitizeExtraGlassSelectors: () => sanitizeExtraGlassSelectors,
+  GLASS_SATURATE: () => GLASS_SATURATE,
+  useLegacySaturateCoupling: () => useLegacySaturateCoupling,
+  registerGlassStatus: () => glassStatusRegister,
 };
 const HOST_BRIDGE_KEYS = Object.keys(HOST_BRIDGE_BINDINGS);
 for (const bridgeKey of HOST_BRIDGE_KEYS) {

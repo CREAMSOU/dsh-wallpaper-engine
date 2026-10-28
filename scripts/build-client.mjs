@@ -122,23 +122,21 @@ const INLINE_MODULES = [
   },
   {
     file: 'src/styles-base.js',
-    why: '样式域 base（原 styles.js 61–592）：画布兜底 · 玻璃总锚点与表面令牌 · markdown 底 · 对比度 · 全局 UI 配色 · 可读性下限常量（与消费它的 CSS 同处一文件）',
-    markers: ['const CSS_BASE = `', 'const READABILITY_FLOOR = ', 'const READABILITY_FLOOR_DARK = ', '/* ── 画布兜底色'],
+    why: '样式域 base（原 styles.js 61–592；ADR-0016 第四刀玻璃段出户后）：画布兜底 · 全局 UI 配色 · 面板色与弹层行配对',
+    markers: ['const CSS_BASE = `', '/* ── 画布兜底色', '--we-popup-row-bg'],
   },
   {
     file: 'src/styles-shell.js',
-    why: '样式域 shell（原 styles.js 593–1134）：iOS liquid glass · 思考触发条 · 输入座位 · composer card · 轨迹霜 · 吸顶条 · 原生左栏底 · 外壳画布底',
-    markers: ['const CSS_SHELL = `', '/* ── iOS liquid glass'],
+    why: '样式域 shell（ADR-0016 第四刀玻璃段出户后）：原生左栏模式底 · 外壳画布底（壁纸让位两段）',
+    markers: ['const CSS_SHELL = `', '/* ── 原生左栏在 extended/advanced 窗口模式下的不透明底', '/* ── 外壳画布底'],
   },
-  {
-    file: 'src/styles-sidebar.js',
-    why: '样式域 sidebar（原 styles.js 1135–1622）：左侧栏液态玻璃 · 四角圆角 · 标题栏玻璃与模糊层 · better-sidebar glass · 官方右侧栏 · 内容面',
-    markers: ['const CSS_SIDEBAR = `', '/* ── 左侧栏液态玻璃'],
-  },
+  // ── ADR-0016 第四刀（2026-10-28）：styles-sidebar.js **整文件**随玻璃包走（该域全部是
+  //    玻璃接管：左栏 / 四角圆角 / 标题栏 / better-sidebar / 官方右栏 / 内容面）——
+  //    内容住 packages/glass/src/glass-css.js 的 CSS_GLASS，主包组装式不再有 CSS_SIDEBAR 段。
   {
     file: 'src/styles-chrome.js',
-    why: '样式域 chrome（原 styles.js 1623–1915）：统一控件 token · 原生设置整窗玻璃 · 插件源浮层 · corner-shape 兼容(#74)',
-    markers: ['const CSS_CHROME = `', '/* ── 统一控件 token'],
+    why: '样式域 chrome（ADR-0016 第四刀玻璃段出户后）：统一控件 token · corner-shape 兼容(#74)',
+    markers: ['const CSS_CHROME = `', '/* ── 统一控件 token', '/* ── DSH harness corner-shape 兼容'],
   },
   {
     file: 'src/styles-settings.js',
@@ -157,13 +155,13 @@ const INLINE_MODULES = [
   },
   {
     file: 'src/styles-ext.js',
-    why: '样式域 ext（原 styles.js 3358–3742）：软件渲染回退(#95) · 「关于」页签 · 扩展槽位与三号模块 · 侧栏全透明(#137)',
-    markers: ['const CSS_EXT = `', '/* ── 软件渲染回退'],
+    why: '样式域 ext（ADR-0016 第四刀玻璃段出户后）：「关于」页签 · 扩展槽位与三号模块',
+    markers: ['const CSS_EXT = `', '/* ── 「关于」页签：静态页'],
   },
   {
     file: 'src/styles.js',
-    why: '样式族**组装点**（8 个域模块按本清单顺序相加 ⇒ 与原单模板逐字节相同；可读性下限由 styles-base.js 声明并导出）',
-    markers: ['const CSS = CSS_BASE + CSS_SHELL + CSS_SIDEBAR + CSS_CHROME + CSS_SETTINGS + CSS_PANEL + CSS_QUICK + CSS_EXT;',
+    why: '样式族**组装点**（域模块按本清单顺序相加；ADR-0016 第四刀起玻璃段住 packages/glass/src/glass-css.js 的 CSS_GLASS，由玻璃包自注入）',
+    markers: ['const CSS = CSS_BASE + CSS_SHELL + CSS_CHROME + CSS_SETTINGS + CSS_PANEL + CSS_QUICK + CSS_EXT;',
       'export { CSS };'],
   },
   {
@@ -255,30 +253,30 @@ const INLINE_MODULES = [
   // 本数组里 `preset-store → section-head` 的相邻关系不变（各模块都按名字引用，顺序不承载语义）。
   {
     // 面板各节的统一节头构件（二次修订：**两档都支持隐藏**）。
-    // ⚠️ 必须排在 `src/glass-panel.js` 与 `src/panel-tabs.js` **之前**：那两个模块都按名字
-    //    直接调它（内联后同作用域）。虽然函数声明有提升、顺序其实不致命，但排在调用方前面
-    //    才读得出依赖方向 —— 与 `we-base.js` 排最前是同一条理由。
+    // ⚠️ 必须排在 `src/panel-tabs.js` **之前**：它按名字直接调它（内联后同作用域）。
+    //    虽然函数声明有提升、顺序其实不致命，但排在调用方前面才读得出依赖方向 —— 与
+    //    `we-base.js` 排最前是同一条理由。（ADR-0016 第二刀起 glass-panel 那份经主 bundle
+    //    的 HOST_BRIDGE 键 `sectionHead` 取同一实现，不再本表内联。）
     file: 'src/section-head.js',
-    why: '节头构件（可折叠）：panel-tabs 与 glass-panel 共用的那一份，抽出来是为了让挂载台能 import 真实现',
+    why: '节头构件（可折叠）：panel-tabs 用；packages/glass 经桥接键 sectionHead 取同一份，抽出来是为了让挂载台能 import 真实现',
     markers: ['function sectionHead(label, open, onToggle, action) {',
       'className: "we-picker__section-head we-picker__section-head--toggle"'],
   },
   {
     // 模块级重置按钮（issue #192 的 ↺）：与 section-head 同一条理由抽出来 ——
-    // panel-tabs（外观各节 + 扩展模块头）与 glass-panel（玻璃 UI）共用同一枚构件，
-    // 抽成独立文件才能让挂载台 import 到真实现。
+    // panel-tabs（外观各节 + 扩展模块头）在主 bundle 用；packages/glass（玻璃 UI）经桥接键
+    // moduleResetButtonNode 取同一实现（ADR-0016 第二刀起不再本表内联）。
     file: 'src/module-reset.js',
-    why: '模块级重置按钮（↺）：panel-tabs 与 glass-panel 共用；模块名查 RESET_MODULES 取键集',
+    why: '模块级重置按钮（↺）：panel-tabs 用；packages/glass 经桥接键 moduleResetButtonNode 取同一份；模块名查 RESET_MODULES 取键集',
     markers: ['function moduleResetButtonNode(moduleName, onResetModule, labels) {',
       'className: "we-mod-reset"'],
   },
-  {
-    // 「玻璃 UI」节的渲染器（wip §10.13）：与其余页签只共享**模块级纯助手**，
-    // 所以抽出去不需要 ctx 传参样板。
-    file: 'src/glass-panel.js',
-    why: '「玻璃 UI」节渲染器（注册表驱动：GLASS_CHILDREN + childGlassKey；只读 ctx、动作经 on* 处理器）',
-    markers: ['function renderAppearanceGlassSection(ctx) {', 'const CHILD_CN = {'],
-  },
+  // ── ADR-0016 第二刀（2026-10-27）：「主题预设」+「玻璃 UI」节渲染器（原 src/glass-panel.js）
+  //    **已迁出主 bundle**，住 packages/glass，由该包自己的 client.build.json 出产物
+  //    lib/client.glass.js；主包只留 panel-tabs 里那枚按 id 取渲染器的**注册表占位桩**
+  //    （屏上位置不变：主题 → 细节 → 玻璃 UI → 侧栏圆角 → 全局 UI 配色 → 全局字体）。
+  //    迁出的等价性证据与 fx/parallax 同款：逐字节相同（`git diff --no-index` 可复核），
+  //    差量只有 outline 的 host 绑定与空 apply/inject。
   // ── P-A 起：点击拖尾与 3D 两份「画布层 + 描述符」**已迁出主 bundle**，各自住自己的包
   //    （packages/fx、packages/parallax），由各包自己的 `client.build.json` 配方各出一份产物；主包只留
   //    `src/extension-registry.js` 这张收件箱（谁登记了什么只能问它）。
@@ -452,31 +450,16 @@ const INLINE_MODULES = [
     markers: ['var OCCLUSION_POLL_MS = ', 'function startOcclusionPolling(', 'function stopOcclusionPolling(',
       'function occlusionTick(', 'function deliverOcclusionSnapshot('],
   },
-  {
-    // 玻璃后端的唯一落点（wip §10.13）：从 `effects.js` 抽出的那一段 ——
-    // 输入输出封闭（只要 `selection` + `body.style`），所以抽出来之后
-    // ⑪/⑫/⑬ 三组守卫读的"写了什么"有了单一归属，R3b 的形状改动也只落在这里。
-    file: 'src/glass.js',
-    why: '玻璃后端：取值解析 / 各面釉层变量 / 门控属性（无条件写，值槽位与开关正交）',
-    markers: ['const toRgbTriple = (hex) => {', 'function applyGlass(selection, s) {',
-      'const glassValue = (surface, param, profileValue, globalValue) =>'],
-  },
-  {
-    file: 'src/glass-surfaces.js',
-    why: '统一表面策略、安全载体、动态几何与可撤销生命周期',
-    markers: ['function weResolveSurface(', 'function syncGlassSurfaces(', 'function disposeGlassSurfaces('],
-  },
-  {
-    // 运行时表面管理先决定哪些额外目标可安全使用本地载体。
-    file: 'src/glass-extra.js',
-    why: '「额外补雾化的选择器」（#200）：把用户点名的选择器编译成 ::before 载体规则，写进本通道自己的 <style>',
-    markers: ['const EXTRA_GLASS_TAG_ID = ', 'function weExtraGlassCss(',
-      'function syncExtraGlassCss(', 'function disposeExtraGlassCss('],
-  },
+  // ── ADR-0016 第三刀（2026-10-28）：玻璃**运行时**（原 src/glass.js / glass-surfaces.js /
+  //    glass-extra.js + effects.js 的玻璃段 + detectSoftwareRender）**已迁出主 bundle**，
+  //    住 packages/glass/src/，由该包的 client.build.json 出产物，经 registerLayerHooks('glass')
+  //    挂进主包的 emit 节拍（sync = 原玻璃段写入、dispose = 原清理清单，逐字搬迁）；
+  //    weClampSurfaceColor / glassColorOf 两个纯函数**家留主包**（effects.js，染色地板判据
+  //    从主包产物抽取复算），子包经 HOST_BRIDGE 键集取同一份。
   {
     file: 'src/effects.js',
-    why: '效果应用层（设置 → DOM；契约见文件头，见 P1-7 后半）—— 玻璃那一段已抽到 src/glass.js',
-    markers: ['let lastScrimCss = "";', 'function applyEffects(', 'applyGlass(selection, s);',
+    why: '效果应用层（设置 → DOM；契约见文件头）—— 玻璃段已出户（ADR-0016 第三刀），本文件只剩非玻璃效果',
+    markers: ['let lastScrimCss = "";', 'function applyEffects(',
       'function clearEffects()', 'function resolveWallpaperFadeBg()'],
   },
   {

@@ -66,56 +66,13 @@ const CSS_QUICK = `  /* ── Rope dock: chibi pull-cord + glass repo drawer �
     pointer-events: none; /* drag/capture stays on the .we-rope box */
   }
 
-  /* #249：.we-update-notice / .we-repo-panel 都渲染在 body 末尾的独立 React root 里，
-     是块级子节点。此前它们全部样式（含定位）都挂在 body[data-we-glass-floaters] 下；
-     「皮肤在台上」的让路态会把该门控属性整族摘掉 ⇒ 节点退化成 body 流里的普通块
-     （左下角裸文本 + 公告图顶穿窗口底部，整屏布局被撑歪）。这里把「脱离文档流所需的
-     定位 / 尺寸 / 层叠 / 收起态」抽成无条件基础规则；门控属性只负责玻璃外观，不再决定
-     节点是否脱离文档流。后面的门控规则特异性更高，会整组覆盖这些基础声明。
-     ⚠️ 本段在模板字符串里：注释内不许出现反引号或美元加大括号（会提前闭合/插值模板）。 */
-  .we-update-notice {
-    position: fixed; left: 50%; bottom: 26px; z-index: 1100;
-    transform: translateX(-50%);
-    width: min(600px, 92vw);
-    max-height: min(78dvh, 720px);
-    box-sizing: border-box;
-    display: flex; flex-direction: column; gap: 10px;
-    padding: 16px 18px; border-radius: 14px;
-    background-color: rgba(24, 24, 28, 0.88);
-    color: inherit;
-  }
-  .we-repo-panel {
-    position: fixed; top: 0; right: 0;
-    width: 360px; max-width: 92vw;
-    height: 100vh; height: 100dvh;
-    z-index: 995;
-    display: flex; flex-direction: column;
-    padding: 14px;
-    box-sizing: border-box;
-    transform: translateX(102%);
-    opacity: 0; visibility: hidden; pointer-events: none;
-    transition:
-      transform 640ms cubic-bezier(0.32, 0.72, 0.24, 1),
-      opacity 480ms ease,
-      visibility 0s linear 640ms;
-  }
-  html[data-windows-titlebar] .we-repo-panel {
-    padding-top: calc(14px + var(--dsh-windows-titlebar-height, 40px));
-  }
-  .we-repo-panel--open {
-    transform: translateX(0);
-    opacity: 1; visibility: visible; pointer-events: auto;
-    transition:
-      transform 640ms cubic-bezier(0.32, 0.72, 0.24, 1),
-      opacity 480ms ease,
-      visibility 0s;
-  }
-
   /* One-time update notice — a floating glass toast (bottom-center) that tells
      immersive/kiosk-window users about the white flash and its one fix. High
      z-index so it sits above the chat; buttons reuse the flat picker style.
      底板跟着主题底色走（max(下限, 82%) 的衬底）：明主题白衬黑字、暗主题深蓝衬白字。 */
-body[data-we-glass-floaters] .we-update-notice {
+/* ADR-0016 第四刀：基础层**无门**（几何 + 面板色实底）—— 玻璃行停用时公告仍是
+   一块可读的实底浮层，而不是裸文本叠在壁纸上；玻璃皮（门内）叠加时以玻璃配方覆盖底色。 */
+.we-update-notice {
     position: fixed; left: 50%; bottom: 26px; z-index: 1100;
     transform: translateX(-50%);
     width: min(600px, 92vw);
@@ -128,14 +85,22 @@ body[data-we-glass-floaters] .we-update-notice {
     box-sizing: border-box;
     display: flex; flex-direction: column; gap: 10px;
     padding: 16px 18px; border-radius: 14px;
+    background-color: var(--we-panel-color, #ffffff);
+    border: 1px solid rgba(128, 128, 128, 0.28);
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.4);
+    color: inherit;
+    animation: we-notice-in 240ms var(--we-ease, cubic-bezier(0.16, 1, 0.3, 1));
+  }
+  /* 玻璃皮（data-we-glass-floaters 门内）：底色换玻璃配方、加雾化与玻璃描边。
+     依赖的按面变量（--we-floaters-*）由玻璃包行为层写出（ADR-0016 第三刀），
+     门在则变量必在（零兜底契约不变）；玻璃行停用 ⇒ 门失效 ⇒ 上面那条基础层兜住。 */
+  body[data-we-glass-floaters] .we-update-notice {
     background-color: color-mix(in srgb, var(--we-surface-tint-light, #ffffff) calc(var(--we-floaters-alpha) * 90%), var(--we-readability-base) calc(max(var(--we-readability-floor), 0.82) * 100%));
     background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.03) 40%, rgba(255, 255, 255, 0.01));
     -webkit-backdrop-filter: blur(var(--we-floaters-blur)) saturate(1.2);
     backdrop-filter: blur(var(--we-floaters-blur)) saturate(1.2);
-    border: 1px solid var(--dsw-alias-border-l2, rgba(128, 128, 128, 0.22));
+    border-color: rgba(255, 255, 255, 0.22);
     box-shadow: 0 18px 48px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.18);
-    color: inherit;
-    animation: we-notice-in 240ms var(--we-ease, cubic-bezier(0.16, 1, 0.3, 1));
   }
   @keyframes we-notice-in { from { opacity: 0; transform: translate(-50%, 12px); } }
   .we-update-notice__title { font-weight: 600; font-size: 0.95em; flex: 0 0 auto; }
@@ -150,7 +115,7 @@ body[data-we-glass-floaters] .we-update-notice {
      已经很高，小窗口会顶出视口）——限高 26vh、宽度跟随、居中（用户口径：38vh 在 1080p 下
      ≈410px，几乎独占半屏，压到 26vh 给正文让位）。发丝边 + 投影让它贴着玻璃面板的既有语言，
      而不是一块浮贴的截图。 */
-  .we-update-notice__art { display: block; margin: 0 auto; width: auto; max-width: 100%; max-height: 26vh; border-radius: 10px; border: 1px solid var(--dsw-alias-border-l2, rgba(128, 128, 128, 0.22)); box-shadow: 0 10px 26px rgba(0, 0, 0, 0.28);
+  .we-update-notice__art { display: block; margin: 0 auto; width: auto; max-width: 100%; max-height: 26vh; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.22); box-shadow: 0 10px 26px rgba(0, 0, 0, 0.28);
     /* 面板限高后允许配图先让位（min-height: 0 是 img 能在 flex 里缩小的前提：
        img 的固有尺寸会当 min-content，不给 0 就永远不缩）；正文区随后才滚动。 */
     flex: 0 1 auto; min-height: 0; }
@@ -170,7 +135,9 @@ body[data-we-glass-floaters] .we-update-notice {
      opacity fade, token-driven; closed keeps visibility hidden (delayed so the
      fade-out finishes first) with pointer-events off. 只在低版本宿主使用 ——
      官方右侧栏已接管同一份内容（见 src/sidebar-right.js）。 */
-body[data-we-glass-floaters] .we-repo-panel {
+/* ADR-0016 第四刀：抽屉本体**无门**（几何/关闭态/面板色底）—— 玻璃行停用时抽屉
+   仍是一块可用的实底滑出面板；玻璃皮只留在 --open 态那条门内规则里。 */
+.we-repo-panel {
     position: fixed; top: 0; right: 0;
     width: 360px; max-width: 92vw;
     height: 100vh; height: 100dvh;
@@ -178,6 +145,7 @@ body[data-we-glass-floaters] .we-repo-panel {
     display: flex; flex-direction: column;
     padding: 14px;
     box-sizing: border-box;
+    background-color: var(--we-panel-color, #1e1f26);
     transform: translateX(102%);
     opacity: 0;
     visibility: hidden;
@@ -188,15 +156,28 @@ body[data-we-glass-floaters] .we-repo-panel {
       visibility 0s linear 640ms;
   }
   /* Native caption buttons overlay the top edge; inset the whole drawer content. */
-  html[data-windows-titlebar] body[data-we-glass-floaters] .we-repo-panel {
+  html[data-windows-titlebar] .we-repo-panel {
     padding-top: calc(14px + var(--dsh-windows-titlebar-height, 40px));
   }
   /* The glass (backdrop-filter + tint + shadow) lives ONLY on the open state:
      while closed the panel is off-screen and must not allocate a full-viewport
      backdrop-filter compositing layer (a fixed, always-present backdrop-filter
      layer is a known Chromium white-flash-on-repaint source). */
-body[data-we-glass-floaters] .we-repo-panel--open {
-    border-left: 1px solid var(--dsw-alias-border-l2, rgba(128, 128, 128, 0.22));
+/* 打开态的**布局与可见性**无门（玻璃行停用时抽屉照常开合）；背景保留基础层
+   的面板色实底。玻璃皮单独留在下面的门内规则。 */
+.we-repo-panel--open {
+    border-left: 1px solid rgba(128, 128, 128, 0.28);
+    transform: translateX(0);
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition:
+      transform 640ms cubic-bezier(0.32, 0.72, 0.24, 1),
+      opacity 480ms ease,
+      visibility 0s;
+  }
+  /* 玻璃皮（门内）：可读性下限配方 + 雾化 + 玻璃描边（变量由玻璃包行为层写出）。 */
+  body[data-we-glass-floaters] .we-repo-panel--open {
     /* 插件自己的抽屉同样是文字面 → 同一层可读性下限。 */
     background-color: color-mix(in srgb,
       var(--we-readability-base) calc(var(--we-readability-floor) * 100%),
@@ -208,16 +189,8 @@ body[data-we-glass-floaters] .we-repo-panel--open {
       inset 1px 0 0 rgba(255, 255, 255, var(--we-glass-highlight, 0.32)),
       inset 0 1px 0 rgba(255, 255, 255, 0.14),
       -18px 0 44px rgba(0, 0, 0, 0.22);
-    transform: translateX(0);
-    opacity: 1;
-    visibility: visible;
-    pointer-events: auto;
-    transition:
-      transform 640ms cubic-bezier(0.32, 0.72, 0.24, 1),
-      opacity 480ms ease,
-      visibility 0s;
   }
-body[data-we-glass-floaters] .we-repo-panel__head {
+.we-repo-panel__head {
     display: flex; align-items: center; justify-content: space-between;
     gap: 8px; flex: 0 0 auto;
     padding-bottom: 10px;
@@ -225,7 +198,7 @@ body[data-we-glass-floaters] .we-repo-panel__head {
   }
   .we-repo-panel__title { font-weight: 600; font-size: 0.95em; white-space: nowrap; }
   /* Body: THE scroll container（内容 = QuickPanel 快捷播放面板）。 */
-body[data-we-glass-floaters] .we-repo-panel__body {
+.we-repo-panel__body {
     flex: 1; min-height: 0;
     overflow-y: auto;
     overscroll-behavior: contain;   /* wheel doesn't bleed into the chat behind */

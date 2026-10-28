@@ -84,17 +84,17 @@ function weComponentVisibleOf(components, name) {
   // 用户口径：主题 → 细节 → 玻璃 UI → 侧边栏圆角 → 全局 UI 配色 → 全局字体。
   // 与上一版的差别只有一处：**「玻璃 UI」与「侧边栏圆角」对调**（前者上移到细节之后）。
   // 首行的空解构是**契约**（test/verify-scene-live.mjs 的『每个页签首行都从 ctx 解构』）：
-  // 本页签只把 ctx 转交给各节、自己不读字段 —— 所以那不是无操作声明。
+  // 本页签只把 ctx 转交给各节、自己不读字段 —— 所以那不是无操作声明，是"要什么写在签名处"。
   function renderAppearanceTab(ctx) {
     const { } = ctx;
-    // 第六节「全局字体」在 P-C 之后**住在 packages/fonts**（子包把渲染器登记进
-    // src/extension-registry.js 的面板节注册表）⇒ 这里按注册表续接，屏上位置仍**在最后**
-    //（描述符不写 `order` ⇒ 落到默认位 100；顺序口径与 extensionModules() 同源）。
-    // ⚠️ 注册表为空 = 该子包没装 / 被关：页签照画前五节，**不**整页签消失
-    //    （D3①/D3③ 在这条通道上的形态：缺的是那一节，不是这一页）。
-    const registered = wePanelSectionsOf("appearance").map((section) => (
-      React.createElement(React.Fragment, { key: section.id }, section.render(ctx))
-    ));
+    // 尾部续接的注册节（fonts 落默认位 100 在最后）。⚠️ glass 不在这条通道上：它有**内置位**
+    // （第三节，由下面的 renderAppearanceGlassSection 占位桩锚定）⇒ 排除，否则一节画两遍
+    // （ADR-0016 第二刀：渲染器住 packages/glass，按 id 从注册表取）。
+    const registered = wePanelSectionsOf("appearance")
+      .filter((section) => section.id !== "glass")
+      .map((section) => (
+        React.createElement(React.Fragment, { key: section.id }, section.render(ctx))
+      ));
     return React.createElement(React.Fragment, null,
       renderAppearanceThemeSection(ctx),
       renderAppearanceDetailSection(ctx),
@@ -105,6 +105,17 @@ function weComponentVisibleOf(components, name) {
       renderAppearanceUiColorSection(ctx),
       registered,
     );
+  }
+
+  // 「主题预设」+「玻璃 UI」节的**注册表占位桩**（ADR-0016 第二刀）：真渲染器住 packages/glass
+  // （它把自己的 render 登记进 src/extension-registry.js 的面板节注册表）。这里按 id 取出来、
+  // 在内置位（第三节）上调它 —— 屏上顺序与搬迁前逐字一致，两种档面（设置页 / 侧栏）同一条路。
+  // 注册表里没有 = 该子包没装 / 行被关 ⇒ 返回 null（React 对 null 子节点零渲染）⇒
+  // **缺的是这一节，不是这一页**（D3①/D3③；fonts 那条尾部通道同款语义）。
+  // 迟到注册（子包产物在面板首画之后才求值）由注册表的 wePanelSectionFire 重画兜底。
+  function renderAppearanceGlassSection(ctx) {
+    const section = wePanelSectionsOf("appearance").find((s) => s.id === "glass");
+    return section ? section.render(ctx) : null;
   }
 
 

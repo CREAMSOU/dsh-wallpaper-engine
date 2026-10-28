@@ -38,7 +38,8 @@ function check(name, ok, detail) {
 //    声明字面量会把锚点带偏，取出的"模板"会从注释一直吃到文件尾。
 // （刀3）：样式表拆成 8 个域模板 + 组装点 ⇒ 取文改走 cssBodyOf（按声明顺序拼回
 // 一份 CSS 体，与旧单模板取文逐字节相同）；取不到任何模板会抛错，不再静默拿空串当"通过"。
-const CSS_BODY = cssBodyOf(SRC);
+const GLASS_BUNDLE = readFileSync(new URL('../packages/glass/lib/client.glass.js', import.meta.url), 'utf8');
+const CSS_BODY = cssBodyOf(SRC + GLASS_BUNDLE);
 const num = (re) => Number((SRC.match(re) || [])[1]);
 let CSS = '';
 try {
@@ -89,7 +90,7 @@ const qualified = sels.filter((s) => s.includes(GATE));
   // 取文口径从"单个模板"换成"族内全部模板按构建序拼接"—— 判据（长度上下限）一字未改。
   // 取不到任何域模板时给空串 ⇒ 下面的 length 判据必红（不是静默通过）。
   let region;
-  try { region = cssBodyOf(SRC); } catch { region = ''; }
+  try { region = cssBodyOf(SRC + GLASS_BUNDLE); } catch { region = ''; }
   // ⚠️ 这里**不许**断言"提取到的模板里没有裸反引号"：抽取正则本身就是 `[^`]*`，该断言对
   // 任何输入恒真（数学恒等式）；"注入一个反引号后被抓到 1/1"也只是拿测试自己刚写下的串跟同一段
   // 正则比（C3）。真正会失真的量是**抽取长度**，两个方向都要红：

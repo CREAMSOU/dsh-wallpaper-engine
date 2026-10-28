@@ -25,7 +25,7 @@
  *   node test/tools/token-contract.mjs --write    # 写入 docs/TOKEN-CONTRACT.md
  *   node test/tools/token-contract.mjs --stats    # 只打印聚合数（对审计口径）
  */
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { scopeFiles } from './src-scope.mjs';
@@ -35,7 +35,17 @@ import { stripCssComments } from './css-text.mjs';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const DOC = join(ROOT, 'docs', 'TOKEN-CONTRACT.md');
 /** 样式族：8 个域模块 + 组装点，顺序 = 构建期内联顺序（INLINE_MODULES 单一真源）。 */
-const STYLE_FAMILY = scopeFiles('src/styles');
+// ADR-0016 第四刀：玻璃 CSS（glass-css.js）随玻璃包走 —— 扫描面 = 主包 8 模板 ∪ 玻璃包
+// 配方里的 glass-css 条目（真源 = 该包自己的 client.build.json；第四刀落地前文件不存在 ⇒
+// 过滤为空，工具照常只扫主包）。
+const GLASS_STYLE_FILES = (() => {
+  try {
+    const recipe = JSON.parse(readFileSync(join(ROOT, 'packages', 'glass', 'client.build.json'), 'utf8'));
+    return recipe.inline.map((e) => 'packages/glass/' + e.file)
+      .filter((f) => f.includes('glass-css') && existsSync(join(ROOT, f)));
+  } catch { return []; }
+})();
+const STYLE_FAMILY = scopeFiles('src/styles').concat(GLASS_STYLE_FILES);
 
 /**
  * 抽出某个**样式域模板**的模板体（`const CSS` 或 `const CSS_<域> = \`…\``）。模板里没有
@@ -161,6 +171,9 @@ export function scanStyleFamily() {
 /** 归桶：glass（链上有 [data-we-glass-*]）> wallpaper（只有 [data-we-wallpaper]）> ungated。 */
 export function bucketOf(chain) {
   if (/\[data-we-glass-/.test(chain)) return 'glass';
+  // ADR-0016 第三刀勘误：全局 UI 配色从玻璃门（data-we-glass-page）迁到主包自有门 ——
+  // 它不是玻璃，停玻璃行不得连坐；单独成桶以便契约按归属审计。
+  if (/\[data-we-ui-color\]/.test(chain)) return 'ui-color';
   if (/\[data-we-wallpaper\]/.test(chain)) return 'wallpaper';
   return 'ungated';
 }
@@ -207,13 +220,13 @@ const NOTES = {
   '--dsw-alias-label-secondary': '次要文字灰阶',
 };
 
-const BUCKET_LABEL = { glass: '玻璃', wallpaper: '壁纸', ungated: '无门控' };
+const BUCKET_LABEL = { glass: '玻璃', 'ui-color': 'UI 配色', wallpaper: '壁纸', ungated: '无门控' };
 
 /** 生成契约全文（守卫逐字节比对的就是它）。 */
 export function buildContract() {
   const decls = scanStyleFamily();
 
-  const buckets = { glass: [], wallpaper: [], ungated: [] };
+  const buckets = { glass: [], 'ui-color': [], wallpaper: [], ungated: [] };
   for (const d of decls) { d.bucket = bucketOf(d.chain); buckets[d.bucket].push(d); }
 
   // 按 token 归并：{ token, decls, buckets:Set, lines[] }
@@ -237,12 +250,13 @@ export function buildContract() {
   L.push('>');
   L.push('> **口径**：只计样式族（`src/styles-base.js` … `src/styles-ext.js` 的 8 个域模板）里**属性位**的');
   L.push('> `--dsw-*` 声明（值里的 `var(--dsw-…)` 是读不是写，不计）；门控归属按花括号栈上的**选择器链**判定。');
-  L.push('> **玻璃** = 链上有 `[data-we-glass-*]`；**壁纸** = 只有 `[data-we-wallpaper]`；');
+  L.push('> **玻璃** = 链上有 `[data-we-glass-*]`；**UI 配色** = 链上有 `[data-we-ui-color]`（主包自有门，ADR-0016）；');
+  L.push('> **壁纸** = 只有 `[data-we-wallpaper]`；');
   L.push('> **无门控** = 两者都不挂（共存审计 M1 的全部暴露面 —— 白名单见下表，新增一条守卫即红）。');
   L.push('> JS 侧的令牌写入（`src/font/apply.js` 的 label 族等）不在本契约口径内，见 `docs/DSH-UI-INTERFACES.md`。');
   L.push('');
   L.push(`共 **${decls.length}** 条声明 / **${tokens.length}** 个不同令牌。门控归属：`);
-  L.push(`玻璃 **${buckets.glass.length}** 条 · 壁纸 **${buckets.wallpaper.length}** 条 · 无门控 **${buckets.ungated.length}** 条。`);
+  L.push(`玻璃 **${buckets.glass.length}** 条 · UI 配色 **${buckets['ui-color'].length}** 条 · 壁纸 **${buckets.wallpaper.length}** 条 · 无门控 **${buckets.ungated.length}** 条。`);
   L.push('');
   L.push('## 无门控声明（白名单 —— M1 的全部暴露面）');
   L.push('');
@@ -264,7 +278,7 @@ export function buildContract() {
   L.push('| 令牌 | 条数 | 门控 | 行号 | 消费者注记 |');
   L.push('|---|---|---|---|---|');
   for (const t of tokens) {
-    const gates = ['glass', 'wallpaper', 'ungated'].filter((b) => t.buckets.has(b))
+    const gates = ['glass', 'ui-color', 'wallpaper', 'ungated'].filter((b) => t.buckets.has(b))
       .map((b) => `${BUCKET_LABEL[b]}(${cnt(t.decls, b)})`).join(' + ');
     const lines = t.lines.join(', ');
     L.push(`| \`${t.token}\` | ${t.decls.length} | ${gates} | ${lines} | ${NOTES[t.token] || ''} |`);

@@ -343,7 +343,7 @@ clearAdapterSetting();
 console.log('\n⑤ 客户端落点：body 钩子 / 外壳选择器门控 / 面板行 / 上报');
 const effectsSrc = read('src/effects.js');
 // 刀3：样式族已按域拆成 8 个模块 + 组装点 ⇒ 取**整族源码文本**（构建序拼接）；判据文本不变。
-const stylesSrc = styleText();
+const stylesSrc = styleText() + readFileSync(new URL('../packages/glass/src/glass-css.js', import.meta.url), 'utf8');
 const tabsSrc = panelText();
 const clientSrc = read('src/client.js');
 const persistSrc = read('src/persistence.js');

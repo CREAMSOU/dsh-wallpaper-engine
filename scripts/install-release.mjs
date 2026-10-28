@@ -3,19 +3,19 @@
  *
  * ## 为什么需要它
  *
- * 发布形态的主包把七个子包声明成**精确版本运行依赖**（`scripts/pack-release.mjs`），pnpm 会拿这些
+ * 发布形态的主包把全部子包声明成**精确版本运行依赖**（`scripts/pack-release.mjs`），pnpm 会拿这些
  * 版本去 registry 解析 —— 实测（pnpm 11.22.0，隔离 profile）只装主包 tarball 必然失败：
  *
  *   ERR_PNPM_FETCH_404  GET https://registry.npmjs.org/dsh-plugin-wallpaper-engine-media-bridge
  *   This error happened while installing the dependencies of dsh-plugin-wallpaper-engine@1.3.3
  *
- * 因此"只挂主包 tgz 的 Release"对用户是一个**装不上的包**。把八个 tarball 一起挂上去也不够：顶层
+ * 因此"只挂主包 tgz 的 Release"对用户是一个**装不上的包**。把整套 tarball 一起挂上去也不够：顶层
  * `file:` 依赖**不能满足**传递依赖的 registry 版本范围（同样实测 404）。唯一能让"离线八件套"装上的
  * 机制是 profile 的 `overrides:` 把每个子包名钉到同目录的 tarball —— DSH 自己的兼容性实跑
  * （`test/compat-harness-live.mjs`）走的就是这条路，`test/verify-deployment.mjs` 之外另有一份
  * 端到端探针（见 `docs/RELEASING.md` §证据）。
  *
- * 本脚本把这套动作固化成一条命令，并在装完后**逐个 require.resolve** 自证：八个包都在、声明
+ * 本脚本把这套动作固化成一条命令，并在装完后**逐个 require.resolve** 自证：整套包都在、声明
  * `dsh.client` 的包连 `./client` 入口都在。它不发布、不改版本，只读发布集目录。
  *
  * ## 边界

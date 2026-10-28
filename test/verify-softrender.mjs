@@ -68,6 +68,9 @@ function check(name, ok, detail) {
 }
 
 const CODE = readFileSync(new URL('../lib/client.js', import.meta.url), 'utf8');
+// ADR-0016 第三刀：detectSoftwareRender 与 data-we-glass-fallback 的挂载随玻璃层出户到
+// packages/glass ⇒ S1/S2 的静态提取与本沙箱的**行为**路径都改读/加载玻璃包产物。
+const GLASS_CODE = readFileSync(new URL('../packages/glass/lib/client.glass.js', import.meta.url), 'utf8');
 
 // ── Sandbox harness ──────────────────────────────────────────────────────────
 // Mirrors the loader style of verify-client.mjs / verify-resource-lifecycle.mjs:
@@ -190,11 +193,11 @@ function loadClient({
     removeItem(k) { delete this._store[k]; },
   };
 
-  const cap = { handoff: null };
+  const cap = { handoff: null, handoffs: [] };
   const timers = [];
   const sandbox = {
     window: {
-      __ModuleLoader__: { load: (h) => { cap.handoff = h; } },
+      __ModuleLoader__: { load: (h) => { cap.handoff = h; cap.handoffs.push(h); } },
       addEventListener: () => {},
       removeEventListener: () => {},
       matchMedia: () => ({ matches: false, addEventListener: () => {}, removeEventListener: () => {} }),
@@ -231,6 +234,15 @@ function loadClient({
   };
   const exportsObj = cap.handoff.factory(requireMock);
 
+  // ADR-0016 第三刀：与真实 loader 同形，把玻璃子包产物也在**同一个 vm 上下文**求值掉
+  // （它的 factory 经 require('dsh-plugin-wallpaper-engine') 取主 bundle 键集，登记
+  // registerLayerHooks('glass') + registerGlassStatus）。不求值它 ⇒ apply() 挂载期玻璃层
+  // 不在注册表里，sync 永不跑，A1/A2/G1 等行为判据全部以"钩子为 null"假红。
+  new vm.Script(GLASS_CODE, { filename: 'client.glass.js' }).runInContext(sandbox);
+  const glassHandoff = cap.handoffs ? cap.handoffs[cap.handoffs.length - 1] : null;
+  const subRequire = (spec) => (spec === 'dsh-plugin-wallpaper-engine' ? exportsObj : requireMock(spec));
+  if (glassHandoff && typeof glassHandoff.factory === 'function') glassHandoff.factory(subRequire);
+
   const disposers = [];
   const ctx = {
     slots: { inject: (key, cb) => cb(), register: () => {} },
@@ -251,8 +263,10 @@ function loadClient({
         : null;
     },
     styleCss() {
+      // ADR-0016 第四刀：样式表拆成主包 sheet + 玻璃包 sheet 两个 <style data-plugin-css>
+      // ⇒ 按**注入顺序拼接**（= 真实层叠序），不再只取最后一个标签。
       const tags = headEl.children.filter((c) => c && c.dataset && c.dataset.pluginCss);
-      return tags.length ? String(tags[tags.length - 1].textContent || '') : '';
+      return tags.map((t) => String(t.textContent || '')).join('\n');
     },
   };
 }
@@ -301,7 +315,7 @@ function parseCssRules(css) {
 function main() {
   // ── S1: the required software-rasteriser patterns, matched case-insensitively
   {
-    const m = /const SOFT_RENDER_RE = \/(.+?)\/([a-z]*);/.exec(CODE);
+    const m = /const SOFT_RENDER_RE = \/(.+?)\/([a-z]*);/.exec(GLASS_CODE);
     const src = m ? m[1] : '';
     // Second element is the RAW source substring (the regex source escapes "(").
     const required = [
@@ -327,11 +341,11 @@ function main() {
 
   // ── S2: manual override token + both renderer read paths
   {
-    const hasParam = CODE.includes('we-glassfallback');
-    const onOff = /\bflag === "on" \|\| flag === "1"/.test(CODE) && /\bflag === "off" \|\| flag === "0"/.test(CODE);
-    const dbgExt = CODE.includes('WEBGL_debug_renderer_info') && CODE.includes('UNMASKED_RENDERER_WEBGL');
-    const plainRenderer = /gl\.RENDERER !== undefined/.test(CODE) && /gl\.getParameter\(gl\.RENDERER\)/.test(CODE);
-    const vendorRead = CODE.includes('UNMASKED_VENDOR_WEBGL') && /gl\.getParameter\(gl\.VENDOR\)/.test(CODE);
+    const hasParam = GLASS_CODE.includes('we-glassfallback');
+    const onOff = /\bflag === "on" \|\| flag === "1"/.test(GLASS_CODE) && /\bflag === "off" \|\| flag === "0"/.test(GLASS_CODE);
+    const dbgExt = GLASS_CODE.includes('WEBGL_debug_renderer_info') && GLASS_CODE.includes('UNMASKED_RENDERER_WEBGL');
+    const plainRenderer = /gl\.RENDERER !== undefined/.test(GLASS_CODE) && /gl\.getParameter\(gl\.RENDERER\)/.test(GLASS_CODE);
+    const vendorRead = GLASS_CODE.includes('UNMASKED_VENDOR_WEBGL') && /gl\.getParameter\(gl\.VENDOR\)/.test(GLASS_CODE);
     check('S2 ?we-glassfallback override (on/1/off/0, else auto) + both renderer read paths exist',
       hasParam && onOff && dbgExt && plainRenderer && vendorRead,
       'param=' + hasParam + ' onOff=' + onOff + 'debugInfo=' + dbgExt + 'plainRENDERER=' + plainRenderer
