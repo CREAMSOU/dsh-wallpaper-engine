@@ -1,7 +1,7 @@
 /**
  * styles-chrome.js —— 样式域模块 **CHROME**（原 src/styles.js 第 1623–1915 行，共 293 行）。
  *
- * 内容：原生窗口与浮层 —— 统一控件 token · 原生设置整窗玻璃 · 插件源浮层 · DSH corner-shape 兼容(#74)。
+ * 内容（ADR-0016 第四刀玻璃段出户后）：统一控件 token · DSH corner-shape 兼容(#74)。整窗玻璃与插件源浮层随玻璃包走。
  *
  * 拼装契约（样式族 9 个模块共享，组装点见 src/styles.js）：
  *   · 构建期按 INLINE_MODULES 顺序把族内文件**原样内联进同一工厂作用域**，模块之间不 import，靠扁平符号协作

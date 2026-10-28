@@ -1,10 +1,12 @@
 /**
  * styles.js —— 样式族**组装点** + 可读性下限的对外出口（纯数据；构建期内联进 lib/client.js 的工厂作用域）。
  *
- * 为什么单独一个文件：这是全仓最大的一块**纯数据**（3,682 行 CSS、**零分支**）。它原先是本文件里的**一个**
- * 模板常量；按视觉域切成 8 个域模块后，定位"某段规则从哪开始"不再需要在一大片 CSS 里翻找 —— 域模块与
- * 来源行号：styles-base.js · styles-shell.js · styles-sidebar.js · styles-chrome.js · styles-settings.js ·
+ * 为什么单独一个文件：这是全仓最大的一块**纯数据**、**零分支**。它原先是本文件里的**一个**
+ * 模板常量；按视觉域切成域模块后，定位"某段规则从哪开始"不再需要在一大片 CSS 里翻找 ——
+ * 主包域模块：styles-base.js · styles-shell.js · styles-chrome.js · styles-settings.js ·
  * styles-panel.js · styles-quick.js · styles-ext.js（切段边界 = 原有分区注释，规则一字未改）。
+ * ADR-0016 第四刀起玻璃段住 packages/glass/src/glass-css.js（styles-sidebar 整域出户），
+ * 由玻璃包自注入，不进本组装式。
  * 它不参与任何控制流，只被样式注入代码读一次（本文件底部的组装常量 → 注入处的 textContent 赋值）。
  *
  * 拼装契约（与 8 个域模块共享，域模块文件头有同一份）：各域模板按 INLINE_MODULES 顺序相加 ⇒ 拼出的 CSS
