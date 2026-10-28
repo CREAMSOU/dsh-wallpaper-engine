@@ -1,5 +1,5 @@
 /**
- * 「外观」页签的节渲染器（原 src/panel-tabs.js）：主题 / 细节 /
+ * 「外观」页签的节渲染器（从 src/panel-tabs.js 按域拆出）：主题 / 细节 /
  * 侧边栏圆角 / 全局 UI 配色，含 sidebarCornerGroup 一族。本节渲染器从 src/panel-tabs.js 按域搬出，函数体逐字未改。
  * ⚠️ P-C 之后第六节「全局字体」**不在本文件**：它住在 packages/fonts/src/appearance-font-section.js，
  *    由子包把渲染器登记进面板节注册表（src/extension-registry.js），节顺序见 src/panel-tabs.js。
@@ -33,7 +33,7 @@
 
   function renderAppearanceDetailSection(ctx) {
     const { onBorder, onResetModule, sel, detailOpen, onToggleDetailSection } = ctx;
-    // 简化 / 高级分档见 ADR-0008 **D4**（实现口径在 packages/glass/src/glass-panel.js，按 `ctx.surface` 判定）：
+    // 简化 / 高级分档见 ADR-0008 **D4**（实现口径在 packages/glass/packages/glass/src/glass-panel.js，按 `ctx.surface` 判定）：
     // 全局四件套、预设方案与各面总开关属简化配置（侧栏档也画）；本节的「独立配置」层及其子项
     // 属高级配置 ⇒ 只在设置页画。它与 quick-panel 的 setting-only 占位器互为负对照。
     // ⚠️ 折叠门（**二次修订**）：**两档都支持隐藏**；差别只在默认值
@@ -47,7 +47,7 @@
         tooltip: weT("提高边框 / 分割线的对比度（浅色与深色主题通用）"),
       }),
       // ── 「左侧栏液态玻璃」及其子项在「玻璃 UI」节（门槛 `leftSidebarGlass`，见
-      //    packages/glass/src/glass-panel.js）：总开关两档都画，其下「独立配置」层属高级配置、只在设置页画。──
+      //    packages/glass/packages/glass/src/glass-panel.js）：总开关两档都画，其下「独立配置」层属高级配置、只在设置页画。──
     ),
     );
   }
@@ -197,7 +197,7 @@
   }
 
   // ── 「玻璃 UI」节：所有玻璃配置（含「左侧栏液态玻璃」及其子项）同处一节。渲染器在
-  //    packages/glass/src/glass-panel.js 的 renderAppearanceGlassSection（门槛一个都没放松）—— 它与其余页签
+  //    packages/glass/packages/glass/src/glass-panel.js 的 renderAppearanceGlassSection（门槛一个都没放松）—— 它与其余页签
   //    只共享模块级纯助手 ⇒ 不需要 ctx 样板，这里按名字调用即可。
 
 

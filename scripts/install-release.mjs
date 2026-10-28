@@ -1,5 +1,5 @@
 /**
- * install-release.mjs —— 用**发布集目录**（GitHub Release 的八件套）在指定 profile 上做一次可验证的安装。
+ * install-release.mjs —— 用**发布集目录**（GitHub Release 的九件套）在指定 profile 上做一次可验证的安装。
  *
  * ## 为什么需要它
  *
@@ -10,7 +10,7 @@
  *   This error happened while installing the dependencies of dsh-plugin-wallpaper-engine@1.3.3
  *
  * 因此"只挂主包 tgz 的 Release"对用户是一个**装不上的包**。把整套 tarball 一起挂上去也不够：顶层
- * `file:` 依赖**不能满足**传递依赖的 registry 版本范围（同样实测 404）。唯一能让"离线八件套"装上的
+ * `file:` 依赖**不能满足**传递依赖的 registry 版本范围（同样实测 404）。唯一能让"离线九件套"装上的
  * 机制是 profile 的 `overrides:` 把每个子包名钉到同目录的 tarball —— DSH 自己的兼容性实跑
  * （`test/compat-harness-live.mjs`）走的就是这条路，`test/verify-deployment.mjs` 之外另有一份
  * 端到端探针（见 `docs/RELEASING.md` §证据）。
@@ -24,7 +24,7 @@
  *   · profile 里**已有** `overrides:` 时拒绝执行：不同来源的 override 交集无法自动合并，报错里给出
  *     要手工贴进去的行。
  *   · 与 `scripts/install-source.mjs` 的分工：那一条用于源码检出（八个 `link:` 依赖），这一条用于
- *     **发布集**（一个 `file:` 主包 + 七个 overrides）；两者都只保留主包 bundle 选择。
+ *     **发布集**（一个 `file:` 主包 + 八个 overrides）；两者都只保留主包 bundle 选择。
  *
  * Usage:
  *   node scripts/install-release.mjs --set <release-set dir> --profile web --dsh-home <dir> --app-closed

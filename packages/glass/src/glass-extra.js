@@ -1,11 +1,11 @@
 /**
  * glass-extra.js — 「额外补雾化的选择器」（上游 issue #200）的唯一落点。
  *
- * 为什么单开一个文件：本插件的注入样式表是**构建期常量**（src/styles.js，纯数据、零分支），
+ * 为什么单开一个文件：本插件的注入样式表是**构建期常量**（主包 7 个样式域模块，纯数据、零分支），
  * 而这一段是**运行期由设置拼出来的** —— 两者的注入路径与归属都不同。混在一起会让
  * "样式表是纯数据"这条契约失效（守卫也从那份常量里按行首锚点取样式表）。
  *
- * 为什么用 `::before` 载体（照抄 styles.js 左侧栏那条**已验证**的形态）：伪元素**没有后代**
+ * 为什么用 `::before` 载体（照抄 glass-css.js 左侧栏那条**已验证**的形态）：伪元素**没有后代**
  * ⇒ 不会成为 `position: fixed` 后代的包含块。本仓 #89 的坑正在这里：在元素**自身**上加
  * backdrop-filter 会让它内部那些定位弹层改锚 —— 而第三方插件的面板里恰好常挂定位弹层
  * （codearts 的徽标弹层就是挂在按钮上的 `position: absolute`）。
@@ -14,7 +14,7 @@
  *   · `weExtraGlassCss(selection)` —— 纯函数：清单 → CSS 文本（空清单 ⇒ 空串）；
  *   · `syncExtraGlassCss(selection)` —— 唯一的写入口（内容没变就不碰 DOM，与 client.js
  *     的 `ensurePluginCss` 同一手法）；
- *   · `disposeExtraGlassCss()` —— 卸载路径（与 effects.js 的 `clearEffects` 成对）。
+ *   · `disposeExtraGlassCss()` —— 卸载路径（由玻璃行为层的 `disposeGlassLayer` 成对调用）。
  * 消毒：**只**走 settings-schema 的 `sanitizeExtraGlassSelectors`（白名单 + 限条数 + 限长），
  * 这里**不另写一套** —— 存进去的与拼进规则的共用同一份判据，两端不会分叉。
  *
@@ -29,11 +29,11 @@ const EXTRA_GLASS_TAG_ID = "dsh-wallpaper-engine/extra-glass";
  *
  * 每个选择器生成 **4 条规则**（2 档主题 × 正常/软渲两档所有权）：
  *   · 浅色正常档 = 霜（backdrop-filter 读全局 --we-blur 滑杆）+ 完整两段 color-mix 底色
- *     （styles-chrome 设置窗同一张配方表：tint×alpha 段 + (1 - readability-floor) 地板段）；
+ *     （glass-css 设置窗同一张配方表：tint×alpha 段 + (1 - readability-floor) 地板段）；
  *   · 深色正常档 = 只覆盖底色（tint-dark），霜从浅色规则**级联**（两档同时匹配同一 ::before，
  *     深色规则特异性更高 ⇒ 底色深色赢、霜无人覆盖照旧）；
  *   · 软渲两档（resolver 打 data-we-surface-runtime="extra-fallback" 时才匹配）= 无霜、
- *     不透明可读底色（tint 满量，形态同 styles-chrome 的 @supports 回退别名），浅色档显式
+ *     不透明可读底色（tint 满量，形态同 glass-css 的 @supports 回退别名），浅色档显式
  *     backdrop-filter:none，深色档靠级联继承 none —— 软渲环境不保留也不会生效的模糊。
  *
  * 组前缀（四把门）：
@@ -71,7 +71,7 @@ function weExtraGlassCss(selection) {
     + " color-mix(in srgb, var(--we-surface-tint-dark, #0d1524)"
     + " calc(var(--we-settings-window-alpha, 0.15) * 0.9 * 100%), transparent)"
     + " calc((1 - var(--we-readability-floor, 0.59)) * 100%));";
-  // 软渲回退底色 = tint 满量（styles-chrome @supports 回退同形态），恒不透明、恒可读。
+  // 软渲回退底色 = tint 满量（glass-css @supports 回退同形态），恒不透明、恒可读。
   const opaqueLight = " -webkit-backdrop-filter: none; backdrop-filter: none;"
     + " background-color: var(--we-surface-tint-light, #ffffff);";
   const opaqueDark = " background-color: var(--we-surface-tint-dark, #0d1524);";
@@ -92,7 +92,7 @@ function weExtraGlassCss(selection) {
   }
   // ⚠️ 这条注释**只许用 ASCII**：它落在 JS 字符串字面量里（不是 styles.js 的模板），
   //    i18n 判据要求"字符串里的中文必须包 weT(...)"—— 生成出来的 CSS 注释不是 UI 文案，
-  //    塞中文只会让守卫判红（实测踩过：`每条中文都进了 weT` 报 src/glass-extra.js 那一行）。
+  //    塞中文只会让守卫判红（实测踩过：`每条中文都进了 weT` 报 packages/glass/src/glass-extra.js 那一行）。
   return "/* extra frost targets for user-named selectors (upstream #200) */\n" + rules.join("\n") + "\n";
 }
 
@@ -116,7 +116,7 @@ function syncExtraGlassCss(selection) {
   if (tag.textContent !== css) tag.textContent = css;
 }
 
-/** 卸载：移除本通道的 <style>（fiber cleanup 与 clearEffects 成对调用）。 */
+/** 卸载：移除本通道的 <style>（fiber cleanup 与 glass-layer 的 disposeExtraGlassCss 成对调用）。 */
 function disposeExtraGlassCss() {
   if (typeof disposeGlassSurfaces === "function") disposeGlassSurfaces();
   if (typeof document === "undefined") return;

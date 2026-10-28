@@ -37,7 +37,7 @@
  *      ⇒ 不建这条主包 apply 会抛）；
  *   ② 各 profile 的 node_modules（宿主解析 patch 行名）。
  *
- * 已删除的第三个链接点（2026-10-15）：本仓 `node_modules/<主包名>` → 本仓根（主包**自链接**）。
+ * 已删除的第三个链接点：本仓 `node_modules/<主包名>` → 本仓根（主包**自链接**）。
  *   它唯一服务的是子包宿主入口里 `import … from 'dsh-plugin-wallpaper-engine/subpackage-boot.js'`
  *   这条裸说明符；跨包通道改走 **① Cordis Service**（ADR-0014 §S5.1）后，子包宿主半边
  *   **零主包说明符**（`test/verify-subpackage-purity.mjs` 的 `ROOT_SPEC_ALLOW` 已收紧为零）
@@ -174,7 +174,7 @@ function main(argv) {
 
   // 链接点有两处，缺一不可：
   //   ① 本仓 node_modules —— **主包自己**在启动自检里 resolve 子包名时走的那条路
-  //      （lib/index.js 的 apply 用 createRequire(import.meta.url)）。开发期三个子包还没发布，
+  //      （lib/index.js 的 apply 用 createRequire(import.meta.url)）。开发期 8 个子包还没发布，
   //      不建这条链接，主包一 apply 就直接抛"子包行解析不到"；
   //   ② 每个 profile 的 node_modules —— **宿主**按裸包名解析 patch 行时的落脚处（§8.1 spike 第 1 条）。
   const sites = [];

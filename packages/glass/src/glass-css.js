@@ -1,12 +1,12 @@
 /**
  * glass-css.js —— 玻璃样式表（ADR-0016 第四刀：玻璃 CSS 随包走）。
  *
- * 内容 = 原 src/styles-{base,shell,sidebar,chrome,ext}.js 里的**全部玻璃段**，按原层叠顺序拼接：
+ * 内容 = 原主包 styles 域模块（含已出户的 styles-sidebar.js）里的**全部玻璃段**，按原层叠顺序拼接：
  *   可读性下限常量 → 玻璃域 body 变量块（地板 / follow-tint / 釉光）→ 页面玻璃总锚点（--dsw-*
  *   令牌映射 + markdown 家族）→ mica 近不透明接管 → iOS 液态玻璃（对话区 / 思考块 / composer /
  *   轨迹 / 吸顶条 / 正文原生挡）→ 左栏 / 四角圆角 / 标题栏 / better-sidebar / 官方右栏 / 内容面 →
  *   declared 面 + 设置整窗玻璃 + 插件源浮层霜 → 软件渲染回退 → 侧栏全透明。
- * 每段与原文件**逐字节相同**（机械行切割，git diff 可复核）；留下的主包模板只剩非玻璃段。
+ * 模板内容 = CSS_GLASS；注入顺序（主包 sheet 之后）决定层叠关系，规则本身不再复制到主包。
  *
  * 注入（packages/glass/src/client.js）：求值期 ensureGlassCss() 写独立 <style data-plugin-css>
  * 标签。主 bundle 先求值、本包后求值 ⇒ 玻璃 sheet 排在主包 sheet **之后**，与搬移前的层叠关系
@@ -72,7 +72,7 @@ const CSS_GLASS = `
      （effects.js 的 weClampSurfaceColor 计算、--we-surface-tint-* 注入）
      —— 色相跟随用户选择，亮度钳制保住 #82 的 ≥4.5:1 正文判据。缺省回落原值。
      玻璃保真度（glassFidelity，默认 100）：--we-readability-floor = floor 常量
-     × --we-glass-fidelity（effects.js 注入 0–1，缺省 1 = 现状、任何旧设置文件
+     × --we-glass-fidelity（glass-layer.js 注入 0–1，缺省 1 = 现状、任何旧设置文件
      无此键时也不变）。拉低保真度 = 地板覆盖度同比例减薄 + 釉色向用户原色回退
      （回退在 effects.js 的 weClampSurfaceColor 第三参），颜色更贴用户原色、
      正文可读性让位 —— 这是唯一的权衡旋钮。 */
@@ -107,7 +107,7 @@ const CSS_GLASS = `
   }
 
   /* ── 页面玻璃总锚点（data-we-glass-page）——**与有没有壁纸无关** ───────────────
-     由 src/glass.js 恒挂（插件启用即挂，与 data-we-glass-chat / -window / -floaters
+     由 packages/glass/src/glass.js 恒挂（插件启用即挂，与 data-we-glass-chat / -window / -floaters
      同族）。壁纸只是玻璃的**背景来源**之一，不是玻璃的前提：没有壁纸时玻璃面照旧
      拿到地板色 / 霜 / 釉光 / 发丝边，压在宿主自己的基色与内容之上（用户口径：
      「页面玻璃效果不设置壁纸也要生效」）。
@@ -885,8 +885,8 @@ const CSS_GLASS = `
      @deepseek-ai/dsh-client-ui-theme 的 design-platform 串逐条提取，浅/深两主题
      各一套）；字面量兜底防宿主改令牌名 —— 缺了它令牌无值会退成透明，正好是
      原生挡的反面。
-     ⚠️ 门控属性由 effects.js 写/撤（thinkingNative，赢过 thinkingGlass 的互斥见那边）；
-     皮肤让路态整族摘门控时随 effects.js 同批摘除。 */
+     ⚠️ 门控属性由 glass-layer.js 写/撤（thinkingNative，赢过 thinkingGlass 的互斥见那边）；
+     皮肤让路态整族摘门控时随 glass-layer.js 同批摘除。 */
   body[data-we-thinking-native] [data-chat-flow],
   body[data-we-thinking-native] [data-vcp-rawhtml] {
     --dsw-specific-bubble: var(--dsw-static-deepseek-50, #edf3fe);
@@ -1031,7 +1031,7 @@ const CSS_GLASS = `
      左右两条侧栏各自一套：**统一档**（6 / 12 / 20 px）写 border-radius 简写，四角开关
      写 border-*-radius 长属性覆盖它。设置真源见 lib/settings-schema.js 的
      leftSidebarCornerRadius / rightSidebarCornerRadius 与两族 Square* 键；属性由
-     src/glass.js 的 applyGlass 写出。
+     glass.js 的 applyGlass 写出。
 
      ⚠️ **顺序即语义**：简写会一次性设置四个角 ⇒ 四角规则必须排在简写规则**之后**，
         否则被简写覆盖（dsh-myskin 的同款教训，见其 regions.ts 的 hoistShorthand）。
@@ -1064,7 +1064,7 @@ const CSS_GLASS = `
      ⚠️ **不再要求它住在面板里**（第一版按"面板内"限定，用户第二轮实测那条线仍在 ⇒ 它可能挂在
         面板的兄弟节点上）；仍然排除 pane 内部的 split 分割线（那是别的布局，缩进它会画错）。
      ⚠️ 手柄本体（可拖拽的命中区）不动，只是那条线变短 —— 拖拽能力一点没少。
-     ⚠️ 兜底：--we-right-sidebar-radius 与门控属性由 src/glass.js 同批写出（零兜底读取）。 */
+     ⚠️ 兜底：--we-right-sidebar-radius 与门控属性由 glass.js 同批写出（零兜底读取）。 */
   body[data-we-right-sidebar-radius]:not([data-we-right-sidebar-square~="tl"]) [data-dockkit-divider]:not([data-dockkit-pane] *)::before {
     top: var(--we-right-sidebar-radius) !important;
   }
@@ -1558,7 +1558,7 @@ const CSS_GLASS = `
      [data-menu-material] 元素选择器上，子树里裸读 var() 会在 computed-value 阶段整条失效。
      于是玻璃开着时它仍是一块不透明板。这里只补霜，底色仍归宿主（不重声明
      --dsw-alias-bg-layer-2，免得与注册表内部那些面板色打架）。
-     模糊半径读「浮层玻璃」这条子项的私有量 --we-floaters-blur（src/glass.js:301 无条件接线，
+     模糊半径读「浮层玻璃」这条子项的私有量 --we-floaters-blur（glass.js 的浮层接线无条件写出，
      取不到时退回全局模糊），与 .we-update-notice / .we-repo-panel 同档。 */
   body[data-we-glass-floaters] [data-install-registry] {
     -webkit-backdrop-filter: blur(var(--we-floaters-blur)) saturate(var(--we-saturate, 1.8)) brightness(var(--we-glass-brightness, 1.04)) contrast(1.01);

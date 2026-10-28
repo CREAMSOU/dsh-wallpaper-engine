@@ -30,7 +30,7 @@
  *
  * 不变量：
  *   · **只读源**：素材属 WE 版权内容，只从用户本机路径只读取用，**绝不复制入库**
- *     （合规说明见 `lib/we-assets.js` 该族服务层的头部注释与上游 docs/COMPLIANCE.md）。
+ *     （合规说明见 `lib/we-assets.js` 该族服务层的头部注释与上游 WebWallGL 的 docs/COMPLIANCE.md）。
  *   · **配置端点先校验形态、再落盘**：必须存在且含 `materials/` 子目录；**不做任何文件迁移**。
  *   · **路径限定**：`resolve(root, rel)` 之后必须仍在素材根之内
  *     （`startsWith(root + sep)`）—— 这是拒绝 `..` 越界的**唯一**判据，不许放宽成 `includes`。

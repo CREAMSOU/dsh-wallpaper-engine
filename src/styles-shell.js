@@ -1,15 +1,16 @@
 /**
- * styles-shell.js —— 样式域模块 **SHELL**（原 src/styles.js 第 593–1134 行，共 542 行）。
+ * styles-shell.js —— 样式域模块 **SHELL**。
  *
  * 内容（ADR-0016 第四刀玻璃段出户后）：原生左栏模式底 · 外壳画布底（壁纸让位两段，均只挂壁纸/壳层门）。
  *
- * 拼装契约（样式族 9 个模块共享，组装点见 src/styles.js）：
+ * 拼装契约（样式族 7 个域模块共享，组装点见 src/styles.js）：
  *   · 构建期按 INLINE_MODULES 顺序把族内文件**原样内联进同一工厂作用域**，模块之间不 import，靠扁平符号协作
  *     （见 docs/CODE-STRUCTURE.md §3）；
  *   · 本段模板的开引号紧跟本段首行（不另起一行）；段间那一个换行由上一段的收尾换行提供；
  *     本段自身以换行收尾（下一段接着写）；
- *   · 组装点按 BASE → SHELL → SIDEBAR → CHROME → SETTINGS → PANEL → QUICK → EXT 相加 ⇒ 拼出的 CSS 与原单模板
- *     **逐字节相同**（分割前 sha256 前缀 3b6c41dc7dcab44bf5c57f4 · 262306 B）。
+ *   · 主包样式 = 7 个域模块按 BASE → SHELL → CHROME → SETTINGS → PANEL → QUICK → EXT 相加，
+ *     组装点 = src/styles.js；玻璃 CSS 不在这条链上 —— 它住 packages/glass/src/glass-css.js
+ *     （CSS_GLASS），由玻璃包自注入；两份样式表是**双工件**（守卫按「主包产物 + 玻璃产物」拼接读取）。
  *
  * ⚠️ 本文件（注释与正文）不得出现裸反引号，也不得复述任何样式表声明语句的字面量：守卫按行首的域模板
  *    声明从**产物**里抽取模板，散文里出现同样的字面量或反引号会把锚点带偏。

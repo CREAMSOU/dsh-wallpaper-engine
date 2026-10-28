@@ -1,9 +1,9 @@
 /**
  * glass-panel.js — 「玻璃 UI」节的**渲染器**（纯渲染 + 显式 ctx）。
  *
- * 为什么单开一个文件：它与其它页签**只共享模块级纯助手** —— `React` / `SliderRow` / `switchRow` /
- * `swatchRow` / `weT` / `GLASS_COLOR_PRESETS` 都是**顶层声明**（`src/client.js` 等），构建期内联进
- * 同一工厂作用域 ⇒ **不需要任何 ctx 传参样板**，`renderAppearanceTab` 按名字调用即可。
+ * 为什么单开一个文件：它只共享宿主注入的纯助手 —— React / SliderRow / switchRow / swatchRow / weT /
+ * GLASS_COLOR_PRESETS 都是 packages/glass/src/client.js 从**显式键集**解构来的，本渲染器只接 ctx 画界面
+ * （玻璃是独立 bundle，不存在主包工厂作用域）。
  *
  * 契约（与 `src/panel-tabs.js` 文件头同一条，不在此重复解释）：
  *   · **只读** ctx —— 不得写 `selection` / ctx 别名指向的东西 / 模块级状态；
@@ -25,7 +25,7 @@
  *      └─ 每个子面一个开关：[独立配置] ⇒ 打开后展开它自己的参数行
  *
  * ⚠️ **没有"要不要玻璃"的开关**（用户口径）：玻璃是恒要的 —— 实测一个"关"并**不能**如愿恢复
- *    原生黑/白纯色（那些面上还有一批不挂门控的令牌改写，见 `src/glass.js` 的退役说明）⇒ 这一节
+ *    原生黑/白纯色（那些面上还有一批不挂门控的令牌改写，见本包 `glass.js` 的退役说明）⇒ 这一节
  *    剩下的**唯一**问题就是"读自己 还是 跟全局"。
  * ⚠️ 「左侧栏液态玻璃」**不在**本节的子项里：它的"关"是**恢复背景**（那列回到壁纸原样），
  *    语义不同 —— 它是乙类，独立成项留在「细节」，本节的 `panelOff` 过滤就是为它。
@@ -135,8 +135,8 @@ function renderGlassPresetsBlock(gp) {
       React.createElement("div", { className: "we-picker__seg", role: "group", "aria-label": weT("吉祥物 · 指向"),
         // （并入 #180 后形态 3 → 11，「小女仆」除名后为 10）：这一行现在最多 1 + 10 = 11 个键，而 `.we-picker__seg`
         // 是不换行的 flex 行、每个键 `flex: 1` ⇒ 不换行就会被压成同样窄的一格、标签互相截断。
-        // 用**行内** `flexWrap` 就地解决（不动 styles.js 的规则行数 —— 那份文件的注释行数被打红过
-        // `verify-token-contract`，它记的是 styles.js 的行锚点）。
+        // 用**行内** `flexWrap` 就地解决（不动主包样式表 —— 那份文件的注释行数被打红过
+        // `verify-token-contract`，它按主包 + 玻璃双工件取文，不记行锚点）。
         style: { flexWrap: "wrap" } },
         React.createElement("button", {
           key: "own",
@@ -622,7 +622,7 @@ function renderAppearanceGlassSection(ctx) {
   //    仍保留「独立配置」开关（`glassMode.sidebarContent`）而不是直接摊两个旋钮：
   //    `applyGlass` 的 `glassValue()` 只在 mode='custom' 时读这两个键，mode 停在 inherit
   //    时写进去的值**不会被消费** —— 直接摊旋钮就是一对死旋钮（本仓专门防这一类）。
-  //    ⚠️ **门只有 `sidebarGlass`，不含 `sidebarPresent`**（2026-10-18 用户实测修正）：
+  //    ⚠️ **门只有 `sidebarGlass`，不含 `sidebarPresent`**（用户实测修正）：
   //    `sidebarPresent` 是"装没装 dsh-better-sidebar"，而这一面真正作用的对象是
   //    **宿主原生右栏**（`[data-sidebar-right-panel]`，阅读文件页就长在那里）——
   //    没装 better-sidebar 的机器上它同样存在、同样吃 `data-we-sidebar-glass` 那张底板。
@@ -692,9 +692,9 @@ function renderAppearanceGlassSection(ctx) {
       // look (white light / deep navy dark); picking any preset or a custom
       // color tints the whole window glass in BOTH themes.
       // #159② 分主题：色板行的"一个颜色"是**浅色那一侧**；开了「深色单独设置」再多一行专写深色。
-      // `sel.glassDarkSeparate` 只是面板开关，不改渲染 —— 取色在 effects.js / glass.js 按主题各取一半。
+      // `sel.glassDarkSeparate` 只是面板开关，不改渲染 —— 取色在 effects.js / 本包 glass.js 按主题各取一半。
       // 侧栏档（窄面板 + 随手调）**不给这个开关**（D4 同向：独立/分套属配置层）；它只有一个色板，
-      // 只写**浅色那一侧** —— 侧栏的玻璃色变量就只消费浅色半（`src/glass.js` / `src/effects.js`
+      // 只写**浅色那一侧** —— 侧栏的玻璃色变量就只消费浅色半（本包 `glass.js` / 主包 `effects.js`
       // 的 sidebar 分支都取 `glassColorOf(sel,"light")`：侧栏没有 `data-ds-dark-theme` 孪生，
       // 有意不分深浅）。**不要**改回"写当前配色那一侧"：深色主题下那等于让用户改一个他看不到的
       // 值（判据 A2-F2）；面板也不许自己采样主题（`panelThemeIsDark` 已随之删除）。
@@ -709,7 +709,7 @@ function renderAppearanceGlassSection(ctx) {
         (hex, live) => onGlassColor("dark", hex, live), { key: "glass-color-dark" }),
       SliderRow(weT("玻璃透明度"), 0, 100, 5, sel.glassAlpha, onGlassAlpha, "%"),
       // 「雾化」控制的只有**模糊半径**（雾面深度），饱和度是解耦的常量材料属性（见 GLASS_SATURATE）。
-      // ⚠️ 覆盖面的实测口径（`.test-cache/blur-selectors.mjs` 复算，按规则头归面）：
+      // ⚠️ 覆盖面的实测口径（按规则头归面复算）：
       //    它喂的 `--we-blur` 被这些面消费 —— 对话栏一族（输入卡片 / 气泡 / 工具弹卡）、
       //    **左侧栏液态玻璃**（`data-we-left-sidebar` 那列的 `::before`）、**设置窗口**、
       //    插件自身浮层（更新提示 / 仓库面板）。
@@ -723,7 +723,7 @@ function renderAppearanceGlassSection(ctx) {
       // 六个面；第三方插件自己的面板读的是被改写过的共享令牌、**自身没有 backdrop-filter**
       // ⇒ 全局「雾化」对它们本来无效（实测 dsh-mobile / dsh-codearts-auth 整包 0 处命中）。
       // 这一行给用户一条**点名**通道：写谁的选择器，就给谁补上毛玻璃载体（::before 形态，
-      // 见 src/glass-extra.js）。空 = 关（一条规则都不生成 ⇒ 与未接本功能时逐字节一致）。
+      // 见 packages/glass/packages/glass/src/glass-extra.js）。空 = 关（一条规则都不生成 ⇒ 与未接本功能时逐字节一致）。
       React.createElement("div", { className: "we-picker__ctl we-picker__ctl--wrap", key: "extra-glass-selectors" },
         ctlText(weT("额外补雾化的选择器"),
           weT("给第三方插件自己的面板补上毛玻璃（它们自身没有模糊，全局「雾化」对它们无效）"),
@@ -749,7 +749,7 @@ function renderAppearanceGlassSection(ctx) {
       //    老配置值不丢。
       // 思考块液态玻璃 —— **三挡**（用户口径）：关（对话区半透明透壁纸）/ 液态玻璃（磨砂）/
       // 原生（**只有正文内容** —— 气泡 / 代码块 / 思考区 —— 恢复 DSH 原生不透明实色；输入框与画布
-      // 保留玻璃）。存储是两个布尔（thinkingGlass + thinkingNative），**原生挡赢**的互斥在 effects.js
+      // 保留玻璃）。存储是两个布尔（thinkingGlass + thinkingNative），**原生挡赢**的互斥在 glass-layer.js
       // 门控层保证，本分段只负责把两键写一致。总开关级 ⇒ 两侧都画（D4）。
       // ⚠️ 原生挡下胶囊两行（门 = thinkingGlass）整组不画 —— 那族 CSS 挂在
       //    data-we-thinking-glass 门下，原生挡不挂门 ⇒ 画了就是死旋钮。

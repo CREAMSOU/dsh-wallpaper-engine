@@ -1,5 +1,5 @@
 /**
- * 「播放」页签的节渲染器（原 src/panel-tabs.js）：滑块 / 实时帧 / 出图来源。
+ * 「播放」页签的节渲染器（从 src/panel-tabs.js 按域拆出）：滑块 / 实时帧 / 出图来源。
  * 转码进度 / 播放与出图 / 画面取景：倍速/帧率上限与适配/翻转两节 P-D S3d 起住在
  * packages/media-bridge 的浏览器半边（注册表续接）；renderEffectsTab 仍在组装点，只留空态与节外壳。
  * 本节渲染器从 src/panel-tabs.js 按域搬出，函数体逐字未改；内联顺序见 scripts/build-client.mjs（排在组装点之前）。

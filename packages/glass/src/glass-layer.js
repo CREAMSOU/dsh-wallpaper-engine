@@ -9,7 +9,7 @@
  * sync 幂等 —— 全部写入都是"按当前 selection 重算"的 setProperty / setAttribute，
  * 迟到注册（attacher 立刻补接 + emit）与重复 emit 都安全。
  *
- * 输入（全部经主 bundle 的显式键集，见 src/client.js 的 GLASS_HOST_REQUIRED）：
+ * 输入（全部经主 bundle 的显式键集，见 packages/glass/src/client.js 的 GLASS_HOST_REQUIRED）：
  *   selection                    ← 设置 store（活绑定）
  *   skinYieldActive()            ← 皮肤让路态（src/client.js）
  *   weClampSurfaceColor(...)     ← 染色地板钳制（src/effects.js 顶层共享，与 verify-readability 同源）
@@ -153,7 +153,7 @@ function syncTitlebarAnchor(on) {
 }
 
 /**
- * 玻璃层 sync（原 src/effects.js applyEffects 的玻璃段，逐字搬来；段落顺序保持原样）。
+ * 玻璃层 sync（ADR-0016 迁移）。
  * 主包 emit ⇒ 本函数重跑：全局玻璃量 → 染色地板 → applyGlass 逐面釉层 → 额外补雾化 →
  * 思考块门控 → 胶囊 → 侧栏跟随 → 软渲染钩子。
  */
@@ -284,7 +284,7 @@ function applyGlassLayer() {
 }
 
 /**
- * 玻璃层 dispose（原 src/effects.js clearEffects 的玻璃段，逐字搬来；清单与摘除顺序保持原样）。
+ * 玻璃层 dispose（ADR-0016 迁移）。
  * 主包拆卸期对本层调用（attachLayer 的 unsubscribe 对面），卸载 / 禁用后 DOM 上不留玻璃态。
  */
 function disposeGlassLayer() {

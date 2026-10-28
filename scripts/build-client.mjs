@@ -67,7 +67,7 @@ const INLINE_MODULES = [
     markers: ['function weClampTo(', 'function weNow(', 'function weBody('],
   },
   {
-    // 词表域模块（7 个）必须排在组装点 `src/i18n-copy.js` **之前**：构建期内联进同一工厂作用域，
+    // 词表域模块（8 个）必须排在组装点 `src/i18n-copy.js` **之前**：构建期内联进同一工厂作用域，
     // 组装点顶层读它们是 TDZ 的正面用法。域划分 = 文案归属的界面域（表体一行未改、顺序未动）；
     // 顺序即键插入序，守卫 test/verify-i18n.mjs 按 INLINE_MODULES 顺序逐条比对。
     file: 'src/i18n-copy-core.js',
@@ -130,7 +130,7 @@ const INLINE_MODULES = [
     why: '样式域 shell（ADR-0016 第四刀玻璃段出户后）：原生左栏模式底 · 外壳画布底（壁纸让位两段）',
     markers: ['const CSS_SHELL = `', '/* ── 原生左栏在 extended/advanced 窗口模式下的不透明底', '/* ── 外壳画布底'],
   },
-  // ── ADR-0016 第四刀（2026-10-28）：styles-sidebar.js **整文件**随玻璃包走（该域全部是
+  // ── ADR-0016 第四刀：styles-sidebar.js **整文件**随玻璃包走（该域全部是
   //    玻璃接管：左栏 / 四角圆角 / 标题栏 / better-sidebar / 官方右栏 / 内容面）——
   //    内容住 packages/glass/src/glass-css.js 的 CSS_GLASS，主包组装式不再有 CSS_SIDEBAR 段。
   {
@@ -271,7 +271,7 @@ const INLINE_MODULES = [
     markers: ['function moduleResetButtonNode(moduleName, onResetModule, labels) {',
       'className: "we-mod-reset"'],
   },
-  // ── ADR-0016 第二刀（2026-10-27）：「主题预设」+「玻璃 UI」节渲染器（原 src/glass-panel.js）
+  // ── ADR-0016 第二刀：「主题预设」+「玻璃 UI」节渲染器（现 packages/glass/src/glass-panel.js）
   //    **已迁出主 bundle**，住 packages/glass，由该包自己的 client.build.json 出产物
   //    lib/client.glass.js；主包只留 panel-tabs 里那枚按 id 取渲染器的**注册表占位桩**
   //    （屏上位置不变：主题 → 细节 → 玻璃 UI → 侧栏圆角 → 全局 UI 配色 → 全局字体）。
@@ -330,23 +330,23 @@ const INLINE_MODULES = [
   },
   {
     file: 'src/panel-tabs-appearance.js',
-    why: '「外观」页签的节渲染器与字体一族（原 src/panel-tabs.js 的 520–1125 行原样搬移）',
+    why: '「外观」页签的节渲染器与字体一族（从 src/panel-tabs.js 按域拆出）',
     markers: ['function renderAppearanceThemeSection(ctx) {', '    const { onResetModule, onToggleThemeFollow, sel } = ctx;'],
   },
   {
     file: 'src/panel-tabs-mascot.js',
-    why: '「吉祥物」页签的节渲染器与其模块级常量/拖拽状态（原 src/panel-tabs.js 的 1184–1574 行原样搬移）',
+    why: '「吉祥物」页签的节渲染器与其模块级常量/拖拽状态（从 src/panel-tabs.js 按域拆出）',
     markers: ['function renderMascotFormCards(sel, previewArt, previewW, previewH,', '  const MASCOT_BOX_PX = 64;'],
   },
   {
     file: 'src/panel-tabs-effects.js',
-    why: '「播放」页签的三个节渲染器：滑块 / 实时帧 / 出图来源（原 src/panel-tabs.js 的 1618–1913 行原样搬移；倍速·帧率上限与适配·翻转两节 P-D S3d 起住在 packages/media-bridge 的浏览器半边）',
+    why: '「播放」页签的三个节渲染器：滑块 / 实时帧 / 出图来源（从 src/panel-tabs.js 按域拆出；倍速·帧率上限与适配·翻转两节住在 packages/media-bridge 的浏览器半边，ADR-0013/ADR-0014）',
     markers: ['function renderEffectsSlidersSection(ctx) {',
       '    const { onBackgroundBrightness, onBackgroundContrast, onBackgroundSaturate, onLayerPositionX, onLayerPositionY, onLayerReset, onLayerScale, onScrim, onWallpaperBlur, onWallpaperOpacity, sel } = ctx;'],
   },
   {
     file: 'src/panel-tabs-advanced.js',
-    why: '「系统」页签的六个节渲染器（原 src/panel-tabs.js 的 1943–2211 行原样搬移）',
+    why: '「系统」页签的六个节渲染器（从 src/panel-tabs.js 按域拆出）',
     markers: ['function renderAdvancedBrowsingSection(ctx) {', '    const { onLayoutChange, sel } = ctx;'],
   },
   {
@@ -450,7 +450,7 @@ const INLINE_MODULES = [
     markers: ['var OCCLUSION_POLL_MS = ', 'function startOcclusionPolling(', 'function stopOcclusionPolling(',
       'function occlusionTick(', 'function deliverOcclusionSnapshot('],
   },
-  // ── ADR-0016 第三刀（2026-10-28）：玻璃**运行时**（原 src/glass.js / glass-surfaces.js /
+  // ── ADR-0016 第三刀：玻璃**运行时**（现 packages/glass/src/glass.js / glass-surfaces.js /
   //    glass-extra.js + effects.js 的玻璃段 + detectSoftwareRender）**已迁出主 bundle**，
   //    住 packages/glass/src/，由该包的 client.build.json 出产物，经 registerLayerHooks('glass')
   //    挂进主包的 emit 节拍（sync = 原玻璃段写入、dispose = 原清理清单，逐字搬迁）；
@@ -483,7 +483,7 @@ const INLINE_MODULES = [
 ];
 
 /**
- * **子包各自的浏览器半边产物**（BUNDLE-SPLIT §7.1 / ADR-0013 D9「多包后每包一产物」）。
+ * **子包各自的浏览器半边产物**（ADR-0014（子包契约） §7.1 / ADR-0013 D9「多包后每包一产物」）。
  *
  * 为什么不把 packages/* 追加进 INLINE_MODULES：INLINE_MODULES 的语义是「内联进**主** bundle 的
  * prelude」，而 test/verify-module-layout.mjs（规则③）、test/tools/src-scope.mjs、
@@ -492,9 +492,9 @@ const INLINE_MODULES = [
  * 不同的产物落点。
  *
  * 产物名 lib/client.<pkg>.js（而不是 client.js）：主产物已经是 lib/client.js，同名会在
- * 「按名字扫描产物」的守卫里撞面（包级约定 exports['./client'] 见 test/verify-package-publish.mjs:267）。
+ * 「按名字扫描产物」的守卫里撞面（包级约定 exports['./client'] 见 test/verify-package-publish.mjs）。
  *
- * **配方数据驱动 N（BUNDLE-SPLIT §7.2）**：子包清单不再写死在本文件里，而是「每个有浏览器半边的
+ * **配方数据驱动 N（ADR-0014（子包契约） §7.2）**：子包清单不再写死在本文件里，而是「每个有浏览器半边的
  * standalone 包一份 `packages/<pkg>/client.build.json`」：
  *   { "entry": "src/client.js",         // 该包浏览器半边入口（相对包目录；缺省 src/client.js）
  *     "artifact": "lib/client.fx.js",   // 产物落点（相对包目录，必须逐字 == exports['./client']）
@@ -926,7 +926,7 @@ function stripHeader(srcText) {
  * 组装一份客户端产物 —— 主 bundle 与子包 bundle **同形**（同一个 window.__ModuleLoader__.load
  * 形状），差别只有两处：
  *   · 子包 bundle 由构建发出 `const host = require('<主包名>')`，那是跨包通道的唯一入口
- *     （ADR-0013 D13 / BUNDLE-SPLIT §5.1 ②：子包不 import 主包源码，只消费主 bundle 的
+ *     （ADR-0013 D13 / ADR-0014（子包契约） §5.1 ②：子包不 import 主包源码，只消费主 bundle 的
  *     `module.exports`；`exports.hostBridgeKeys` 是冻结的显式键集）。
  *     这一行**必须**由构建发出：源码面写 require 会被 test/verify-subpackage-purity.mjs 判红
  *     （它只放行产物，只放行主包名出现在 packages/<pkg>/lib/client*.js 里）。

@@ -2537,10 +2537,10 @@ function onSidebarAllCorners(side, square) {
   emit();
 }
 // 标题栏液态玻璃（titlebarGlass）：与左侧栏同一形状的**乙类**总开关 —— 门控属性挂在
-// 玻璃后端（现 packages/glass/src/glass.js，ADR-0016 第三刀出户；本文件只翻存储键，切换不重建任何东西）。
+// 玻璃后端（现 packages/glass/packages/glass/src/glass.js，ADR-0016 第三刀出户；本文件只翻存储键，切换不重建任何东西）。
 function onTitlebarGlass(e) { setSetting("titlebarGlass", e.target.checked); emit(); }
 // 「思考块液态玻璃」三挡分段（关 / 液态玻璃 / 原生）：一次写两键 —— 原生挡赢过玻璃挡的
-// 互斥由 effects.js 的门控属性保证（thinkingNative ⇒ 不挂 data-we-thinking-glass），
+// 互斥由 glass-layer.js 的门控属性保证（thinkingNative ⇒ 不挂 data-we-thinking-glass），
 // 这里让存储两键与所选拍始终一致（不留给手改 config 4 种组合里的矛盾态）。
 function onThinkingMode(mode) {
   setSetting("thinkingGlass", mode === "glass");
@@ -6487,10 +6487,10 @@ const HOST_BRIDGE_BINDINGS = {
   FPS_CAP_VALUES: () => FPS_CAP_VALUES,
   codecLabel: () => codecLabel,
   // ── 玻璃半边（packages/glass，ADR-0016 第二刀）的显式键集 ───────────────────────────
-  // 来源 = packages/glass/src/glass-panel.js 的**自由标识符**逐个点名（键集真源 = 本表；
+  // 来源 = packages/glass/packages/glass/src/glass-panel.js 的**自由标识符**逐个点名（键集真源 = 本表；
   // 子包侧 *_HOST_REQUIRED 由 verify-subpackage-client-half 双向对账）。
   // React / weT / switchRow / SliderRow / swatchRow / ctlText / sectionHead / renderConfirmRow
-  // 是 fx / fonts / media-bridge 已登记过的键，glass 复用、**不重复登记**。新增八键如下；
+  // 是 fx / fonts / media-bridge 已登记过的键，glass 复用、**不重复登记**。新增七键如下（另有 `apiUrl` 已在通用键段登记，玻璃行状态轮询依赖它）；
   // 反面同样严格：多一个键就是多一条没人维护的隐式契约（多一个都不给）。
   moduleResetButtonNode: () => moduleResetButtonNode,
   GLASS_CHILDREN: () => GLASS_CHILDREN,
@@ -6499,7 +6499,7 @@ const HOST_BRIDGE_BINDINGS = {
   ROPE_FORMS: () => ROPE_FORMS,
   ROPE_FORM_VALUES: () => ROPE_FORM_VALUES,
   panelGlassPair: () => panelGlassPair,
-  // 第三刀（运行时随包走）新增五键 + 两个登记入口（registerLayerHooks 已有）：
+  // 第三刀（运行时随包走）新增六键 + registerGlassStatus 一个登记入口（registerLayerHooks 是早已登记的键）：
   //   · skinYieldActive —— 让路态判定（applyGlass 门控与思考块/侧栏跟随共用）；
   //   · weClampSurfaceColor / glassColorOf —— 染色地板钳制与分主题取色（家留主包，子包经此共享）；
   //   · sanitizeExtraGlassSelectors —— #200 选择器消毒（settings-schema 具名导出）；

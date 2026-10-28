@@ -14,8 +14,8 @@
  *   ③ **读谁只在这里决定**：`glassValue(面, 参数, 自己的键, 全局的键)`；UI 只翻开关，不动接线。
  *
  * ⚠️ 本文件**不读** `selection` 以外的状态。`norm` / `denorm` / `toRgbTriple` 是本文件内的
- *    工具；`weClampSurfaceColor` 由 `src/effects.js` 顶层提供（构建期内联进**同一个工厂作用域**，
- *    所以这里直接调用即可，不需要 import 语法）。
+ *    工具；`weClampSurfaceColor` 经主包显式键集从 host 取（玻璃是独立 bundle，不存在主包工厂
+ *    作用域 —— 裸符号会运行期 ReferenceError；见 packages/glass/src/client.js 的解构）。
  */
 
 // RGB 三元组：给 rgba() 槽位用（消息气泡 / 输入框的白釉染色）。
@@ -38,11 +38,11 @@ function applyGlass(selection, s) {
     return;
   }
   // ── 页面玻璃总锚点：**恒挂**（插件在跑 = 玻璃在算值 ⇒ 配方该生效）───────────────
-  // styles.js 里全部"整页接管"的玻璃规则（表面令牌映射 / 对话栏 / 轨迹 / 左栏 /
+  // glass-css.js 里全部"整页接管"的玻璃规则（表面令牌映射 / 对话栏 / 轨迹 / 左栏 /
   // 右栏面板 / 两档回退）都挂在这个属性下 —— 它与 `data-we-wallpaper`（壁纸层在场、
   // 页面让开）**正交**：壁纸只是玻璃的背景来源之一，不是玻璃的前提 —— 否则不设壁纸时
   // 玻璃参数全是死旋钮（用户报障：「页面玻璃效果只有设置壁纸后才生效」）。卸载路径在
-  // effects.js 的 clearEffects 成对撤除（与 -chat / -window / -floaters 同批）。
+  // 玻璃行为层的 disposeGlassLayer 成对撤除（与 -chat / -window / -floaters 同批）。
   document.body.setAttribute("data-we-glass-page", "on");
   // ── 玻璃面 × 参数的取值解析（**两态**，由 `glassMode` 说读谁）────────────────────
   //
@@ -72,7 +72,7 @@ function applyGlass(selection, s) {
     (glassModeOn(surface) ? profileValue : globalValue);
 
   // ── 设置窗口这个玻璃面的**按面**釉层变量 ────────────────────────────────────────
-  // 该面的 CSS 现在读 `var(--we-settings-window-<x>, <原全局表达式>)`（见 styles.js 的
+  // 该面的 CSS 现在读 `var(--we-settings-window-<x>, <原全局表达式>)`（见 glass-css.js 的
   // 「设置窗口」4 条规则）⇒ 这一组变量就是它的来源，"读全局还是读自己"由 `glassValue` 决定。
   //
   // ⚠️ **两项能做到，两项做不到**（取证结论）：
@@ -93,7 +93,7 @@ function applyGlass(selection, s) {
   //   读谁）。"该撤没撤"于是**在结构上无法发生**。
   // ⚠️ 跟随档写出的值 == CSS 兜底本来会取到的值
   //   （`--we-blur` 就是 `blur + "px"`；`--we-glass-alpha` 与本面的 alpha 曲线同形），
-  //   等价性由 `.test-cache/r1-equivalence.mjs` 的"有效取值零差异"守着。
+  //   等价性要求：有效取值零差异。
   // "要不要玻璃"仍由**门控属性**管（层叠机制），与"用谁的值"正交。
   {
     // 本面的透明度曲线：与全局**同形**（滑杆 0–100 → 0.25…0.10，数值越大越透）。
@@ -107,7 +107,7 @@ function applyGlass(selection, s) {
   //   存储键**复用** `chatGlassFidelity`（不新建平行键），所以老配置的值不丢。
   //   ⚠️ 取值的"读谁"判定经 `glassValue`：开了「对话框玻璃·独立配置」才读它自己的键，
   //   否则**继承全局**的 `glassFidelity`。
-  //   只喂对话栏的**框架**玻璃面（气泡 / 输入卡片含工具弹卡 —— styles.js 里消费
+  //   只喂对话栏的**框架**玻璃面（气泡 / 输入卡片含工具弹卡 —— glass-css.js 里消费
   //   --we-chat-readability-* 的那批声明）。正文里的 markdown 内容面（代码块 / 行内代码 /
   //   引用等）刻意**不**跟本档：内容渲染面与侧边栏一起跟全局保真度（用户口径：代码块不和
   //   输入框一起）。tint 钳制与地板权重都按本档单独算（同源不变量）。
@@ -127,7 +127,7 @@ function applyGlass(selection, s) {
   s.setProperty("--we-chat-surface-tint-rgb-dark", toRgbTriple(weClampSurfaceColor(chatColorDark, "dark", chatGlassFidelity)));
 
   // ── 思考触发条的**按面**釉层变量 ──────────────────────────────────────────────
-  // 该面的 CSS 读 `var(--we-thinking-trigger-<x>, <原全局表达式>)`（styles.js 里那条
+  // 该面的 CSS 读 `var(--we-thinking-trigger-<x>, <原全局表达式>)`（glass-css.js 里那条
   // **接管宿主令牌**的规则）⇒ 这一组变量就是它的来源，"读全局还是读自己"由 `glassValue` 决定。
   // ⚠️ 只写**两项**（模糊 / 透明度）：与 `settingsWindow` / `floaters` 同一口径 ——
   //    共享面纱 ⇒ 保真度不可达；本面的 CSS 不消费颜色 ⇒ 不给 `color`。
@@ -159,7 +159,7 @@ function applyGlass(selection, s) {
   else document.body.removeAttribute("data-we-left-sidebar");
 
   // ── 侧边栏四角圆角 / 直角（外观 → 侧边栏圆角）────────────────────────────────
-  // 与玻璃无关的一对属性 + 一个变量（CSS 见 styles.js 同名块）：左栏锚点 = 座位出口的
+  // 与玻璃无关的一对属性 + 一个变量（CSS 见 glass-css.js 同名块）：左栏锚点 = 座位出口的
   // **父元素**（出口带 display:contents、不生成盒子），右栏锚点必须带
   // [data-sidebar-right-open]（容器收起时仍挂在布局里，裸锚会给收起态留一块板子）。
   // 默认（统一档 'native'、四角都不直角）时**一个属性都不挂** ⇒ 规则不生效、逐字节等于今天。
@@ -181,7 +181,7 @@ function applyGlass(selection, s) {
   }
 
   // ── 左侧栏的**按面**釉层变量 ─────────────────────────────────────────────────
-  // 该面的 CSS 读 `var(--we-left-sidebar-<x>, <原全局表达式>)`（styles.js 的
+  // 该面的 CSS 读 `var(--we-left-sidebar-<x>, <原全局表达式>)`（glass-css.js 的
   // 「左侧栏液态玻璃」规则）⇒ 这一组变量就是它的来源。
   //
   // ⚠️ 门控与「玻璃 UI」的子项**不同**（这是乙类的特征）：
@@ -215,7 +215,7 @@ function applyGlass(selection, s) {
   else document.body.removeAttribute("data-we-titlebar-glass");
 
   // ── 标题栏的**按面**釉层变量 ───────────────────────────────────────────────────
-  // 该面的 CSS 读 `var(--we-titlebar-<x>, …)`（styles.js 的「标题栏液态玻璃」规则）
+  // 该面的 CSS 读 `var(--we-titlebar-<x>, …)`（glass-css.js 的「标题栏液态玻璃」规则）
   // ⇒ 这一组变量就是它的来源。
   //
   // ⚠️ 门控与左侧栏**完全同形**（同是乙类）：
@@ -283,12 +283,12 @@ function applyGlass(selection, s) {
   // 侧栏全透明（issue #137）：独立于「要不要玻璃」的第三态门控 —— 玻璃开着时它把
   // 地板/色染/釉光三组变量在侧栏子树里就地归零，玻璃关着时它接管右栏那条原生
   // 不透明兜底。与 data-we-sidebar-glass 一样是"值与门正交"的属性；配对的卸载
-  // 撤除在 effects.js 的 clearEffects（漏撤 ⇒ 插件卸载后规则组照旧生效）。
+  // 撤除在玻璃行为层的 disposeGlassLayer（漏撤 ⇒ 插件卸载后规则组照旧生效）。
   if (selection.sidebarFullClear) document.body.setAttribute("data-we-sidebar-fullclear", "on");
   else document.body.removeAttribute("data-we-sidebar-fullclear");
 
   // ── 插件自身浮层的**按面**釉层变量 ───────────────────────────────────────────
-  // 该面的 CSS 现在读 `var(--we-floaters-<x>, <原全局表达式>)`（styles.js 的
+  // 该面的 CSS 现在读 `var(--we-floaters-<x>, <原全局表达式>)`（styles-quick.js 的
   // `.we-update-notice` 与 `.we-repo-panel--open` 两条规则）⇒ 这一组变量就是它的来源。
   // 涉及两处玻璃面：**更新提示**（自己一块面板）与**壁纸仓库抽屉**（打开态才画玻璃）。
   //

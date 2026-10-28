@@ -34,7 +34,7 @@ import { statSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 // 提取本体 `extractSceneVideoFromDir` / `extractSceneVideoFromPkgFile` 来自主包
 // `lib/scene-manifest.js`（**纯符号库**，不是 `apply` 的状态；该叶子因主包内核
-// `lib/media/scene-probe.js:22` 的 import 面留主包）⇒ 经调用点显式给的 `schema` 面拿
+// `lib/media/scene-probe.js` 的 import 面留主包）⇒ 经调用点显式给的 `schema` 面拿
 //（主包纯符号视图），本文件不再 import 主包；路由模块对新 import 的依赖越少越难与门面漂开
 //（见 verify-module-layout ⑤）。
 

@@ -13,7 +13,7 @@
  *   · 本包的 INLINE_MODULES（client.build.json 的 inline[]）内联在正文之前 ⇒ 兄弟文件与入口落在
  *     **同一个工厂作用域**：互相按裸名引用，不 import、不 require、不许 `...host` 展开、不许动态键。
  *   · 唯一例外 = 产物里由构建循环 outline 在正文与内联件之前发出的那一行
- *     `const host = require('<主包名>');`（BUNDLE-SPLIT §5.1 ②）。源码面写 require 会被
+ *     `const host = require('<主包名>');`（ADR-0014（子包契约） §5.1 ②）。源码面写 require 会被
  *     test/verify-subpackage-purity.mjs 判红（只放行产物、只放行主包名出现在本包 lib/client*.js 里）。
  *
  * ## 消费侧契约（唯一跨包通道 = 主 bundle 的显式键集，ADR-0014 S5.1 / S5.4）

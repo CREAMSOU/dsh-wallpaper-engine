@@ -36,11 +36,11 @@
  *
  * 域模块的**节渲染器**按域住在同族兄弟模块（构建期内联在本文件之前，见 scripts/build-client.mjs 的
  * INLINE_MODULES）：src/panel-tabs-appearance.js / -mascot.js / -effects.js / -advanced.js；壁纸库的
- * 六节渲染器随子包走（packages/media-bridge/src/*），经面板节注册表挂回来。本文件只留八个 render*Tab
+ * 壁纸库 4 节 + 播放 2 节渲染器随子包走（packages/media-bridge/src/*），经面板节注册表挂回来。本文件只留八个 render*Tab
  * （守卫与 src/client.js 的调用点都按名字取它们，导出名必须在**本文件**里有绑定）与
  * extensionModules()。主包内搬出的 render*Section / renderMascotFormCards 等仍是同一工厂作用域的
  * 自由名字（打包后同作用域；按文件 import 的台架按既有口径挂全局）；**子包**的渲染器
- * （`packages/fonts` 的字体节、`packages/media-bridge` 的六节）不在这条作用域里 —— 它们经面板节
+ * （`packages/fonts` 的字体节、`packages/media-bridge` 的 4+2 节）不在这条作用域里 —— 它们经面板节
  * 注册表 / 扩展注册表挂回来。
  * **接缝四类越界的判据扫的是全族并集**（test/verify-client.mjs 的 RENDERERS 表 +
  * test/tools/src-scope.mjs 的 panelText()），搬出去不等于搬出判据。
@@ -124,7 +124,7 @@ function weComponentVisibleOf(components, name) {
   // 喂给它 —— 中文因此留在本文件的 `weT(...)` 里（i18n 扫描器认这个形态；写进被调模块会
   // 被判成"裸中文"），各节调用点则保持 `moduleResetButton("模块名", onResetModule)` 这么短。
   // ⚠️ 必须是**本文件的模块级（工厂作用域）声明**，不能留在 `renderAppearanceTab` 体内：
-  //    五个域模块（src/panel-tabs-*.js）按域搬出后仍按这个名字引用它 —— 打包后同一工厂
+  //    四个域模块（src/panel-tabs-*.js）按域搬出后仍按这个名字引用它 —— 打包后同一工厂
   //    作用域没问题，但按文件 import 的守卫台架（verify-fontset / verify-scene-live 的
   //    侧栏档）只有把真实现挂到全局才找得到。
   function moduleResetButton(moduleName, onResetModule) {

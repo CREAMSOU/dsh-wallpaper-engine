@@ -4,7 +4,7 @@
   "inline": [
     {
       "file": "src/glass-css.js",
-      "why": "玻璃样式表（ADR-0016 第四刀）：原 src/styles-{base,shell,sidebar,chrome,ext}.js 的全部玻璃段逐字节搬来，CSS_GLASS 由入口的 ensureGlassCss() 在求值期注入独立 <style data-plugin-css> 标签（主包 sheet 之后，层叠关系与搬移前同构）",
+      "why": "玻璃样式表（ADR-0016 第四刀）：ADR-0016 第四刀迁入：CSS_GLASS 由入口的 ensureGlassCss() 在求值期注入独立 <style data-plugin-css> 标签（主包 sheet 之后）",
       "markers": [
         "const READABILITY_FLOOR = 0.45;",
         "const CSS_GLASS = `",
@@ -13,7 +13,7 @@
     },
     {
       "file": "src/glass-surfaces.js",
-      "why": "统一表面策略、安全载体、动态几何与可撤销生命周期（原 src/glass-surfaces.js，ADR-0016 第三刀整文件逐字搬来）；weGlassSurfaceStatus 经入口的 registerGlassStatus 登记回主包（外观 ctx 的诊断投影）",
+      "why": "统一表面策略、安全载体、动态几何与可撤销生命周期（ADR-0016 迁入）；weGlassSurfaceStatus 经入口的 registerGlassStatus 登记回主包（外观 ctx 的诊断投影）",
       "markers": [
         "function weResolveSurface(",
         "function syncGlassSurfaces(",
@@ -22,7 +22,7 @@
     },
     {
       "file": "src/glass.js",
-      "why": "玻璃后端：取值解析 / 各面釉层变量 / 门控属性（无条件写，值槽位与开关正交；原 src/glass.js，ADR-0016 第三刀整文件逐字搬来）",
+      "why": "玻璃后端：取值解析 / 各面釉层变量 / 门控属性（无条件写，值槽位与开关正交；ADR-0016 第三刀迁入）",
       "markers": [
         "const toRgbTriple = (hex) => {",
         "function applyGlass(selection, s) {",
@@ -31,7 +31,7 @@
     },
     {
       "file": "src/glass-extra.js",
-      "why": "「额外补雾化的选择器」（#200）：把用户点名的选择器编译成 ::before 载体规则，写进本通道自己的 <style>（原 src/glass-extra.js，ADR-0016 第三刀整文件逐字搬来）",
+      "why": "「额外补雾化的选择器」（#200）：把用户点名的选择器编译成 ::before 载体规则，写进本通道自己的 <style>（ADR-0016 迁入）",
       "markers": [
         "const EXTRA_GLASS_TAG_ID = ",
         "function weExtraGlassCss(",
@@ -50,7 +50,7 @@
     },
     {
       "file": "src/glass-panel.js",
-      "why": "「主题预设」+「玻璃 UI」节的渲染器（原 src/glass-panel.js，第二刀逐字搬来）：注册表驱动（GLASS_CHILDREN + childGlassKey）、只读 ctx、动作经 on* 处理器",
+      "why": "「主题预设」+「玻璃 UI」节的渲染器（ADR-0016 迁入）：注册表驱动（GLASS_CHILDREN + childGlassKey）、只读 ctx、动作经 on* 处理器",
       "markers": [
         "function renderGlassPresetsBlock(gp) {",
         "function renderGlassSurfaceControls(ctx) {",
