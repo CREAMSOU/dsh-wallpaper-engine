@@ -5019,14 +5019,14 @@ setTimeout(async () => {
   const A = buildFh(fhSrc);
   const disposeA = A.mod.installFocusHandback();
   assert.ok(typeof disposeA === 'function', '#148 宿主半：installFocusHandback 必须返回拆除函数（挂 ctx.effect）');
-  assert.ok(A.listeners.filter((l) => l.on === 'document').length === 2
+  assert.ok(A.listeners.filter((l) => l.on === 'document').length === 5
     && A.listeners.filter((l) => l.on === 'window').length === 4,
-    '#148 宿主半：监听器清单 = document 上 focusin/focusout + window 上 pointerdown/mousedown/touchstart/keydown，实测 '
+    '#148 宿主半：监听器清单 = document 上 focusin/focusout/keydown/beforeinput/input（后三个只为刷新「最近使用」）+ window 上 pointerdown/mousedown/touchstart/keydown，实测 '
     + JSON.stringify(A.listeners.map((l) => l.on + ':' + l.t)));
   assert.ok(A.win.__weFocusHandback && A.win.__weFocusHandback.active === true,
     '#148 宿主半：状态必须挂到 window.__weFocusHandback 上（真机控制台自证"交还了几次"）');
   assert.equal(A.mod.installFocusHandback(), disposeA, '#148 宿主半：重复安装必须幂等（返回同一个拆除函数）');
-  assert.equal(A.listeners.length, 6, '#148 宿主半：重复安装不许叠加第二套监听器，实测 ' + A.listeners.length);
+  assert.equal(A.listeners.length, 9, '#148 宿主半：重复安装不许叠加第二套监听器，实测 ' + A.listeners.length);
 
   // ② 正常交还：用户在输入框里 → 焦点被搬进壁纸帧 → 搬回来。
   A.fire('focusin', A.hostInput);
@@ -5218,8 +5218,8 @@ setTimeout(async () => {
   mutGesture.advance(0);
   assert.deepEqual(mutGesture.focused, ['input'],
     'negative control: 摘掉"最近真实交互"判定 ⇒ 有手势也会交还 ⇒ 上面那条负对照不是空转');
-  const mutTargetSrc = fhSrc.replace('if (!weIsWallpaperFrame(active) || !active.isConnected) return;',
-    '/* 不看落点 */');
+  const mutTargetSrc = fhSrc.replace('if (!weIsWallpaperFrame(active) || !active.isConnected) { // ② 焦点得真的在壁纸帧里',
+    'if (false) { /* 不看落点 */');
   assert.ok(mutTargetSrc !== fhSrc, 'negative control 的改写必须真的命中源码');
   const mutTarget = buildFh(mutTargetSrc);
   mutTarget.mod.installFocusHandback();
@@ -5299,6 +5299,70 @@ setTimeout(async () => {
     assert.ok(mutEarly.atWindowEdge === 1,
       'negative control（变异③提前补交）：`窗口未到点不许补交`要判红 —— 实测 999ms 时已经补交 ' + mutEarly.atWindowEdge + ' 次');
   }
+
+  // ⑤ §11 #169 §2：新鲜度按「最近一次使用」算，不是「最近一次聚焦」。
+  //    同一个输入框连续打字 > STALE_MS（期间只有 keydown/input，没有 focusin）⇒ 焦点被夺走后
+  //    必须仍能交还；旧语义会把它判成「过期」，恰好在交还机制要服务的场景（打字中）里失效。
+  const U = buildFh(fhSrc);
+  U.mod.installFocusHandback();
+  U.fire('focusin', U.hostInput);
+  U.advance(150000);                        // 打了 150s 字：只可能是 keydown/input
+  U.fire('keydown', U.hostInput);
+  U.fire('input', U.hostInput);
+  U.advance(60000);                         // 距最后一次使用 60s、距聚焦 210s（> STALE_MS=120s）
+  U.doc.activeElement = U.frame;
+  U.fire('focusout', U.hostInput);
+  U.advance(0);
+  assert.deepEqual(U.focused, ['input'],
+    '#169 §2：长时打字后（> STALE_MS）交还必须仍然成立 —— 新鲜度按「最近使用」算，实测 '
+    + JSON.stringify(U.focused));
+  assert.equal(U.win.__weFocusHandback.handbacks, 1, '#169 §2：这次交还要如实记账');
+  // 负对照：把「使用刷新」摘掉 ⇒ 同一序列必须判红（证明上面那条判的是这条语义）。
+  const noUseSrc = fhSrc.replace(
+    'state.lastAt = Date.now(); // #169：最近一次使用',
+    '/* 变异：#169 不刷新「最近一次使用」 */');
+  assert.ok(noUseSrc !== fhSrc, 'negative control 的改写必须真的命中源码（#169 使用刷新）');
+  const M2 = buildFh(noUseSrc);
+  M2.mod.installFocusHandback();
+  M2.fire('focusin', M2.hostInput);
+  M2.advance(150000);
+  M2.fire('keydown', M2.hostInput);
+  M2.fire('input', M2.hostInput);
+  M2.advance(60000);
+  M2.doc.activeElement = M2.frame;
+  M2.fire('focusout', M2.hostInput);
+  M2.advance(0);
+  assert.ok(M2.focused.length === 0 && M2.win.__weFocusHandback.handbacks === 0
+    && M2.win.__weFocusHandback.skipped >= 1,
+    'negative control（摘掉「使用刷新」）：长时打字后交还要判红（skipped 记一次）—— 实测 '
+    + JSON.stringify({ focused: M2.focused, handbacks: M2.win.__weFocusHandback.handbacks, skipped: M2.win.__weFocusHandback.skipped }));
+
+  // ⑥ §11 #169 §1：宿主侧把焦点腾到 `body` 的那一族只**记账**、不交还（补偿分支等真机样本）。
+  //    旧实现里这个分支是静默 return：`handbacks`/`skipped` 都不动，真机分不清两族成因。
+  const B = buildFh(fhSrc);
+  const disposeB = B.mod.installFocusHandback();
+  B.fire('focusin', B.hostInput);
+  B.doc.activeElement = B.doc.body;          // 宿主重排/重合成把焦点腾到 body
+  B.fire('focusout', B.hostInput);
+  B.advance(0);
+  assert.equal(B.win.__weFocusHandback.handbacks, 0,
+    '#169 §1：落点是 body 时不许交还（没有可交还的帧，抢回来就是另一种焦点抢占）');
+  assert.equal(B.win.__weFocusHandback.bodyLandings, 1,
+    '#169 §1：body 落点必须单独记账（旧实现静默 return，真机看不到这一族）');
+  assert.ok(B.win.__weFocusHandback.lastBodyAt > 0, '#169 §1：body 落点要带时间戳（自证面可读）');
+  // 第二条观测入口：`focusin` 直接落在 body（旧实现同样静默 return）。
+  B.fire('focusin', B.doc.body);
+  assert.equal(B.win.__weFocusHandback.bodyLandings, 2,
+    '#169 §1：focusin 落到 body 也要记账（两条入口同一个计数器）');
+  // 负对照：落点是**宿主元素** ⇒ 不许记进 bodyLandings（否则读数分不清两族）。
+  B.doc.activeElement = B.hostButton;
+  B.fire('focusout', B.hostInput);
+  B.advance(0);
+  assert.equal(B.win.__weFocusHandback.bodyLandings, 2,
+    '负对照：焦点落在宿主元素上不是 body 落点，bodyLandings 不许涨');
+  disposeB();
+  B.fire('focusin', B.doc.body);
+  assert.equal(B.win.__weFocusHandback.bodyLandings, 2, '拆除后不许再记账（监听器已摘干净）');
 }
 
 // ── 滑块的取值域必须**同源于 schema**（为一个真实事故补的判据）────────────────────
