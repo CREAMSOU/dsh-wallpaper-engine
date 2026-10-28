@@ -181,15 +181,21 @@ const CSS_BASE = `
   }
 
   /* While a wallpaper is active: make the app frame AND sidebar transparent so
-     all columns share the same wallpaper+scrim background. 这两条**只**属于壁纸：
-     壁纸层挂在 body 的 z-index:-1 上，页面基色 / 侧栏填充必须让开才看得见。
-     无壁纸时它们保持宿主原色 —— 页面因此始终有一层不透明基色（玻璃面压在这层之上）。 */
+     all columns share the same wallpaper+scrim background. 页面基色让位**只属于壁纸**：
+     壁纸层挂在 body 的 z-index:-1 上，页面基色必须让开才看得见；无壁纸时保持宿主原色。
+     ⚠️ 侧栏填充的让位**只属于玻璃**（ADR-0016 第四刀勘误）：玻璃的侧栏配方随玻璃行走后，
+     若让位仍无跟随，停玻璃行 ⇒ 侧栏失去配方又失去原生填充 = 全透明洞。改挂 data-we-glass-page
+     （玻璃行启用即挂）⇒ 玻璃开 = 现状逐字节；玻璃停 = 侧栏回宿主原生实色，壁纸只在对话区透出。 */
   body[data-we-wallpaper] {
     --dsw-alias-bg-base: transparent;
+  }
+  body[data-we-wallpaper][data-we-glass-page] {
     --dsw-specific-sidebar-fill: transparent;
   }
   body[data-ds-dark-theme][data-we-wallpaper] {
     --dsw-alias-bg-base: transparent;
+  }
+  body[data-ds-dark-theme][data-we-wallpaper][data-we-glass-page] {
     --dsw-specific-sidebar-fill: transparent;
   }
 
