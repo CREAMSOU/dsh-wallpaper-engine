@@ -160,7 +160,7 @@ jobs:
 
       # 仓库内务（原 `verify:docs` 软档）不再跑在每次 full 链上：它既不是文档检查，也不该
       # 为代码 PR 增加 6 条软步骤。现在由 `.github/workflows/housekeeping.yml` 每周定时 +
-      # 手动触发；ADR-0016 已取消文档/内务类门禁。本地仍可用 `npm run verify:docs`。
+      # 手动触发；ADR-0017 已取消文档/内务类门禁。本地仍可用 `npm run verify:docs`。
 
       # 产物出库（v1.4 起）：`lib/client.js` 不再入库 —— 分发路径（npm / Release tgz）
       # 由 prepack 打包时构建，开发路径（link:）先 `npm run build`。因此这里判"没有被跟踪"

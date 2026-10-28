@@ -406,7 +406,7 @@ export function auditCiWorkflow(input) {
       + ' npm=' + JSON.stringify(noticeNpmSteps.map(npmScriptOf)) + ' install=' + noticeInstalls.length
       + ' if=' + briefOf(noticeJob.if) : '缺 notice 作业');
 
-  // ⑤ 软档已撤出 full 链：`verify:docs` 是仓库内务（非文档检查），按 ADR-0016 移到
+  // ⑤ 软档已撤出 full 链：`verify:docs` 是仓库内务（非文档检查），按 ADR-0017 移到
   //    `.github/workflows/housekeeping.yml` 定时跑；本链因此**不允许任何 continue-on-error**，
   //    所有步骤都必须是 fail-closed 的（否则就是"灰档"）。
   const coerce = steps.filter((s) => s.continueOnError);

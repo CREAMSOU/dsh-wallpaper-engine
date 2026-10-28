@@ -58,7 +58,7 @@ ADR 里**不写会随代码漂移的具体数值**（条数、行数、体积、
 | [0003](./0003-build-time-module-inlining.md) | 浏览器半边拆分靠构建期内联，不用运行时模块 | Accepted |
 | [0004](./0004-two-tier-guard-verification.md) | 守卫按"失败的含义"分硬/软两档 | Accepted |
 | [0005](./0005-media-loopback-origin.md) | 媒体由宿主自建的独立 loopback 源提供 | Accepted |
-| [0006](./0006-comment-discipline-as-written-convention.md) | 注释与文档纪律改为纯写作约定，撤掉文档类机器守卫 | Superseded by ADR-0016 |
+| [0006](./0006-comment-discipline-as-written-convention.md) | 注释与文档纪律改为纯写作约定，撤掉文档类机器守卫 | Superseded by ADR-0017 |
 | [0007](./0007-machine-checks-target-code-not-prose.md) | 机器判据只针对代码与磁盘，不针对散文（给出四问判定程序 + 保留/撤除清单） | Accepted |
 | [0008](./0008-glass-config-two-state.md) | 玻璃配置收成"每面两态 + 一把刻度 + 门控分两类"；放弃按面变量间接层与"关即回原生纯色" | Amended by ADR-0010 |
 | [0009](./0009-system-fonts-from-the-os.md) | 本机字体清单由宿主问操作系统（不自己解析字体文件、也不让浏览器枚举） | Accepted |
@@ -68,4 +68,5 @@ ADR 里**不写会随代码漂移的具体数值**（条数、行数、体积、
 | [0013](./0013-bundle-multi-component-rows.md) | **插件拆分**：终态 = **多包**（主包 + 子包，版本一致；2026-10-14 **就地改写 D6/D8**，原为「单包多行 / 不做多包」）＋ 单包多行是**起点与已落地形态**；三件核心目标并列（降复杂度 / 锚定模块边界 / 解耦合）；行级开关 = 宿主路由 + 该组件的浏览器可见面；组件化前先库化 + 内核化。**原编号 0012**（与上游 `0012-artifact-untracking` 撞号 ⇒ 让位顺延） | Accepted |
 | [0014](./0014-subpackage-contract.md) | **子包规范（`packages/<pkg>` 的成文契约，条款号 `S*`）** —— 术语把「独立子包行」与「组件行」分开；依赖方向定成**两张平面**（宿主平面 = 主包 `provide` 服务 → 子包 `inject` 只读；浏览器平面 = 主包冻结面 → 子包产物 `require` 真名且唯一）＋禁止边；判据**只加在代码与磁盘**、**不再新增任何 markdown 判据**；树形依赖图 = 人工维护的 Mermaid（[`docs/SUBPACKAGE-GRAPH.md`](../SUBPACKAGE-GRAPH.md)），放弃机器对账 | Accepted |
 | [0015](./0015-glass-surface-ownership.md) | 统一背景所有权、安全装饰叶节点、未知面原生回退与外部模态让路；修订全局背景令牌泛化接管 | Accepted |
-| [0016](./0016-code-is-truth-docs-reference-source.md) | **代码即真相**：文档只引用源码位置/复算命令，不复制源码与清单；取消文档类门禁与"文档同步"审阅约束（取代 ADR-0006） | Accepted |
+| [0016](./0016-glass-subpackage.md) | **玻璃子包**：液态玻璃抽离为独立子包行（`wallpaper-engine-glass`），设置面板 / 运行时 / CSS 逐刀出户；停用该行 ⇒ 宿主回到原生外观（ADR-0010 D2 的 wallpaper-only 态转正） | Accepted |
+| [0017](./0017-code-is-truth-docs-reference-source.md) | **代码即真相**：文档只引用源码位置/复算命令，不复制源码与清单；取消文档类门禁与"文档同步"审阅约束（取代 ADR-0006）。**原编号 0016**（与 glass 子包撞号 ⇒ 让位顺延） | Accepted |

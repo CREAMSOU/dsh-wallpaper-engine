@@ -67,6 +67,7 @@ Bring local **Wallpaper Engine** Scene, Web and Video wallpapers into DSH, with 
 
 - **Wallpapers**: live Scene / Web rendering, video playback, local image / video uploads and WE project directories.
 - **Appearance**: liquid glass for settings, conversation and sidebar; colors, transparency, blur, borders and fonts.
+- **Glass subpackage**: liquid glass is a standalone subpackage row, `wallpaper-engine-glass`, which can be disabled on its own in the plugin manager; with it disabled the host returns to its native look while wallpapers, fonts and mascots keep working.
 - **Extensions**: mascots, conversation avatars, click / pointer-trail effects, 3D parallax and optional official `dsh-pet` integration.
 - **Library**: filters, hide / restore, rotation lists and whole-configuration preset import / export.
 
@@ -92,6 +93,8 @@ dsh plugin --profile web add dsh-plugin-wallpaper-engine
 ```
 
 Use `desktop` instead of `web` for the desktop host.
+
+This repository ships a **nine-package release set**: the main package plus eight subpackages (including `wallpaper-engine-glass`) at the same version, nine tarballs in total; `publishOrder` puts the eight subpackages first and the main package last, so installing the main package resolves all of them.
 
 **From source**
 

@@ -2,7 +2,7 @@
 
 [中文完整版](README.md) · [English README](README.en.md) · [English below](#english)
 
-> **版本说明**：本指南对应**源码部署**，不是 npm 上已发布的版本；npm 通道见 [README](README.md)。当前安装单位是**主包 + 七个子包，共八包**，不再内置 pet。
+> **版本说明**：本指南对应**源码部署**，不是 npm 上已发布的版本；npm 通道见 [README](README.md)。当前安装单位是**主包 + 八个子包，共九包**，不再内置 pet。
 
 ## 中文
 
@@ -116,7 +116,7 @@ node scripts/install-source.mjs --profile web --dsh-home "<目标 DSH 数据目�
 
 ## English
 
-This guide covers a **source deployment**, not the published npm version. The current source suite is **one main package plus seven subpackages**, with no bundled pet.
+This guide covers a **source deployment**, not the published npm version. The current source suite is **one main package plus eight subpackages**, with no bundled pet.
 
 ### Prepare and install
 

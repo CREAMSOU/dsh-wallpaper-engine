@@ -25,10 +25,10 @@
 
 **`docs/wip/` 的门槛**：它只放**还没做成事实的东西**；
 完成即移入 `docs/archive/wip/`，并且**不许出现"唯一的进度真源"这类台账** —— 需要看守的东西一律写成守卫
-（判据边界见 [`adr/0007`](./adr/0007-machine-checks-target-code-not-prose.md)，文档原则见 [`adr/0016`](./adr/0016-code-is-truth-docs-reference-source.md)），账本自己会漂、且漂了不会变红。
+（判据边界见 [`adr/0007`](./adr/0007-machine-checks-target-code-not-prose.md)，文档原则见 [`adr/0017`](./adr/0017-code-is-truth-docs-reference-source.md)），账本自己会漂、且漂了不会变红。
 过程记录**先把结论写进它该住的地方**（机制 → 实现文件的头注释；判据 → `test/`；取舍 → `adr/`），写不进去的才留在 `wip/`。
 
-## 写作原则（ADR-0016：代码即真相）
+## 写作原则（ADR-0017：代码即真相）
 
 - **源码是唯一真相。** 解释机制时引用 `路径:符号` / 文件头注释 / 复算命令，**不复制源码、清单、默认值、条数、行数**；文档里出现会随代码漂的值，按"文档待修"处理，不是维护承诺。
 - **文档只留三类内容：** 决策与代价（`adr/`）、用户可见行为的解释（README / UPGRADING / TROUBLESHOOTING / HOW-IT-WORKS 等）、由工具生成并逐字节校验的契约索引（`ROUTE-INDEX.md` / `GUARD-MAP.md` / `TOKEN-CONTRACT.md`）。人工快照/名册/进度账本不是必维护项。
@@ -47,7 +47,7 @@
 
 **分层约定**：门面 `README.md` / `README.en.md` 只放**不随版本变化、且新访客决策必需**的事实；
 任何**带版本号 / issue 号 / 性能数字 / 排障步骤 / 实现细节**的内容一律进上表或 `CHANGELOG.md`
-（起因：首页曾有一批 `localStorage` 陈述在某次持久化改造后**集体失真** —— 这正是 ADR-0016"文档不复制会漂的事实"的由来）。
+（起因：首页曾有一批 `localStorage` 陈述在某次持久化改造后**集体失真** —— 这正是 ADR-0017"文档不复制会漂的事实"的由来）。
 
 ## 规范与参考（常青，中文）
 
@@ -69,7 +69,7 @@
 它们住在对应实现文件的头注释里（本仓的成文纪律：能写在代码旁的规则不单写文档）。
 
 写新 ADR 前先读 [`adr/README.md`](./adr/README.md)：那里有该写什么 / 不该写什么、
-头部格式、以及**为什么文档只引用源码而不复制数值**（与 ADR-0016 同口径）。
+头部格式、以及**为什么文档只引用源码而不复制数值**（与 ADR-0017 同口径）。
 
 | ADR | 决定 |
 |---|---|
@@ -87,15 +87,18 @@
 | [0012](./adr/0012-artifact-untracking.md) | 构建产物出库（`lib/client.js` 不入库，改由 build / prepack 现场构建）＋ README 展示图迁至 Release 资产外链；修订 ADR-0003 的 D6 |
 | [0013](./adr/0013-bundle-multi-component-rows.md) | **插件拆分**：终态 = **多包**（主包 + 子包，版本一致），单包多行是**起点**；核心目标 = **降复杂度 / 锚定模块边界 / 解耦合**三件并列；**行级开关 = 宿主路由 ＋ 该组件的浏览器可见面**（可见面由宿主行状态派生、双向对账、"宁可显示不可静默消失"）；**不做**每组件一格客户端开关 / 包内懒块 |
 | [0014](./adr/0014-subpackage-contract.md) | **子包规范**：`packages/<pkg>` 独立子包行的成文契约（条款号 `S*`）—— 术语（独立子包行 vs 组件行、宿主/浏览器半边）、布局、清单契约、行与接线、**依赖方向（两张平面 + 禁止边）**、生命周期、开关与重启、发布形态、登记点；判据只加在**代码与磁盘**，**不新增任何 markdown 判据**；依赖图是人工维护的 Mermaid（[`SUBPACKAGE-GRAPH.md`](./SUBPACKAGE-GRAPH.md)） |
+| [0015](./adr/0015-glass-surface-ownership.md) | **玻璃表面所有权统一**：统一背景所有权、安全装饰叶节点、未知面原生回退与外部模态让路；修订全局背景令牌泛化接管 |
+| [0016](./adr/0016-glass-subpackage.md) | **玻璃子包**：液态玻璃抽离为独立子包行（`wallpaper-engine-glass`），设置面板 / 运行时 / CSS 逐刀出户；停用该行 ⇒ 宿主回到原生外观（ADR-0010 D2 的 wallpaper-only 态转正） |
+| [0017](./adr/0017-code-is-truth-docs-reference-source.md) | **代码即真相**：文档只引用源码位置与复算命令，不复制源码与清单；取消文档类门禁与「文档同步」审阅约束（取代 ADR-0006；原编号 0016，与 glass 子包撞号后让位顺延） |
 
 ## 已归档（`archive/`，只作记录）
 
-归档件**不反映现行实现**，各件顶部有状态横幅；本文件不维护逐件清单与来源日期（清单会漂，按目录自身枚举即得，ADR-0016 D2/D5）。当前四组：
+归档件**不反映现行实现**，各件顶部有状态横幅；本文件不维护逐件清单与来源日期（清单会漂，按目录自身枚举即得，ADR-0017 D2/D5）。当前四组：
 
 | 目录 | 是什么 |
 |---|---|
 | [`archive/adr/`](./archive/adr/README.md) | 拆分子插件重构的旧编号决策档案（旧件带旧编号 → 现行 `D*` 映射） |
-| [`archive/audits/`](./archive/audits/) | 过程审计与实施计划（已收口；低价值过程记录已按 ADR-0016 D5 删除，内容留在 git 历史） |
+| [`archive/audits/`](./archive/audits/) | 过程审计与实施计划（已收口；低价值过程记录已按 ADR-0017 D5 删除，内容留在 git 历史） |
 | [`archive/wip/`](./archive/wip/) | 已收口工作项的过程记录（结论已分头落位：机制 → 文件头注释、判据 → `test/`、取舍 → `adr/`） |
 | [`archive/specs/`](./archive/specs/) | 已落地的设计稿（官方 pet 桥接迁移） |
 
@@ -106,7 +109,7 @@
 
 ## 其它
 
-- **没有活账本**：需要看守的东西一律是守卫（入口 [`DEV-GUIDE.md`](./DEV-GUIDE.md) §4 与 [`adr/0016`](./adr/0016-code-is-truth-docs-reference-source.md)）；历史评估只在 `archive/`。
+- **没有活账本**：需要看守的东西一律是守卫（入口 [`DEV-GUIDE.md`](./DEV-GUIDE.md) §4 与 [`adr/0017`](./adr/0017-code-is-truth-docs-reference-source.md)）；历史评估只在 `archive/`。
 - **尚在进行的工作**可临时住 `docs/wip/`（门槛与去向见 §目录的寿命规则；**里面放了哪些文件不写在这里** —— 按目录枚举即得）。本机专用临时待办不入库，也不被任何入库文档引用。
 - 开发/发布：仓库根 `CONTRIBUTING.md`（含「`lib/client.js` 到底是什么」）；用户门面：`README.md` / `README.en.md` / `README.beginner.md`。
 - `images/`：**已不是门面截图的来源** —— 展示图走 Release 外链（取舍见 [`adr/0012`](./adr/0012-artifact-untracking.md)），该目录在 `.gitignore` 内。

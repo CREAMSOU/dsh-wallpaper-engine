@@ -2,7 +2,7 @@
 
 > **规范在 [ADR-0014](./adr/0014-subpackage-contract.md)**（条款号 `S*`）—— 本文只画"长什么样、谁连谁"，
 > 不复述条款，也不定义契约。
-> **本文没有机器判据**（ADR-0014 的 D3/D4）；按 ADR-0016 D5，它只保留"长什么样、谁连谁"的索引，
+> **本文没有机器判据**（ADR-0014 的 D3/D4）；按 ADR-0017 D5，它只保留"长什么样、谁连谁"的索引，
 > **不抄条数 / 键表 / 日期**，包一改请以守卫输出与生成物为准。语言：维护者向，只出中文。
 
 ## 改本文之前 / 读本文之后：复算命令
@@ -34,6 +34,7 @@ graph TD
   MAIN -->|"同上"| S2["id=wallpaper-engine-parallax<br/>name='dsh-plugin-wallpaper-engine-parallax'"]
   MAIN -->|"同上"| S3["id=wallpaper-engine-fonts<br/>name='dsh-plugin-wallpaper-engine-fonts'"]
   MAIN -->|"真名行 —— 独立子包行（包内安装器形态 S3.8a）"| S4["id=wallpaper-engine-pet-link<br/>name='dsh-plugin-wallpaper-engine-pet-link'<br/>住 packages/pet-link/，独立清单 + 包内安装器入口 + 自出浏览器半边产物"]
+  MAIN -->|"真名行 —— 独立子包行（玻璃已整体出户）"| S5["id=wallpaper-engine-glass<br/>name='dsh-plugin-wallpaper-engine-glass'<br/>住 packages/glass/，独立清单 + 自出浏览器半边产物"]
 ```
 
 - **组件行**：代码在主包 `files` 里、随主包发布，清单就是主包清单；本仓现存的三格
@@ -59,6 +60,7 @@ graph LR
   SVC -->|"同上"| MA["packages/mascot-avatar 宿主半边<br/>inject ['webServer','wallpaperEngineHost']<br/>packages/mascot-avatar/lib/routes/avatar.js · mascot.js"]
   SVC -->|"同上"| MB["packages/media-bridge 宿主半边<br/>inject ['webServer','wallpaperEngineHost']<br/>packages/media-bridge/lib/routes/（族名见 docs/ROUTE-INDEX.md）"]
   SVC -->|"同上"| PL["packages/pet-link 宿主半边<br/>inject ['webServer','wallpaperEngineHost']<br/>packages/pet-link/lib/routes/pet-link.js（仅 /pet-link/capability）"]
+  SVC -->|"只读"| GL["packages/glass 宿主半边<br/>inject ['wallpaperEngineHost']<br/>零路由零服务（纯浏览器族，与 fx 同形；行为与样式都在浏览器半边）"]
   FX --- N1["零主包说明符"]
   PX --- N2["零主包说明符"]
   FT --- N3["零主包说明符"]
@@ -66,6 +68,7 @@ graph LR
   MA --- N5["零主包说明符"]
   MB --- N6["零主包说明符"]
   PL --- N7["零主包说明符"]
+  GL --- N8["零主包说明符"]
 ```
 
 - 每个子包能拿到**哪些键**由主包 `lib/subpackage-boot.js` 的 `SUBPACKAGE_KEY_TABLE` 按 **id**（= 行 id 去掉
@@ -93,17 +96,19 @@ graph LR
   LOADER -->|"同上"| FT["packages/fonts/lib/client.fonts.js"]
   LOADER -->|"同上"| WB["packages/media-bridge/lib/client.media-bridge.js"]
   LOADER -->|"同上"| PL["packages/pet-link/lib/client.pet-link.js"]
+  LOADER -->|"同上"| GB["packages/glass/lib/client.glass.js"]
   FB -->|"require('dsh-plugin-wallpaper-engine') —— 唯一外部说明符"| MAINB
   PB -->|"同上"| MAINB
   FT -->|"同上"| MAINB
   WB -->|"同上"| MAINB
   PL -->|"同上"| MAINB
+  GB -->|"同上"| MAINB
 ```
 
 - 子包产物由**包内配方** `packages/<pkg>/client.build.json`（`artifact` / `entry` / `inline[]`）驱动
   `scripts/build-client.mjs` 逐项构建（产物被 `.gitignore` 排除、**不进 git**）；声明面
   （`exports['./client']` + `dsh.client`）与配方、盘上产物三方对账（S3.4 / S10.2）。
-- 本仓今天**两种形态并存**：带浏览器半边的子包（`fx` / `parallax` / `fonts` / `media-bridge` / `pet-link`）
+- 本仓今天**两种形态并存**：带浏览器半边的子包（`fx` / `parallax` / `fonts` / `media-bridge` / `pet-link` / `glass`）
   与 host-only 的子包（`about-notice` / `mascot-avatar`，浏览器半边仍内联主包 `src/**`）。
   **不要**为了"看起来统一"给 host-only 包补一个空的 `./client`（S3.4）。
 
@@ -133,6 +138,10 @@ graph LR
 生成物用 `node test/tools/host-route-index.mjs --write` 与 `node test/tools/guard-targets.mjs --write` 重算。
 需要人做的只有 `(id, name)` / `icon.png` / `locale` / `client.build.json` —— 契约见
 [`adr/0014`](./adr/0014-subpackage-contract.md) S3–S10。
+
+`glass` 是最近的完整样例：宿主半边是零路由空壳，浏览器半边由 `client.build.json` 自出
+`lib/client.glass.js`（`exports['./client']` + `dsh.client` 三方对账），运行时与 CSS 都在该包内；
+行 / 键表项 / 根清单 `file:` 依赖 / 同批重算的 `package-lock` 齐全即入册。
 
 ## 六、这张图会怎么漂
 

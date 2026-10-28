@@ -1,8 +1,10 @@
-# ADR-0016: 代码即真相，文档只引用源码位置（Code is truth; docs reference source）
+# ADR-0017: 代码即真相，文档只引用源码位置（Code is truth; docs reference source）
 
 - **Date**: 2026-10-27
 - **Status**: Accepted
 - **Deciders**: YV3507
+- **Renumbered**: **0016 → 0017**。本文原先占用编号 0016，与上游 #293 并入的
+  [`0016-glass-subpackage`](./0016-glass-subpackage.md)（玻璃子包）撞号；按"上游编号胜出"让位并顺延一位。
 - **Supersedes**: [ADR-0006](./0006-comment-discipline-as-written-convention.md)（注释/文档的写作约定与"撤除文档守卫"作为审阅纪律的部分）
 - **Amends**: [ADR-0007](./0007-machine-checks-target-code-not-prose.md) 的 `Depends on` 关系（其"机器判据只针对代码与磁盘"仍有效）
 

@@ -6,7 +6,7 @@
 > happens when it fails). **Code structure** is in [`CODE-STRUCTURE.md`](../CODE-STRUCTURE.md);
 > **why it was designed that way** is in [`adr/`](../adr/). It deliberately **carries no drifting
 > numbers** — counts, sizes and timeout thresholds point at the implementation or give a way to
-> recompute them (see [`adr/0016`](../adr/0016-code-is-truth-docs-reference-source.md) D1).
+> recompute them (see [`adr/0017`](../adr/0017-code-is-truth-docs-reference-source.md) D1).
 
 ### The default form for scene / web wallpapers: WebWallGL live rendering
 
@@ -263,8 +263,9 @@ runtime the wallpaper is remembered and degrades to the legacy plain iframe (no 
   picking wallpapers is an in-panel drill-in view (no modals) alongside hide/restore, transitions /
   playback speed / flip, accent color + glass transparency, the font system, and custom-upload management.
   The page-wide glass recipe is **independent of whether a wallpaper is set**: its anchor is
-  `data-we-glass-page` on `body`, mounted unconditionally by `applyGlass` in `src/glass.js` (the plugin
-  running means the recipe applies) and removed in pairs by `clearEffects` in `src/effects.js`; a wallpaper
+  `data-we-glass-page` on `body`, mounted unconditionally by `applyGlass` in
+  `packages/glass/src/glass.js` (the glass row running means the recipe applies) and removed in pairs by
+  `disposeGlassLayer` in the glass behavior layer; a wallpaper
   is only one possible **backdrop source**, while `data-we-wallpaper` covers just the two "the page gets
   out of the way so the wallpaper layer shows through" declarations (page base colour / sidebar fill set
   to transparent).
@@ -474,6 +475,14 @@ No third-party nodes are moved, no third-party z-index is changed, and no top-la
 Host-structure fixtures do not replace testing each real third-party window, prove a native crash fix, or establish long-term stability. Untested platforms and independent-review status must be reported separately.
 
 Further reading: [surface ownership](../adr/0015-glass-surface-ownership.md), [token ledger](../TOKEN-CONTRACT.md), [troubleshooting](../TROUBLESHOOTING.md).
+
+#### Disabling the glass row = the host's native look
+
+Since `packages/glass` ([ADR-0016](../adr/0016-glass-subpackage.md)), glass is a **standalone plugin row** (`wallpaper-engine-glass`) that can be disabled on its own in the plugin manager:
+
+- **Row enabled** (default): byte-for-byte the same look as previous versions — including better-sidebar colouring from `--dsw-alias-bg-layer-1` (the glass token mapping still applies).
+- **Row disabled**: the glass stylesheet and behavior layer leave together, so no `data-we-glass-*` gates are written ⇒ every glass recipe stops applying and the host returns to its native theme. better-sidebar / parallax / official pet integration are unaffected (they read the host's native token values — which is what the host shows with no glass anyway); the wallpaper-domain let-through rules (canvas base / host clearing) stay in the main package, so wallpapers keep working when the glass row is disabled.
+- **Main row disabled**: the glass row parks with the service plane ([ADR-0014](../adr/0014-subpackage-contract.md) S7.2) and the whole family leaves together.
 
 ### Client-side errors also leave a trace (`client-error`)
 

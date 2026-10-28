@@ -1,11 +1,11 @@
 # 共存审计与玻璃/壁纸解耦计划（原始记录）
 
-> **状态：历史记录（2026-10-27 自 `docs/wip/` 归档；不反映现行实现，不再维护）**。按 ADR-0016"代码即真相"，本文仅作当时的审计证据；现行机制以源码与 ADR 为准。
+> **状态：历史记录（2026-10-27 自 `docs/wip/` 归档；不反映现行实现，不再维护）**。按 ADR-0017"代码即真相"，本文仅作当时的审计证据；现行机制以源码与 ADR 为准。
 
 > **2026-10-09 原始记录**：以下入口未改，仅供追溯。
 > 本文是 2026-10-09 交付的共存审计原始记录 + 重构计划（S1–S8 分批落地）。
 > **第一批已随本分支落地**：S2 令牌契约 → [`../TOKEN-CONTRACT.md`](../../TOKEN-CONTRACT.md)（生成物）+ `test/verify-token-contract.mjs`；
-> S8 共存文档 → [`../COEXISTENCE.md`](../../COEXISTENCE.md) + [`../adr/0010-glass-off-revisit-four-states.md`](../../adr/0010-glass-off-revisit-four-states.md)。
+> S8 共存文档 → [`../../HOW-IT-WORKS.md` 的「共存」节](../../HOW-IT-WORKS.md#共存玻璃表面与其他-ui-插件) + [`../adr/0010-glass-off-revisit-four-states.md`](../../adr/0010-glass-off-revisit-four-states.md)。
 >
 > **2026-10-14 逐批复核（本机复算）**：
 >
@@ -13,12 +13,12 @@
 > |---|---|---|
 > | S1 玻璃主开关 / 共存四态 | **未落地** | schema 里没有四态键（`glass-only` / `wallpaper-only` / `off` 在 `lib/settings-schema.js` + `src/**` 命中 0）；ADR-0010 已定案（实施分三批、主开关最后） |
 > | S2 令牌契约文件化 + 漂移守卫 | **已落地** | [`../TOKEN-CONTRACT.md`](../../TOKEN-CONTRACT.md) + `test/verify-token-contract.mjs` |
-> | S3 让路协议通用化（属性级 opt-out + 对外信号） | **未落地** | [`../COEXISTENCE.md`](../../COEXISTENCE.md) 自己写明"属性级 opt-out 在计划中（ADR-0010 D3）" |
+> | S3 让路协议通用化（属性级 opt-out + 对外信号） | **未落地** | [`../../HOW-IT-WORKS.md` 的「共存」节](../../HOW-IT-WORKS.md#共存玻璃表面与其他-ui-插件) 自己写明"属性级 opt-out 在计划中（ADR-0010 D3）" |
 > | S4 共存自诊断 + 一键降级到"仅壁纸" | **未落地** | `src/**` 无"仅壁纸"入口 |
 > | S5 第三方面契约集中化（一个映射表 + 版本漂移测试） | **疑似已随 S2 落地** | 同上行（映射表 = 契约生成物）；请 owner 确认后改本行 |
 > | S6 包含块预检常开（不依赖视差开关） | **未核对** | 该坑的解释在 `src/glass-extra.js` / `src/parallax-layer.js` 的注释里，但"常开预检"本身未见 |
 > | S7 卸载健壮性（逐步 try/catch + 幂等 + 单一属性表） | **未核对** | 需 owner 逐条过 |
-> | S8 共存文档 | **已落地** | [`../COEXISTENCE.md`](../../COEXISTENCE.md) + [`../adr/0010`](../../adr/0010-glass-off-revisit-four-states.md) |
+> | S8 共存文档 | **已落地** | [`../../HOW-IT-WORKS.md` 的「共存」节](../../HOW-IT-WORKS.md#共存玻璃表面与其他-ui-插件) + [`../adr/0010`](../../adr/0010-glass-off-revisit-four-states.md) |
 >
 > ⇒ **结论：不能归档**（S1 / S3 / S4 未落地）。本文继续住 `wip/`；S1 / S3 / S4 的落地口径在
 > [`../adr/0010`](../../adr/0010-glass-off-revisit-four-states.md)，落地后按寿命规则整体归档。
