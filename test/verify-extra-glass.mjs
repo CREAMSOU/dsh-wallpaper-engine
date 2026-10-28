@@ -40,14 +40,12 @@ const MOD_URL = pathToFileURL(join(ROOT, 'packages', 'glass', 'src', 'glass-extr
 const TAG_ID = 'dsh-wallpaper-engine/extra-glass';
 
 const schema = await import(pathToFileURL(join(ROOT, 'lib', 'settings-schema.js')).href);
-const effectsSrc = readFileSync(join(ROOT, 'src', 'effects.js'), 'utf8');
 // ADR-0016 第三刀：effects.js 的玻璃段（含 syncExtraGlassCss 调用与 --we-blur 写入）随玻璃层
 // 出户到 packages/glass —— 接线判据改读**玻璃层源码**。
 const glassLayerSrc = readFileSync(join(ROOT, 'packages', 'glass', 'src', 'glass-layer.js'), 'utf8');
 const panelSrc = readFileSync(join(ROOT, 'packages', 'glass', 'src', 'glass-panel.js'), 'utf8');
 const clientSrc = readFileSync(join(ROOT, 'src', 'client.js'), 'utf8');
 const quickSrc = readFileSync(join(ROOT, 'src', 'quick-panel.js'), 'utf8');
-const buildSrc = readFileSync(join(ROOT, 'scripts', 'build-client.mjs'), 'utf8');
 // ADR-0016 第三刀：glass-extra 随玻璃子包出产物 ⇒ 登记面判据改读**该包自己的配方**。
 const glassRecipe = readFileSync(join(ROOT, 'packages', 'glass', 'client.build.json'), 'utf8');
 
