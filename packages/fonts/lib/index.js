@@ -60,7 +60,7 @@ export const inject = ['webServer', 'wallpaperEngineHost'];
  * 宿主半边入口。`ctx` 是 cordis 的插件上下文（`new apply(ctx)` 形态），`config` 来自 patch 行的 config
  * （本包今天不使用：路由路径/键名都是定死的，要求行为零回归）。
  *
- * @returns {() => void} 拆卸函数（同时已交 `ctx.effect`；mock ctx 无 effect 时退回返回值，见 host-boot.js:188-197）。
+ * @returns {() => void} 拆卸函数（同时已交 `ctx.effect`；mock ctx 无 effect 时退回返回值，见 `lib/host-boot.js` 的 `handOffTeardown`）。
  */
 export function apply(ctx, _config) {
   let webServer = ctx && ctx.webServer;
@@ -78,7 +78,7 @@ export function apply(ctx, _config) {
   // issue #267：注册面容错（原地升级撞 1.3.3 残留路由时不整条抛错）。
   webServer = keys.tolerantWebServer(webServer);
 
-  // 拆卸句柄数组：照主包 lib/kernel/host-session.js:190/:257 的口径（一个数组、插入顺序、
+  // 拆卸句柄数组：照主包 lib/kernel/host-session.js 的口径（一个数组、插入顺序、
   // 逐条兜错），两条路由族的 register 都往它 push。
   const disposers = [];
   // 两个调用点各自给**自己那一族**的键集：`...keys` 是冻结表（唯一真源），`disposers` 是共用
@@ -92,7 +92,7 @@ export function apply(ctx, _config) {
       disposers,
       schema: host.schema,
       http: host.http,
-      // 落盘缓存路径与主包同式（本文件 :94；出户前 = 主包 lib/index.js:383）：pluginDataDir()/system-fonts.json。
+      // 落盘缓存路径与主包同式（本文件的 `cachePath` 实参；出户前是主包门面的同名入参）：pluginDataDir()/system-fonts.json。
       cachePath: () => join(keys.pluginDataDir(), 'system-fonts.json'),
     });
   } catch (error) {
@@ -121,7 +121,7 @@ function assertFontsKeys(required, keys) {
 }
 
 /**
- * 逐条兜错的拆卸：**插入顺序**、单条抛错不影响其余（与 lib/kernel/host-session.js:257 逐字同口径）。
+ * 逐条兜错的拆卸：**插入顺序**、单条抛错不影响其余（与 lib/kernel/host-session.js 的 teardown 逐字同口径）。
  * `splice(0)` 让重复调用成 no-op（teardown 可能被 ctx.effect + 调用方各跑一次）。
  */
 function disposeAll(disposers) {

@@ -5,7 +5,6 @@
  *    动作体（onPlaybackRate / onFpsCap）、档位表 FPS_CAP_VALUES、codecLabel、源信息与转码进度
  *    状态全留在主包 ⇒ 值一律经主包构造的渲染 ctx 或 host 显式键集拿到。
  *    本文件只读 ctx、不写 selection、不自发通知（接缝判据见 test/verify-client.mjs）。
- * 搬移记录：P-D S3d 从 src/panel-tabs-effects.js 原样搬出（原 :182-272，逐字未改）；
  *    构建期内联在 packages/media-bridge/src/client.js 之前（inline 顺序见 client.build.json）。
  */
 

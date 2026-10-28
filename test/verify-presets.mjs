@@ -1035,8 +1035,8 @@ section('③d 资产段：install-assets 落盘与 applied 语义、export→imp
       JSON.stringify(iaPoint.applied));
     for (const id of ['preset-point-whale', 'preset-point-both', 'preset-point-bad']) await del(id);
     // 复位（同 ① 段末尾）：把带内嵌字节的那份重新应用 —— 后面的判据还要按 PNG1 字节数立绘。
-    // ⚠️ 落盘文件名**每次安装都重新分配**（`landImage` 生成新名，见 `lib/routes/presets.js:929` /
-    //   回执 `applied.mascot.file` 见 `lib/routes/presets.js:931`）⇒ 收尾判据不能拿"复位前那个名字"
+    // ⚠️ 落盘文件名**每次安装都重新分配**（`landImage` 生成新名，见 `lib/routes/presets.js` 的
+    //   `landImage` / 回执 `applied.mascot.file`）⇒ 收尾判据不能拿"复位前那个名字"
     //   去比（那会把正常的重新落盘判成副作用，是台架自己造的假红）。判据改为：立绘族**恰好一份**，
     //   且就是这次复位回执点名的那一份 —— 既钉住"没有多出来的残留文件"，又不依赖随机名。
     const restore = bodyJson(await installAssetsCall('preset-embed-1')) || {};

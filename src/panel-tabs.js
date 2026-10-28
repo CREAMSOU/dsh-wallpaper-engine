@@ -34,12 +34,14 @@
  *   · 本文件必须保持浏览器安全（无 import / require / Node API），且**不得有顶层可执行语句**
  *     读 client.js 的 const（会被内联到 bundle 顶部，撞 TDZ）。
  *
- * 把五个域的**节渲染器**按域搬进同族兄弟模块（构建期内联在本文件之前，
- * 见 scripts/build-client.mjs 的 INLINE_MODULES）：src/panel-tabs-wallpaper.js /
- * -appearance.js / -mascot.js / -effects.js / -advanced.js。本文件只留八个 render*Tab
+ * 域模块的**节渲染器**按域住在同族兄弟模块（构建期内联在本文件之前，见 scripts/build-client.mjs 的
+ * INLINE_MODULES）：src/panel-tabs-appearance.js / -mascot.js / -effects.js / -advanced.js；壁纸库的
+ * 六节渲染器随子包走（packages/media-bridge/src/*），经面板节注册表挂回来。本文件只留八个 render*Tab
  * （守卫与 src/client.js 的调用点都按名字取它们，导出名必须在**本文件**里有绑定）与
- * extensionModules()。搬出的 render*Section / renderMascotFormCards / renderFont* 等
- * 仍是同一工厂作用域的自由名字（打包后同作用域；按文件 import 的台架按既有口径挂全局）。
+ * extensionModules()。主包内搬出的 render*Section / renderMascotFormCards 等仍是同一工厂作用域的
+ * 自由名字（打包后同作用域；按文件 import 的台架按既有口径挂全局）；**子包**的渲染器
+ * （`packages/fonts` 的字体节、`packages/media-bridge` 的六节）不在这条作用域里 —— 它们经面板节
+ * 注册表 / 扩展注册表挂回来。
  * **接缝四类越界的判据扫的是全族并集**（test/verify-client.mjs 的 RENDERERS 表 +
  * test/tools/src-scope.mjs 的 panelText()），搬出去不等于搬出判据。
  */
@@ -276,7 +278,7 @@ function weComponentVisibleOf(components, name) {
   //   二号 = 点击效果与拖尾效果（packages/fx）、三号 = 3D 效果（packages/parallax）**各自
   //          是一个独立包** —— 三份 bundle 的求值顺序不保证，同一个工厂作用域里再也放不下
   //          一份"按数组顺序排好的清单"，于是"谁登记了什么"落在一张共享注册表上
-  //          （src/extension-registry.js；跨包通道见 BUNDLE-SPLIT §6.2）。
+  //          （src/extension-registry.js；跨包通道见 ADR-0014 S5.1 / S5.4）。
   // ⚠️ **顺序即屏上顺序**：跨包顺序**不能**靠数组序（bundle 求值顺序不是契约），改由描述符的
   //    `order` 声明（avatar=1 / fx=2 / parallax=3），排序 = (order, 注册序)。
   //    加第四项 = 在它自己的包里调 `weRegisterExtensionModule(id, descriptor)`，本文件零改动。

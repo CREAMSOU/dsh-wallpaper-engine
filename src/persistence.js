@@ -31,11 +31,12 @@
  *     的路径都必须有明确理由（目前只有一条：宿主还没有任何存档时做一次性迁移）。
  *   · **写必须 debounce 且可重试**：滑块每格都 JSON.stringify + 同步写 localStorage 会拖垮拖动；
  *     非 2xx 要留下脏标记（否则宿主文件变旧，下次加载会把用户的设置**回滚**）。
- *   · **只发改动键**：宿主侧 `PUT /settings/<ns>` 是**按键合并**的，所以客户端维护"上一次
- *     成功推送的快照"，把与它不同的键按组件簇分组、每簇一个请求发出去；无改动 ⇒ 一个请求都不发。
+ *   · **只发改动键**：宿主侧 `PUT /settings/<ns>` 是**按键合并**的，所以客户端维护"基线"——
+ *     宿主**已知持有**的那份快照（写入成功后推进；启动时从宿主 GET 采纳），把与它不同的键按组件簇
+ *     分组、每簇一个请求发出去；无改动 ⇒ 一个请求都不发。
  *     不进任何簇的键（`CLIENT_ONLY` 只住 localStorage、`settingsVersion` 属 `meta`）与 `kind:'const'`
- *     的键（宿主侧改不动，发了只会被 ignored）一律不发。**唯一的整段路径**是首启迁移：宿主还没有
- *     存档时不知道基线，仍走老 `PUT /settings`（兼容入口，请求体与改造前逐字节一致）。
+ *     的键（宿主侧改不动，发了只会被 ignored）一律不发。**整段路径只在基线未知时走**（首启迁移 /
+ *     宿主不可达）：不知道宿主有什么，仍走老 `PUT /settings`（兼容入口，请求体与改造前逐字节一致）。
  *   · **在途 GET 不许覆盖用户的新写**：`persistWrites` 计数器是这条的判据 —— 快照 → 比对 → 跳过合并。
  *   · 定时器只经 `window.*`（带守卫）：无定时器设施的验证环境退化为立即写，而不是抛。
  *   · 本文件必须保持浏览器安全（无 import / require / Node API），且**不得有顶层可执行语句**
@@ -94,7 +95,8 @@ let persistDirty = false;
 // host→selection merge when the user edited settings while the GET was in
 // flight (the user's pending PUT is newer than the host's answer).
 let persistWrites = 0;
-// 差分基线：宿主**已知持有**的那份快照（客户端形状，134 键）。`null` = 还不知道宿主
+// 差分基线：宿主**已知持有**的那份快照（客户端形状；键集由 `serializeSettings()` 从 schema 派生，
+// 条数不写死）。`null` = 还不知道宿主
 // 有什么（loadPersisted 未跑 / 宿主不可达 / 首启迁移）⇒ pushPersisted() 走老整段入口。
 // 只在"写入成功 / 宿主值真的被采纳"时推进；按簇确认成功键，失败键下次重发（按键合并 ⇒ 幂等）。
 // ⚠️ 不变量（#292）：基线必须是**冻结副本**，且差分按**值**比较 —— 两件事缺一不可。

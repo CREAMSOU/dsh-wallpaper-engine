@@ -1,7 +1,7 @@
 /**
- * 「壁纸库」页签第一节「当前壁纸」的渲染器（P-D S3c 由 src/panel-tabs-wallpaper.js 逐字搬来）。
+ * 「壁纸库」页签第一节「当前壁纸」的渲染器。
  *
- * 归属（ADR-0013 D20 / P-D S0 口径）：随包走的是**渲染器**；当前壁纸的 selection、播放动作体、
+ * 归属（ADR-0013 D20）：随包走的是**渲染器**；当前壁纸的 selection、播放动作体、
  * 失败原因计算仍在主包（src/client.js / src/live-layer.js）⇒ 本文件**不持键、不写 selection、
  * 不调 emit**，只读 ctx；跨包通道只有主 bundle 的显式 host 键集：
  *   · VinylRecord / vinylSpinVisible（src/client.js 工厂作用域）· liveFailReasonOf（src/live-layer.js）

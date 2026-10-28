@@ -18,17 +18,8 @@
  *
  * ## 消费侧契约（唯一跨包通道 = 主 bundle 的显式键集，ADR-0014 S5.1 / S5.4）
  * 下面的 FONTS_HOST_REQUIRED 与主包 `src/client.js` 的 HOST_BRIDGE_BINDINGS 字体段**逐键一致**
- * （缺键大声抛，不许静默 undefined）。键集的依据 = 两个已搬文件的**自由标识符**逐个点名，
- * 取证脚本 `.integration-notes/scratch/fonts-host-keys.mjs`；逐键清单另见
- * `.integration-notes/p-c-contract.md` §5（那面是唯一真源，本注释是它的副本）：
- *   packages/fonts/src/appearance-font-section.js（原 src/panel-tabs-appearance.js:54-420）
- *     React×77 · weT×70 · ctlText×8 · switchRow×5 · sectionHead×1 · moduleResetButton×1
- *     · FONT_FAMILY_LABELS×2 · fontFamilyKeyOf×3 · filterUsableSystemFonts×2 · systemFontKeyOf×1
- *     · systemFontNameOf×1 · sanitizeFamilyKey×2 · THEME_COLOR_ROLES×1 · THEME_TYPE_ROLES×2
- *     · THEME_SIZE_MIN×1 · THEME_SIZE_MAX×1 · COMPONENT_FONT_TARGETS×1 · componentFontDefaults×2
- *   packages/fonts/src/fontset-editor.js（原 src/fontset-editor.js）
- *     weT×35 · React×29 · ctlText×1
- *   ⇒ 并集 18 键，再加贡献面 `registerPanelSection`（主包 src/extension-registry.js 的收件箱）= 19 键。
+ * （缺键大声抛，不许静默 undefined）。键集的依据 = 两个渲染器文件里的**自由标识符**逐个点名；
+ * **逐键清单以主包 `HOST_BRIDGE_BINDINGS` 为准**，本注释不复制清单（ADR-0016 D1）。
  *   ⚠️ 每多一个键就是多一条没人维护的隐式契约（ADR-0014 S5.2）⇒ 清单之外一个都**不**解构。
  *
  * ## 每渲染才存在的值走 ctx，不走键集（契约 §2.1）

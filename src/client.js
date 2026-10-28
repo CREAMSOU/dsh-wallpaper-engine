@@ -62,13 +62,12 @@ globalThis.__weComponentVisible = weComponentVisible;
 const ACTIVE_ATTR = "data-we-wallpaper";
 const LAYER_ID = "dsh-wallpaper-engine-layer"; // 壁纸层单例：全仓唯一声明点（verify-layer-ownership P1）
 const SCRIM_ID = "dsh-wallpaper-engine-scrim"; // 可读性 scrim 单例：同上
-// **层所有权契约（P-D S4，ADR-0013 D12 / BUNDLE-SPLIT §7.4 / §13 风险 9）**：壁纸层与 scrim 是
+// **层所有权契约（P-D S4，ADR-0013 D12）**：壁纸层与 scrim 是
 // **进程内单例 DOM 节点**，所有权 = 主包渲染内核独占 —— `src/live-layer.js` 建层/领养/退役，
 // `src/client.js` 的 fiber cleanup 摘净。子包（`packages/media-bridge` 浏览器半边）**不得**建层/退层，
 // 也不许持 `#layer` 引用：它只经 host 键面拿渲染器与状态（`selection` 等活别名）。
 // 判据：`test/verify-layer-ownership.mjs`（P1 声明/id 赋值点 · P2 body 挂载白名单 ·
-// P3 拆卸零残留 · P4 iframe 父链）。改这两行或这两条路径 = 改契约，必须同步守卫与
-// `.integration-notes/p-d-contract.md` §4.1。
+// P3 拆卸零残留 · P4 iframe 父链）。改这两行或这两条路径 = 改契约，必须同步守卫。
 // Chat-interface rope dock: a draggable pull-cord floating over the chat plus
 // the glass repo side panel it pulls out. Both are portalled onto <body> under
 // their own React root (see apply), independent of the settings view.
@@ -1157,7 +1156,7 @@ function syncRotationTimer() {
 // 数，全灭则 re-arm 定时器下轮重来）。手动切换/关闭轮换会取消进行中的准备。
 let rotationPrep = null; // { id, fromId, excluded, cancelled, settled, timers, staged, probeMedia, readyEl, kind }
 let pendingRotationFade = false; // commit 置位，syncLayers 消费后清零
-// eslint-disable-next-line prefer-const -- 跨片段写入：layer-core.js:52,67 · live-layer.js:398,424
+// eslint-disable-next-line prefer-const -- 跨片段写入：layer-core.js 与 live-layer.js 的 `fadingLayerNode`
 let fadingLayerNode = null;      // 正在淡出的旧壁纸层（渐变结束移除）
 // iframe 类媒体（live 渲染页 / 旧链网页壁纸）的「节点级领养」通道：同源 iframe
 // 在同文档内 reparent 会重载文档（Chromium 实测：appendChild 移动 iframe =
@@ -2342,7 +2341,7 @@ function VinylRecord(props) {
 // view closes. pickerFocusPending: one-shot flag so the view's initial focus
 // lands exactly once on open (an inline ref callback would re-fire every render).
 let pickerOpener = null;
-// eslint-disable-next-line prefer-const -- 跨片段写入：panel-tabs-effects.js:175
+// eslint-disable-next-line prefer-const -- 跨片段写入：panel-tabs-effects.js 的 `customFrameInput`
 let customFrameInput = null;
 let pickerFocusPending = false;
 // GPU 抓帧缓存状态（面板展示用）：wid 对应当前面板壁纸，pinned=缓存里已有
@@ -3599,7 +3598,7 @@ function nextFontSetName() {
 }
 
 // ── 字体集编辑器的一屏：**显式 ctx**，面板完全不碰 selection ──────
-// 各字段的含义见 src/fontset-editor.js 的文件头。这里只做三件事：状态从 selection 取、
+// 各字段的含义见 packages/fonts/src/fontset-editor.js 的文件头。这里只做三件事：状态从 selection 取、
 // 动作用 fontset-store 发、完事 emit()。（删除的 confirm 门控在**面板**里 —— 问那一句的地方
 // 就是按钮那儿，与轮换列表 / 移除自定义壁纸同形。）
 function fontSetCtx() {
@@ -5588,7 +5587,7 @@ function UpdateNotice() {
   // 整条不渲染，用户看到的就是"点了没反应"。从 pending 起步 + 下面 effect 让手动请求重新探
   // 一次，语义才对：手动重看应当现算"这台机器的后端**现在**有没有这张图"。
   const [art, setArt] = React.useState(noticeReopenRequest ? "pending" : (noticeArtVerdict || "pending"));
-  // ⚠️ 上面这个初始化式读模块级 `noticeReopenRequest`（声明在本文件 4951 行、`UpdateNotice`
+  // ⚠️ 上面这个初始化式读模块级 `noticeReopenRequest`（模块级 `let`，声明在 `UpdateNotice`
   //    之前）—— 模块求值期不读它，只在组件渲染期读，所以不存在 TDZ 面。
   // Only render once the host settings (source of truth) are applied, so the
   // persisted noticeSeen is final. On a fresh port/restart the localStorage
@@ -6452,12 +6451,11 @@ const petLink = {
   },
 };
 
-// ── 跨包浏览器半边通道（BUNDLE-SPLIT §6.2「宿主注入显式键集」）──────────────────────────
+// ── 跨包浏览器半边通道（ADR-0014 S5.1 / S5.4「宿主注入显式键集」）────────────────────
 // 子包产物由 loader 用 `require("dsh-plugin-wallpaper-engine")` 取本 bundle 的导出面。
 // 这里挂的是**显式键集**，不是整个 module.exports：子包要什么就登记什么，多给一个键就是多
-// 一条没人维护的隐式契约。键集与 packages/{fx,parallax,fonts}/src/client.js 的
-// *_HOST_REQUIRED 逐字对齐（缺键那三包自己会大声抛），判据见 test/verify-subpackage-client-half.mjs
-// 与 .integration-notes/p-c-contract.md §5 的两方向清单。
+// 一条没人维护的隐式契约。键集与各子包 src/client.js 的 *_HOST_REQUIRED 逐字对齐
+// （缺键那几包自己会大声抛），判据见 test/verify-subpackage-client-half.mjs。
 // 一律用 **getter**：这些是活的模块级绑定（React / selection / 文案表在求值期才落地），
 // 值拷贝既会在求值期撞 TDZ，也会让子包拿到过期的引用。
 // 窄键常量（P-D S3b）：轮播节搬进子包半边后仍要回显「每 N 分钟」的默认间隔，但
@@ -6480,14 +6478,13 @@ const HOST_BRIDGE_BINDINGS = {
   // 两个注册入口（子包在上面的契约里要的就是这两个名字，不是 we* 前缀的内名）。
   registerExtensionModule: () => weRegisterExtensionModule,
   registerLayerHooks: () => weRegisterLayerHooks,
-  // ── 字体半边（packages/fonts）的显式键集（P-C v2 契约 §2.2）─────────────────────────
-  // 来源 = 被搬代码里的**自由标识符**逐个点名，脚本取证：
-  //   node .integration-notes/scratch/fonts-host-keys.mjs
-  //   范围 `src/panel-tabs-appearance.js:54-420`（外观页签字体节）+ `src/fontset-editor.js`（整文件）
+  // ── 字体半边（packages/fonts）的显式键集（ADR-0014 S5.1 / S5.4）──────────────────────
+  // 来源 = 被搬渲染器里的**自由标识符**逐个点名（键集真源 = 主包 HOST_BRIDGE_BINDINGS 与本表；
+  // 子包侧的 *_HOST_REQUIRED 由 verify-subpackage-client-half 双向对账）。
   // 判据：命中「留在主 bundle 的文件在工厂作用域声明」才在这里登记（0 个未归类）。
   // 反面同样严格：这里每多一个键就是多一条没人维护的隐式契约（多一个都不给）。
   // React / weT / ctlText / switchRow 是 fx 那半已经要过的四个键，fonts 复用它们、**不重复登记**
-  // （重复键在对象字面量里是静默覆盖 —— `eslint no-dupe-keys` 会判红，本行就是那次判红的修复）。
+  // （重复键在对象字面量里是静默覆盖 —— `eslint no-dupe-keys` 会判红）。
   sectionHead: () => sectionHead,
   moduleResetButton: () => moduleResetButton,
   FONT_FAMILY_LABELS: () => FONT_FAMILY_LABELS,
@@ -6504,10 +6501,7 @@ const HOST_BRIDGE_BINDINGS = {
   componentFontDefaults: () => componentFontDefaults,
   registerPanelSection: () => weRegisterPanelSection,
   // ── 桌宠联动半边（packages/pet-link）的显式键集 ─────────────────────────────────────
-  // 来源 = 被搬文件里的**自由标识符**逐个点名（acorn 扫，手法与 fonts 那次相同，脚本：
-  //   node .integration-notes/scratch/petlink-host-keys.mjs）
-  //   packages/pet-link/src/pet-link.js       : weT · apiUrl · apiFetch · wallSidebarOpen · wallSidebarClose · wallSidebarToggle
-  //   packages/pet-link/src/pet-link-tuner.js : weT（与上面复用，不重复登记）
+  // 来源 = 被搬文件里的**自由标识符**逐个点名（与 fonts 同一条纪律：只登记活绑定 getter）。
   // 反向（主包要**调**子包）只有一个键：registerPetLink = 登记槽 + 缓冲补做（见上面的门面）。
   // 反面同样严格：这里每多一个键就是多一条没人维护的隐式契约（多一个都不给）。
   apiUrl: () => apiUrl,
@@ -6516,18 +6510,17 @@ const HOST_BRIDGE_BINDINGS = {
   wallSidebarClose: () => wallSidebarClose,
   wallSidebarToggle: () => wallSidebarToggle,
   registerPetLink: () => petLinkRegister,
-  // ── 壁纸子包浏览器半边（packages/media-bridge，P-D S3a）的显式键集 ─────────────────────
-  // 来源 = 被搬渲染器（packages/media-bridge/src/wallpaper-uploads-section.js，原
-  // src/panel-tabs-wallpaper.js 的「自定义壁纸」节）里的**自由标识符**逐个点名。
+  // ── 壁纸子包浏览器半边（packages/media-bridge）的显式键集 ────────────────────────────
+  // 来源 = 被搬渲染器（packages/media-bridge/src/*.js）里的**自由标识符**逐个点名。
   // 动作体全留主包（ADR-0013 D20）：这里给的是活绑定 getter，不是值拷贝。
   changeUploadDir: () => changeUploadDir,
   changeWeAssetsDir: () => changeWeAssetsDir,
   uploadWallpaperFile: () => uploadWallpaperFile,
   removeUploadWallpaper: () => removeUploadWallpaper,
   renderConfirmRow: () => renderConfirmRow,
-  // ── 壁纸子包浏览器半边（packages/media-bridge，P-D S3b：切换过场 / 自动轮播两节）的显式键集 ─
-  // 来源 = 两个被搬渲染器（packages/media-bridge/src/wallpaper-{transition,rotation}-section.js，
-  // 原 src/panel-tabs-wallpaper.js:108-167 / :169-316）里的**自由标识符**逐个点名；
+  // ── 壁纸子包浏览器半边（packages/media-bridge）的显式键集 ─────────────────────────────
+  // 来源 = 两个渲染器（packages/media-bridge/src/wallpaper-{transition,rotation}-section.js）
+  // 里的**自由标识符**逐个点名；
   // 动作体 / 默认值 / 持久化全留主包（ADR-0013 D20）⇒ 这里给活绑定 getter，不是值拷贝。
   // 轮播间隔走窄键 rotationIntervalDefault（同源 = DEFAULTS.rotationInterval，见上方常量）。
   switchTransitionOf: () => switchTransitionOf,

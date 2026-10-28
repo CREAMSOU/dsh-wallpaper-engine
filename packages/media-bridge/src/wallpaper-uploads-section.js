@@ -1,11 +1,10 @@
 /**
- * wallpaper-uploads-section.js — 「壁纸库」页签第四节「自定义壁纸」的渲染器（P-D S3a 搬出）。
+ * wallpaper-uploads-section.js — 「壁纸库」页签第四节「自定义壁纸」的渲染器。
  *
- * 原来住在 src/panel-tabs-wallpaper.js 的 316-475 行（再往前是 src/panel-tabs.js 的 38-508 行那一刀），
- * **函数体逐字未改**，只是换了住处；父页签 renderWallpaperTab 仍在主包组装点（src/panel-tabs.js），
- * 按面板节注册表（src/extension-registry.js）的顺序续接本包的节（library / order 40）。
+ * 父页签 renderWallpaperTab 仍在主包组装点（`src/panel-tabs.js`），按面板节注册表
+ * （`src/extension-registry.js`）的顺序续接本包的节（library / order 40）。
  *
- * 归属（ADR-0013 D20 / P-D 契约）：随包走的是**渲染器**；上传目录 / 官方资源目录 / 上传列表 /
+ * 归属（ADR-0013 D20）：随包走的是**渲染器**；上传目录 / 官方资源目录 / 上传列表 /
  * 确认令牌这些键、默认值、持久化与动作体全留主包，本文件只读 ctx 值 + 经 host 显式键集
  * （入口 src/client.js 的 WALLPAPER_UPLOADS_HOST_REQUIRED）调主包动作。
  *

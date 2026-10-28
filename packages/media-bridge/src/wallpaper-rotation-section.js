@@ -7,11 +7,8 @@
  * groupWallpapers / startCreateGroup / startEditGroup / saveEditingGroup / cancelEditGroup /
  * importPlaylistIntoDraft / rotationIntervalDefault）由入口从 host 显式键集解构。
  *
- * 搬移记录（P-D S3b，2026-10-18）：原 `src/panel-tabs-wallpaper.js:169-316` 的
- * `renderWallpaperRotationSection` **逐字搬来**（函数体 / 注释 / 类名 / 文案 / 顺序零改动）。
- * 全文只有一处**同义替换**：默认轮播间隔的 `DEFAULTS.rotationInterval`（两处）→ 窄键
- * `rotationIntervalDefault`（同一格默认值的显式 host 绑定，行为逐字相同；见主包
- * src/client.js 的 ROTATION_INTERVAL_DEFAULT 与 verify-client 的同源判据）。
+ * 默认轮播间隔经**窄键** `rotationIntervalDefault` 从 host 取（同一格默认值的显式绑定；
+ * 真源仍是主包 `DEFAULTS.rotationInterval`，同源判据见 `test/verify-client.mjs`）。
  *
  * ctx 键（INTERVALS / armedConfirm / editing / group / groups / 十个 on* 回调 /
  * playableCount / sel）照旧由主包 renderWallpaperTab 构造 ⇒ 本函数与搬前逐字同行为。

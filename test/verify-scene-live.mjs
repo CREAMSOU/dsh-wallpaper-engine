@@ -6186,7 +6186,7 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
           querySelector: (sel) => query(body, sel)[0] || null,
         };
         globalThis.MutationObserver = MO;
-        // 有意喂一个 SUT 不认的字段：`src/avatar-layer.js:268/275/276` 只按名读 enabled / size / radius，
+        // 有意喂一个 SUT 不认的字段：`syncAvatarLayer` 只按名读 enabled / size / radius，
         // 而 ③ 断言节点仍只有一枚 `.we-avatar__glyph` 子节点 ⇒ 证明设置里多出来一个名字字段也不会
         // 凭空长出名字节点（未知字段负对照，保留）。
         globalThis.selection = { avatarEnabled: true, avatarSize: 40, avatarRadius: 100, avatarUserName: '' };

@@ -4,7 +4,6 @@
  * ⚠️ 归属（ADR-0013 D20）：随包走的只有**渲染器**；objectFit / flip 的选择、默认值、持久化与
  *    动作体（onObjectFit / onFlip）全留在主包 ⇒ 值一律经主包构造的渲染 ctx 拿到。
  *    本文件只读 ctx、不写 selection、不自发通知（接缝判据见 test/verify-client.mjs）。
- * 搬移记录：P-D S3d 从 src/panel-tabs-effects.js 原样搬出（原 :274-299，逐字未改）；
  *    构建期内联在 packages/media-bridge/src/client.js 之前（inline 顺序见 client.build.json）。
  */
 

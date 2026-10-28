@@ -6,10 +6,8 @@
  * 作用域**，不收 import / require；自由标识符（React / weT / ctlText / switchTransitionOf /
  * SWITCH_TRANSITIONS / SWITCH_DIRS / SWITCH_DIR_LABELS / SWITCH_SPEEDS）由入口从 host 显式键集解构。
  *
- * 搬移记录（P-D S3b，2026-10-18）：原 `src/panel-tabs-wallpaper.js:108-167` 的
- * `renderWallpaperTransitionSection` **逐字搬来**（函数体 / 注释 / 类名 / 文案 / 顺序零改动）；
  * ctx 键（onSwitchTransition / onSwitchTransitionDir / onSwitchTransitionSpeed / sel）
- * 照旧由主包 renderWallpaperTab 在渲染处构造 ⇒ 本函数与搬前逐字同行为。
+ * 由主包 renderWallpaperTab 在渲染处构造 ⇒ 本渲染器只读 ctx。
  */
 
   function renderWallpaperTransitionSection(ctx) {

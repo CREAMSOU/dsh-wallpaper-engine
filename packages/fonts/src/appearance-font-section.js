@@ -384,6 +384,6 @@
   }
 
 // 独立文件形态下必须有导出：本文件被内联进产物时这一行会被构建器剥掉
-// （scripts/build-client.mjs 的 EXPORT_BLOCK，同 packages/fonts/src/fontset-editor.js:205 的先例），
+// （scripts/build-client.mjs 的 EXPORT_BLOCK，同 fontset-editor.js 的导出块先例），
 // 但渲染挂载台（test/verify-scene-live.mjs 等）是**按文件 import** 的，没有它就取不到渲染器。
 export { renderAppearanceFontSection };

@@ -250,7 +250,7 @@ export function buildContract() {
   L.push('（白名单 = `body[data-we-thinking-native]` 思考块自带开关 + 插件自有 bare roots 封闭集');
   L.push('`{.we-layer, .we-picker, .we-picker__modal, .we-qp}` —— 整条选择器链必须是纯逗号列表、');
   L.push('每段 trim 后精确命中集合成员，不认 `.we-*` 前缀/子串，拒未知根/混组；');
-  L.push('按宿主规范消费 token 的第三方插件无法区分「玻璃开/关」，只能拿到配方本身 —— 见 `docs/COEXISTENCE.md`）。');
+  L.push('按宿主规范消费 token 的第三方插件无法区分「玻璃开/关」，只能拿到配方本身 —— 见 `docs/HOW-IT-WORKS.md` §共存）。');
   L.push('');
   L.push('| 令牌 | 行 | 选择器链 | 归属 |');
   L.push('|---|---|---|---|');

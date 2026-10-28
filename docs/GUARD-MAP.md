@@ -109,7 +109,7 @@
 | `verify-settings-schema-exports.mjs` | `lib/index.js` `lib/subpackage-boot.js` | ✅ |
 | `verify-softrender.mjs` | — | ✅ |
 | `verify-static.mjs` | — |  |
-| `verify-steam-discovery.mjs` | `lib/index.js` `lib/steam-discovery.js` |  |
+| `verify-steam-discovery.mjs` | `lib/kernel/host-kernel.js` `lib/steam-discovery.js` |  |
 | `verify-subpackage-boot.mjs` | `lib/index.js` `lib/subpackage-boot.js` |  |
 | `verify-subpackage-client-half.mjs` | `src/client.js` | ✅ |
 | `verify-subpackage-manifests.mjs` | `lib/kernel/component-session.js` `lib/subpackage-boot.js` |  |
@@ -145,13 +145,13 @@
 | `lib/host-boot.js` | 9 | `verify-about` `verify-bundle-rows` `verify-component-face` `verify-contracts` `verify-lazy-engine-dir` `verify-logging` `verify-mp4-vfs` `verify-subpackage-purity` `verify-tolerant-register` |
 | `lib/http-body.js` | 2 | `verify-body-caps` `verify-package-files` |
 | `lib/http-lifecycle.js` | 1 | `verify-scene-live` |
-| `lib/index.js` | 36 | `e2e-web-media-origin` `verify-about` `verify-adapter` `verify-bundle-rows` `verify-cache-dir` `verify-client` `verify-contracts` `verify-fontset` `verify-host-teardown` `verify-logging` `verify-module-layout` `verify-notice-routing` `verify-occlusion-hub` `verify-package-files` `verify-package-publish` `verify-pet-package` `verify-presets` `verify-reachability` `verify-release-set` `verify-route-index` `verify-route-ownership` `verify-scene-frame-master` `verify-scene-live` `verify-scene` `verify-settings-namespaces` `verify-settings-schema-exports` `verify-steam-discovery` `verify-subpackage-boot` `verify-subpackage-purity` `verify-subpackage-toggle-roundtrip` `verify-token-domain` `verify-tolerant-register` `verify-transcode-state` `verify-types` `verify-upload-store` `verify-we-install-probe` |
+| `lib/index.js` | 35 | `e2e-web-media-origin` `verify-about` `verify-adapter` `verify-bundle-rows` `verify-cache-dir` `verify-client` `verify-contracts` `verify-fontset` `verify-host-teardown` `verify-logging` `verify-module-layout` `verify-notice-routing` `verify-occlusion-hub` `verify-package-files` `verify-package-publish` `verify-pet-package` `verify-presets` `verify-reachability` `verify-release-set` `verify-route-index` `verify-route-ownership` `verify-scene-frame-master` `verify-scene-live` `verify-scene` `verify-settings-namespaces` `verify-settings-schema-exports` `verify-subpackage-boot` `verify-subpackage-purity` `verify-subpackage-toggle-roundtrip` `verify-token-domain` `verify-tolerant-register` `verify-transcode-state` `verify-types` `verify-upload-store` `verify-we-install-probe` |
 | `lib/inventory.js` | 5 | `verify-avatar-interval-and-rotation` `verify-inventory-index` `verify-scene-live` `verify-types` `verify-we-install-probe` |
 | `lib/json-response.js` | 4 | `verify-about` `verify-json-response` `verify-occlusion-hub` `verify-system-fonts` |
 | `lib/kernel/component-session.js` | 6 | `verify-bundle-rows` `verify-component-face` `verify-component-visibility` `verify-route-index` `verify-route-ownership` `verify-subpackage-manifests` |
 | `lib/kernel/config.js` | 2 | `verify-config-store` `verify-upload-store` |
 | `lib/kernel/data-dir.js` | 4 | `verify-cache-dir` `verify-client` `verify-settings-namespaces` `verify-upload-store` |
-| `lib/kernel/host-kernel.js` | 6 | `verify-bundle-rows` `verify-component-face` `verify-contracts` `verify-lazy-engine-dir` `verify-logging` `verify-scene` |
+| `lib/kernel/host-kernel.js` | 7 | `verify-bundle-rows` `verify-component-face` `verify-contracts` `verify-lazy-engine-dir` `verify-logging` `verify-scene` `verify-steam-discovery` |
 | `lib/kernel/host-session.js` | 4 | `verify-logging` `verify-mp4-vfs` `verify-scene` `verify-token-domain` |
 | `lib/log.js` | 1 | `verify-logging` |
 | `lib/media-origin.js` | 2 | `verify-host-teardown` `verify-scene-live` |

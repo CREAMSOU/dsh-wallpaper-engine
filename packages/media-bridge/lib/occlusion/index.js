@@ -3,7 +3,8 @@
  *
  * ══ 为什么值得独立成文件 ══════════════════════════════════════════════════════
  * 「采集」（x11.js）与「快照语义」（epoch/gen/降级/心跳）是两件事：前者是平台细节，
- * 后者是**渲染器契约**（docs/wip/LINUX-OCCLUSION.md §1）。渲染器只认快照形状与
+ * 后者是**渲染器契约**（见本文件下方的「快照契约」段；消费端是 `lib/webwallgl/occlusion-bridge.js`）。
+ * 渲染器只认快照形状与
  * `ts` 新鲜度，不关心底下是 X11 还是 Wayland —— hub 把这两件事隔开，让将来的
  * Wayland 适配器（KWin 脚本 / sway IPC / portal）只是**换一个 createAdapter**。
  *
