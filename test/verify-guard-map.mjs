@@ -94,6 +94,9 @@ const ZERO_COVERAGE_WHY = {
   [M('packages', 'pet-link', 'src', 'client.js')]: '桌宠联动浏览器半边入口（收口成一般形态后自出 packages/pet-link/lib/client.pet-link.js）：注入键契约由 verify-subpackage-client-half 隔产物断言（dsh.client / exports["./client"] / 产物 id / 构建期 require 主包），宿主键集与包间纯度由 verify-subpackage-purity 动态扫 packages/*/src 覆盖，行为面由 test/verify-pet-*.mjs 那组离线回归与 verify-scene-live 的真求值覆盖，本工具只认字面量路径 ⇒ 按口径算零覆盖',
   // ── P-D S3a（2026-10-18）：壁纸子包自出浏览器半边（「自定义壁纸」节搬出主 bundle）──
   [M('packages', 'media-bridge', 'src', 'client.js')]: '壁纸子包浏览器半边入口（P-D S3a 起自出 packages/media-bridge/lib/client.media-bridge.js）：缺键自检与 library 节登记由 verify-scene-live（按包内源文件真 import + installExtensionRegistry 登记）与 verify-client（在同一 vm 里真求值产物）覆盖，注入键契约由 verify-subpackage-client-half 隔产物断言（含 D-7「申报键 ⊆ hostBridgeKeys」反向对账），宿主键集与包间纯度由 verify-subpackage-purity 动态扫 packages/*/src 覆盖；本工具只认字面量路径 ⇒ 按口径算零覆盖',
+  // ── ADR-0016 玻璃子包（host-only 空壳 + 浏览器半边出产物）：行为级覆盖，与 fx / media-bridge 同口径 ──
+  [M('packages', 'glass', 'lib', 'index.js')]: '玻璃子包宿主入口（ADR-0016 第一刀 host-only 空壳，零路由零服务）：只做 subpackageKeys 校验与行登记，装载顺序与逐行拆卸由 verify-subpackage-boot（按 packages/* 目录与 patch 行双向对账）与 verify-subpackage-toggle-roundtrip（关→开→再关零残留）覆盖；宿主侧解析由 verify-subpackage-boot 的 profile 检查覆盖，本工具只认字面量路径 ⇒ 按口径算零覆盖',
+  [M('packages', 'glass', 'src', 'client.js')]: '玻璃子包浏览器半边入口（ADR-0016 第二至四刀出 packages/glass/lib/client.glass.js）：面板节经 registerPanelSection、行为层经 registerLayerHooks("glass") 登记，注入键契约由 verify-subpackage-client-half 隔产物断言，宿主键集与包间纯度由 verify-subpackage-purity 动态扫 packages/*/src 覆盖，行为面由 verify-client / verify-glass-runtime / verify-glass-surfaces / verify-glass-compositing / verify-readability 与 verify-scene-live 的真求值覆盖，本工具只认字面量路径 ⇒ 按口径算零覆盖',
 };
 
 /**

@@ -16,7 +16,7 @@
  *   export function parseRows(patchText)    → [{ id, name }]，按文件顺序。
  *   export function discoverPackages(root=ROOT) → 模型（见下）。
  *   export function enumerateViolations(model, io) → string[]（**纯函数**，io 注入）。
- *   export const FLOORS = { packages: 7, clientArtifacts: 6, rows: 8 }
+ *   export const FLOORS = { packages: 8, clientArtifacts: 7, rows: 9 }
  *   CLI: `node test/tools/packages.mjs selftest`（退出码 0/1，逐条打印 ✓/✗）、
  *        可选 `--json`（打印模型）、无参（打印摘要，有违规则退出码 1）。
  *
@@ -47,15 +47,12 @@ import { fileURLToPath } from 'node:url';
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 
 /**
- * 地板取当前实测值：主包 + 7 个独立子包，主 patch 共 8 行。
- * 浏览器半边产物 6 份：主包（src/client.js）、fx、parallax、fonts、pet-link、wallpaper
- * （pet-link 收口前源码由主包构建内联、无自有产物；2026-10-15 收口成一般形态后自出
- * packages/pet-link/lib/client.pet-link.js，地板随之 4→5；P-D S3a 2026-10-18 壁纸子包
- * 出 packages/media-bridge/lib/client.media-bridge.js，地板 5→6）。
+ * 地板取当前实测值：主包 + 8 个独立子包，主 patch 共 9 行。
+ * 浏览器半边产物 7 份：主包（src/client.js）、fx、parallax、fonts、pet-link、media-bridge、glass。
  * ⚠️ `clientArtifacts` 与 `test/verify-client-sync.mjs` 的产物面地板**共用这一个常量**（那边 import 它）
- * ⇒ 抬地板是**一处改动**，两边的正/负对照自动同批跟着走（原先两处各写一个数字、必须手动同批抬的隐患已消）。
+ * ⇒ 抬地板是**一处改动**，两边的正/负对照自动同批跟着走。
  */
-export const FLOORS = { packages: 7, clientArtifacts: 6, rows: 8 };
+export const FLOORS = { packages: 8, clientArtifacts: 7, rows: 9 };
 
 // ── 路径小工具（模型一律根相对 POSIX）─────────────────────────────────────────
 
