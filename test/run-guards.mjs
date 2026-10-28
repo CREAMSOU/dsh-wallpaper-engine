@@ -103,7 +103,7 @@ const npmStep = (script) => ({ file: null, npm: script, args: [], tier: 'hard', 
  * 并把 `test/verify-package-files.mjs` 的 `CHAIN_FLOOR` 收紧到实测值（那里有"删一步即红"的负对照）。
  */
 const VERIFY_STEPS = [
-  // ⓪ **行尾契约**（D-G1，2026-10-16 收口）：`.gitattributes:9` 的 `* text=auto eol=lf` 此前
+  // ⓪ **行尾契约**（D-G1，收口）：`.gitattributes:9` 的 `* text=auto eol=lf` 此前
   //    **零判据** —— 而它坏了不会报错，只会让下面一大批"按行锚定的字面替换"负对照**假红**
   //    （本仓真踩过：一次整轮改动被 CRLF 污染，靠人眼在 `git diff` 里找 `^M` 才发现；Windows 上
   //    `core.autocrlf=true` 会把文本文件检出成 CRLF）。它是**字节级前提**，故放链首：破了就不该
@@ -190,7 +190,7 @@ const VERIFY_STEPS = [
   step('test/verify-video-preview.mjs'),
   step('test/verify-asset-paths.mjs'),
   step('test/verify-settings-schema-exports.mjs'),
-  // BUNDLE-SPLIT 7.6 的四条新判据（P2-5b）。全部 hard：
+  // ADR-0014 S3/S5 的四条新判据（P2-5b）。全部 hard：
   //   ① 启动自检：主包 apply 必须先 resolve 每个子包与其行，失败大声报错（I5 是行级静默失败）；
   //   ② 浏览器半边在场：声明 dsh.client 的子包，其行必须被主 patch 插入、产物按 id 注册且只注册一份；
   //   ③ 跨包纯度：子包只许 import 主包叶子 subpackage-boot.js + node: 内置，子包之间零 import；
@@ -201,7 +201,7 @@ const VERIFY_STEPS = [
   step('test/verify-subpackage-client-half.mjs'),
   step('test/verify-subpackage-purity.mjs'),
   step('test/verify-subpackage-toggle-roundtrip.mjs'),
-  // ⑤ 子包包面（P2-5；2026-10-15 收口时**由软档升 hard**）：`packages/*/package.json` 的
+  // ⑤ 子包包面（P2-5；收口时**由软档升 hard**）：`packages/*/package.json` 的
   //    name/version/main/exports/peer 与自带 patch 行、根 `exports` 三连对账（组件行 + 独立子包行两段）。
   //    按 ADR-0004 的分档判据，它守的是**发布面 / 打包面**：版本漂离主包、peer 范围与主包不逐字相等
   //    （I6：宿主整次安装被拒 + 回滚）、`dsh.client` ⟺ `exports['./client']` 失配（C2：浏览器半边静默不加载）
@@ -217,11 +217,11 @@ const VERIFY_STEPS = [
   //    真 cordis 往返仍未跑（`@deepseek-ai/cordis` 是 peer，本轮口径 `npm ci --omit=peer`）⇒
   //    fiber 回滚语义是**源码推读**，守卫只在文件头如实标注，不升级为"已验证"。
   step('test/verify-host-teardown.mjs'),
-  // 壁纸层所有权（P-D S4；BUNDLE-SPLIT §7.4 / §13 风险 9）：层是**单例 DOM 节点**
+  // 壁纸层所有权（P-D S4；ADR-0013 D12 / §13 风险 9）：层是**单例 DOM 节点**
   //    （`#dsh-wallpaper-engine-layer` / `#dsh-wallpaper-engine-scrim`），P-D 把渲染半边搬进
   //    `packages/media-bridge` 时，最坏的结构性失效是两半边各建一层、各拆各的 —— 用户看到的是
   //    "壁纸永远停在上一张 / 关掉插件层不撤 / 两个 scrim 叠出双倍暗化"。判据四条：层单例声明
-  //    与 id 赋值点冻结（声明只许 src/client.js:63-64，id 赋值只许 src/live-layer.js）、body
+  //    与 id 赋值点冻结（声明只许 src/client.js，id 赋值只许 src/live-layer.js）、body
   //    挂载白名单逐点归属、fiber cleanup 拆卸零残留（真源码跑在 mini mock DOM 上）、iframe
   //    父链不得直接含 body。硬档依据：每一条的后果都是**用户在屏上能看见的残留/错层**，不是
   //    仓库内务（同上方包面判据的发布面口径）。

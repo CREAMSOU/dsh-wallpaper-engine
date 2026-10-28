@@ -20,12 +20,12 @@
  * 判据（正判据与全部负对照调**同一个** `manifestViolations()`）：
  *   ① 目录与「三处一致」：`lib/components/<sub>/` 在盘上；清单 `name` = `<根包名>-<sub>`（且 ≠ 根包名
  *      ⇒ 不让 Node 的最近清单解析把根包劫持到子目录）；根 `exports` 三连都落在这个目录里；
- *   ② `version` 存在且 **=== 根清单 version**（"漂回极简"的主要抓手；依据 BUNDLE-SPLIT §12.1
+ *   ② `version` 存在且 **=== 根清单 version**（"漂回极简"的主要抓手；依据 ADR-0014 S3.8
  *      「主包与所有子包同号」）；
  *   ③ 入口（`main` / `exports['.']`）指向的文件真实存在，且与根 `exports['./<sub>']` 的落点一致；
  *   ④ 声明了 `dsh.client` ⇒ 必须有 `exports['./client']` 且入口在盘上（没有浏览器半边就不该声明）；
  *   ⑤ `peerDependencies` 每个包名都在根 peer 里；`@deepseek-ai/dsh-*` 的范围与根**逐字相等**
- *      （依据 BUNDLE-SPLIT §12.5 / I6：范围不一致 ⇒ 宿主整次安装被拒 + 回滚）；
+ *      （依据 ADR-0014 S3.5：范围不一致 ⇒ 宿主整次安装被拒 + 回滚）；
  *   ⑥ 清单是**可 `JSON.parse` 的 LF 文本、无 BOM**（本仓 `.gitattributes` = `* text=auto eol=lf`；
  *      而 `JSON.parse` 不剥 BOM ⇒ `.json` 带 BOM 是真缺陷）。
  *
@@ -160,7 +160,7 @@ function manifestViolations({ sub, text, rootPkg, fileExists, dirExists }) {
       + '（`<根包名>-<子路径>`；写成根包名会让最近清单解析劫持根包）');
   }
 
-  // ② version：与根清单同号（BUNDLE-SPLIT §12.1）。
+  // ② version：与根清单同号（ADR-0014 S3.8）。
   if (typeof m.version !== 'string' || !m.version) {
     out.push('缺 version（子包随根包同号发布，必须写出来）');
   } else if (m.version !== rootPkg.version) {
@@ -609,8 +609,8 @@ function packagesViolations(input) {
   const nameRows = rows.filter((r) => r.name && r.name.startsWith(rootPkg.name + '-'));
 
   // 覆盖面地板：枚举面被削空（或两张声明面表读不出来）时，下面每一条都恒真 ⇒ 先钉住这条。
-  if (dirs.length < 3) {
-    add('覆盖面', 'packages/ 下只枚举到 ' + dirs.length + ' 个包目录（< 3 ⇒ 本判据可能恒真；确实要收缩包数时，'
+  if (dirs.length < 6) {
+    add('覆盖面', 'packages/ 下只枚举到 ' + dirs.length + ' 个包目录（< 6 ⇒ 本判据可能恒真；实测 8；确实要收缩包数时，'
       + '同一次提交改这条地板；见 docs/adr/0014-subpackage-contract.md 的复核触发线）');
   }
   if (nameRows.length < 3) {

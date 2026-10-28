@@ -398,7 +398,7 @@ function main() {
 
     // The recipes below are quoted VERBATIM from the @supports fallbacks; each
     // one must also appear inside a data-we-glass-fallback rule.
-    // ⚠️ R2（玻璃后端重构，wip §10.11）去掉了**按面变量**的内层兜底 ⇒ 第一条配方里的
+    // ⚠️ R2去掉了**按面变量**的内层兜底 ⇒ 第一条配方里的
     //    `var(--we-sidebar-color, #ffffff)` 变成 `var(--we-sidebar-color)`。
     //    **契约没变**（两支仍逐字共用同一段配方），变的是承载它的文本 ⇒ 这条抄本跟着更新。
     //    其余三条读的是**全局**变量（`--we-surface-tint-*`），R2 刻意没动，所以原样保留。

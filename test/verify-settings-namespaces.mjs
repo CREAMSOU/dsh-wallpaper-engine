@@ -29,7 +29,7 @@
  * 为什么 ②③④ 必须打**真路由**而不是读源码：它们断言的"磁盘上到底变了哪些键"只有跑一遍才知道；
  * ⑥ 反过来只读源码，两者互补。
  *
- * 环境隔离**必须在 import lib/index.js 之前**（与 test/verify-adapter.mjs:43-69 同一套约定）：
+ * 环境隔离**必须在 import lib/index.js 之前**（与 test/verify-adapter.mjs 同一套约定）：
  * 配置目录由 `DSH_WE_DATA_DIR` 决定，不隔离就会碰用户真实的那份 config.json。
  * 全程不 build、不跑 verify:all、不 commit。
  */
@@ -97,7 +97,7 @@ const dispose = apply({
 });
 const settingsRoute = routes.find((r) => r.path === SETTINGS_URL);
 
-// ── 收体 / 应答替身（形态抄 test/verify-adapter.mjs:191-220 与 verify-cache-dir.mjs:77-99）──
+// ── 收体 / 应答替身（形态抄 test/verify-adapter.mjs 与 verify-cache-dir.mjs）──
 function fakeRes() {
   const state = { status: 200, headers: {}, body: Buffer.alloc(0), ended: false };
   const res = new Writable({
@@ -876,14 +876,14 @@ console.log('\n⑦ 客户端差分：只发改动键、按 ns 分组、首启迁
 // ═══ ⑧ 刻度：组件写路径的 patch 值按"当前刻度"落盘（P1-FIX）════════════════════
 // 缺陷（终态 verifier 端到端复现）：组件差分 body **不带** `settingsVersion`，宿主把它当"档"跑
 // `migrateSettings` ⇒ v4 的 6 个换算键每次经组件写路径落盘都被**二次换算**（70 ⇒ 100 / 35 / 88）。
-// 机制：`lib/routes/settings.js` 的 `sanitizeSettings(parsed)` → `lib/settings-schema.js:1687-1689`
+// 机制：`lib/routes/settings.js` 的 `sanitizeSettings(parsed)` → `lib/settings-schema.js`
 // `migrateSettings`（`Number(raw.settingsVersion)` 为 NaN ⇒ 不短路）→ `:1713-1719` 的 rescale；
 // `lib/kernel/config.js` 的 `mergeSettings` 又把"未规范化的存量 base + 已换算的 patch"混着迁一次。
 // ⑦ 只断言字节变没变与字符串键 `id`，从不比对这 6 个键的**字面值** ⇒ 缺陷落在它的盲区里（本节由来）。
 // 本节的判据全部读**磁盘上的字面值**，并带"二次换算值 ≠ 期望值"的夹具自检（防止判据恒真）。
 console.log('\n⑧ 组件写路径：v4 换算键按当前刻度落盘（70 就是 70）');
 {
-  // 6 个换算键；WRONG = 若被当旧档再换算一次会得到的值（`lib/settings-schema.js:1706-1719`）。
+  // 6 个换算键；WRONG = 若被当旧档再换算一次会得到的值（`lib/settings-schema.js`）。
   const SCALE_KEYS = [
     'glassAlpha', 'sidebarAlpha', 'sidebarContentAlpha',
     'settingsWindowTransparency', 'floatersTransparency', 'leftSidebarTransparency',

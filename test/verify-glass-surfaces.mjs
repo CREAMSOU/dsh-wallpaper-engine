@@ -47,6 +47,8 @@ import { fileURLToPath } from 'node:url';
 import { stripExportBlocks } from './tools/js-text.mjs';
 // 刀3：样式族取文（8 个域模板 + 组装点）——源码侧用 styleText()，产物侧用 cssBodyOf()。
 import { styleText, cssBodyOf, cssPartsOf, panelText, liveText, parseInlineModules } from './tools/src-scope.mjs';
+// 可读性下限常量（ADR-0016 第四刀起随玻璃 CSS 出户）的唯一读法：match 失败即 throw，不返回 NaN。
+import { readabilityFloors } from './tools/readability-floors.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const CLIENT = process.argv[2] || join(ROOT, 'lib', 'client.js');
@@ -243,10 +245,9 @@ const MODE_MARKERS = new Set(['data-ds-dark-theme', 'data-sidebar-right-open', '
 // 得到的才是插件真正注入的那份 CSS；再剥注释。
 const SRC = readFileSync(CLIENT, 'utf8');
 
-const FLOOR = {
-  light: Number((SRC.match(/const READABILITY_FLOOR = ([\d.]+);/) || [])[1]),
-  dark: Number((SRC.match(/const READABILITY_FLOOR_DARK = ([\d.]+);/) || [])[1]),
-};
+// 可读性下限常量随玻璃 CSS 出户（ADR-0016 第四刀）⇒ 从玻璃包源读（test/tools/readability-floors.mjs，
+// match 失败即 throw）。旧写法从主产物 `SRC` 取 ⇒ undefined ⇒ NaN 被插进求值后的样式表。
+const FLOOR = readabilityFloors();
 // 刀3：样式表从单个 CSS 模板拆成 8 个域模板 + 组装点 ⇒ 取文改走 cssBodyOf
 // （按声明顺序把族内每个域模板拼回一份 CSS 体，与旧单模板取文逐字节相同：276,804 B）。
 // 取不到任何模板会**抛错**（旧写法是静默拿到 undefined）——这里把失败显式转成退出码 1。
@@ -384,7 +385,7 @@ function claimKeysOf(surface) {
 // ── 接线实况：从 src/effects.js **按代码**提取「哪些面 × 参数**真的**接了取值解析器」 ──
 // 这不是手抄清单：判据的两侧各自独立 —— 一侧是 schema 的默认值（运行时数据），
 // 另一侧是解析器调用点（源码文本）。两者不一致就是漂移。
-// ⚠️ 玻璃那一段住在 `src/glass.js`（R3b 第一步抽出去的，见 wip §10.13）。
+// ⚠️ 玻璃那一段住在 `packages/glass/src/glass.js`。
 // 构建期把两个文件**内联进同一个工厂作用域** ⇒ 判据要看的"玻璃代码"= 两者拼接
 // （顺序同构建表：glass.js 在前）。下面的谓词因此继续成立，而**不会**盯着一份
 // 已经没有玻璃代码的 `effects.js` 变成恒真。
@@ -936,7 +937,7 @@ console.log('\n⑥ settings golden 夹具的键集快照（新增键必须逐用
       && exact.missing.length === 0 && exact.extra.length === 0);
 }
 
-// ═══ ⑦ 量纲统一：**一把刻度** + 调用点传裸值（R4，wip §10.19）═══════════════════
+// ═══ ⑦ 量纲统一：**一把刻度** + 调用点传裸值═══════════════════
 // 背景（§4.10）：各面的键曾经**量纲不同**（透明度 0–60 / 0–200 / 0–80、模糊 0–60 / 0–200）。
 // 把一边的值喂给另一边的曲线 = "把 60 分制当 200 分制用" —— 实测后果就是"跟随"档下
 // 全局雾化 47 被放大成 `--we-sidebar-blur: 156.67px`（等价性探针留着这条证据）。
@@ -1068,7 +1069,7 @@ console.log('\n④ 接线 ↔ 注册表 ↔ 面名 三方对账');
   const MUTATE = process.env.WE_GLASS_MUTATE || '';
   if (MUTATE === 'drop-wire' && wired.size) wired.delete([...wired.keys()][0]);
 
-  // ── 注册表 `params` ↔ 代码接线：**逐参数**相等（R3a 补，wip §10.12）────────────────
+  // ── 注册表 `params` ↔ 代码接线：**逐参数**相等────────────────
   // 为什么需要它：注册表可以声明一个**代码从不读取**的参数 —— 面板会照样渲染出一行，
   // 用户拖它毫无反应。实测（R3a 前）有 **5 个**：`settingsWindowColor` /
   // `conversationTransparency` / `conversationBlur` / `floatersColor` / `leftSidebarColor`
@@ -1105,7 +1106,7 @@ console.log('\n④ 接线 ↔ 注册表 ↔ 面名 三方对账');
     return 'selection.' + (ov || (id + param.charAt(0).toUpperCase() + param.slice(1)));
   };
   const badOwnKey = [];
-  // 取值接线住在 `src/glass.js`（"玻璃后端的唯一落点"）—— 直接读源文件（同 STYLES_TEXT 的做法）。
+  // 取值接线住在 `packages/glass/src/glass.js`（"玻璃后端的唯一落点"）—— 直接读源文件（同 STYLES_TEXT 的做法）。
   const glassSrc = readFileSync(join(ROOT, 'packages', 'glass', 'src', 'glass.js'), 'utf8');
   // ⚠️ 这里自带一个实参提取器（不复用上面那个 `callArgs`：它定义在另一个判据组的块作用域里）
   //    —— 判据自己成块、自己能跑，是这份文件的一贯形态。
@@ -1174,7 +1175,7 @@ console.log('\n④ 接线 ↔ 注册表 ↔ 面名 三方对账');
       && wired.has('sidebar') === true
       && !wiredOverrides('const x = selection.sidebarBlur;').has('sidebar'));
 
-  // ── 已删除的键必须**真的消失**（R3b-ii，wip §10.17）────────────────────────────
+  // ── 已删除的键必须**真的消失**────────────────────────────
   // 为什么单列一条：删代码容易、删**键**容易漏 —— 而漏掉的那个键会继续被消毒、被序列化、
   // 被写进用户存档，于是"删掉的能力表"以另一种形式活着。三条一起判：KINDS / DEFAULTS / 接线点。
   const shouldBeGone = ['glassOverrides'];
@@ -1231,7 +1232,7 @@ console.log('\n⑧ 「玻璃 UI」子项的模式语义（两态 · 一个键）
     'base=' + switchSemantics(BASE).length + ' bad1=' + switchSemantics(BAD1).length
       + ' bad2=' + switchSemantics(BAD2).length + ' bad3=' + switchSemantics(BAD3).length);
 
-  // ⚠️ **默认必须是"跟随全局"**（R3b 语义迁移，wip §10.16）：
+  // ⚠️ **默认必须是"跟随全局"**：
   //    这条判据曾经要求"`sidebar` / `sidebarContent` 默认**独立**"，理由是它们从 P2 起就读自己的键。
   //    那个口径已被**推翻** —— 用户要的是"全局的玻璃使用同一套配置语义"，而"既有独立"从未真正
   //    生效过（§4.25 修好默认值机制之前能力表恒空）⇒ 独立必须是**显式选择**。判据口径不变：
@@ -1264,7 +1265,7 @@ console.log('\n⑧ 「玻璃 UI」子项的模式语义（两态 · 一个键）
     '子项 ' + childIds.length + ' 个 · 缺接线的 ' + JSON.stringify(childWithNoWire));
 
   // ── mode 的**可达性**：每个被读的面都必须有"能把它设成 custom"的 UI 入口 ────────────
-  // 为什么单列（wip §10.24 的真实缺口）：`glassMode` 的唯一写入方是 `onToggleChildIndependent`，
+  // 为什么单列：`glassMode` 的唯一写入方是 `onToggleChildIndependent`，
   // 而它原先只被 `GLASS_CHILDREN` 那四项 + 左侧栏调用；`sidebar` / `sidebarContent` **不在**登记表里
   // ⇒ 它们的 mode 永远停在 `'inherit'` ⇒ 那 5 个既有滑块（侧栏模糊/透明度/颜色、内容面透明度/底色）
   // **全是死的**（拖了没有任何变化）。当时**没有任何判据看得见**这一类"旋钮无入口"。
@@ -1301,7 +1302,7 @@ console.log('\n⑧ 「玻璃 UI」子项的模式语义（两态 · 一个键）
 console.log('\n⑨ W5：各面的锚点门控覆盖率（防"关掉后还剩一点玻璃味"）');
 {
   // 面 → { 成员选择器, 认定的锚点, 是否已完成 W5 }
-  // ✅ **四个面全部 done: true**（W5 收口，见 wip §4.23）。`done` 字段保留是因为它让
+  // ✅ **四个面全部 done: true**。`done` 字段保留是因为它让
   //    "哪些面回退干净、哪些还没有"在判据里**可见** —— 将来新增一个面时，
   //    若它的规则没有门控，把 done 设成 false 会立刻暴露出"已知未做"，而不是静默半成品。
   //    登记它们是为了让"哪些面回退干净、哪些没有"这件事**在判据里可见**，而不是靠记忆。
@@ -1410,7 +1411,7 @@ console.log('\n⑨ W5：各面的锚点门控覆盖率（防"关掉后还剩一�
 }
 
 // ═══ ⑩ 默认值可达性：这两态必须**真的取到值** ══════════════════════════════════
-// 为什么单列一组（为一次**已发生的真实事故**补的，wip §4.25）：
+// 为什么单列一组：
 // 前面几组多是**形态判据** —— 它们能证明"接线写对了"，却证明不了"接线在真实会话里可达"。
 // 实测：`readOne` 把 `def` 丢掉 ⇒ `DEFAULTS` 里那几张表成了**死代码**，真实会话里恒为 `{}`，
 // 于是"每个「独立配置」旋钮天生不动"、面板总开关显示为关 —— 用户看到的正是
@@ -1571,7 +1572,7 @@ const eff = (box, name) => {
 };
 
 // ═══ ⑪ 按面变量必须**无条件写出**（"不写 ≠ 撤销"的正面形式；R1 起）════════════
-// 历史（wip §4.26 → §10.10）：这些变量原先走"**写 / 撤**两态" —— 独立档写、跟随档撤。
+// 历史：这些变量原先走"**写 / 撤**两态" —— 独立档写、跟随档撤。
 // 而 CSS 的 `var(--we-x, 兜底)` **只在 `--we-x` 未定义时**才取兜底；变量一旦被写到
 // `document.body.style` 上，它就一直是"已定义"的 ⇒ 只是"跳过写入"会把上一档的旧值留在
 // body 上，表现为"关掉独立配置后没接受全局配置，而是保留自己的配置"（用户实测原话）。
@@ -1717,7 +1718,7 @@ console.log('\n⑫ 语义表（执行型 · 扰动自证：跟随全局 / 独立
     staleReg.length === 0,
     staleReg.length ? '已失效的登记：' + staleReg.join(', ') : '登记 ' + deviated.length + ' 个，全部仍在偏差');
 
-  // 门控属性（wip §10.20 之后分**两类**）：
+  // 门控属性：
   //   · **恒挂**（"要不要玻璃"那一层已退役）：设置窗口 / 对话栏 / 插件浮层 —— 任何输入下都必须在，
   //     而且源码里**不许**再有摘除分支（那条路正是被删掉的）。
   //   · **仍可切**：左侧栏液态玻璃 / 侧栏液态玻璃 —— 它们各有自己的总开关，开 ⇒ 挂、关 ⇒ 摘。
@@ -1841,7 +1842,7 @@ console.log('\n⑫b 玻璃色分主题（#159②：一对颜色 ⇒ 两套配色
     box.wrote.has('--we-surface-tint-rgb-light') && box.wrote.has('--we-surface-tint-rgb-dark')
       && eff(box, '--we-surface-tint-rgb-light') !== eff(box, '--we-surface-tint-rgb-dark'),
     'rgb-light=' + eff(box, '--we-surface-tint-rgb-light') + ' · rgb-dark=' + eff(box, '--we-surface-tint-rgb-dark'));
-  // ❸ 对话栏那一面（`src/glass.js` 的 applyGlass）同样要分开 —— 只在**跟随全局**那一档
+  // ❸ 对话栏那一面（`packages/glass/src/glass.js` 的 applyGlass）同样要分开 —— 只在**跟随全局**那一档
   //    （custom 档读自己的 conversationColor，与玻璃色无关）
   check('分主题：对话栏的 --we-chat-surface-tint-{light,dark} 在跟随全局时也各自只随自己那一半变',
     judgesBothHalvesChat(effectsBody, Object.assign({}, mode(false), fx)),
@@ -1872,12 +1873,12 @@ console.log('\n⑫b 玻璃色分主题（#159②：一对颜色 ⇒ 两套配色
 // ═══ ⑬ CSS 契约：按面变量**零兜底** + 门控许可证 + 双向对账（R2 起）═══════════
 // R2 去掉了样式表里 62 处按面变量的**内层兜底**（`var(--we-<面>-x, <兜底>)` → `var(--we-<面>-x)`）。
 // 为什么可以去掉（**许可证**，本组要把它判住）：那些规则（至少）挂在
-// **JS 写出的门控属性**之下 —— 整页那一族是 `data-we-glass-page`（`src/glass.js` 的
+// **JS 写出的门控属性**之下 —— 整页那一族是 `data-we-glass-page`（`packages/glass/src/glass.js` 的
 // applyGlass 恒挂：插件在跑就挂，与有没有壁纸无关），壁纸让开那一族是 `data-we-wallpaper`
 // （`src/live-layer.js` 的 ACTIVE_ATTR）⇒ 规则匹配时 `applyEffects` 已经跑过、这些变量
 // 已经写出来了。R1 又保证"每档都写"⇒ **兜底在原理上不可达**。
 // ⚠️ 刻意**不动**的：`--we-readability-*` / `--we-chat-readability-*`（CSS 自己声明、F1c/F2a 锁定）
-//    与全局 `--we-glass-alpha`（E2 配方字面量）—— 见 wip §10.7 的"明确保留"。
+//    与全局 `--we-glass-alpha`（E2 配方字面量）—— 见  的"明确保留"。
 console.log('\n⑬ CSS 契约（按面变量零兜底 / 门控许可证 / 双向对账）');
 {
   const FACE_RE = /^--we-(?:settings-window|left-sidebar|floaters|sidebar-|chat-(?:glass-fidelity|surface-tint))/;
@@ -1894,7 +1895,7 @@ console.log('\n⑬ CSS 契约（按面变量零兜底 / 门控许可证 / 双向
   //     是"派生变量 / 宿主令牌"的定义点 —— 那个 `, 1` / `, #ffffff` **就是缺省形态本身**
   //     （verify-readability 的 F1e/F1f 查的正是这个形态），而且该守卫**独立求值整份样式表**
   //     （不跑插件 JS）⇒ 去掉它会让 dark 侧整片算式变成 NaN。
-  //     ⚠️ 这条是 R2 第一版**多删了 8 处**换来的教训（wip §10.11）：口径必须按"角色"分，
+  //     ⚠️ 这条是 R2 第一版**多删了 8 处**换来的教训：口径必须按"角色"分，
   //        不能按"名字前缀看起来像不像面变量"分。
   const REMOVE_RE = /^--we-(?:settings-window-|left-sidebar-|floaters-|sidebar-)/;
   const KEEP_RE = /^--we-(?:chat-glass-fidelity$|chat-surface-tint-)/;
@@ -1920,7 +1921,7 @@ console.log('\n⑬ CSS 契约（按面变量零兜底 / 门控许可证 / 双向
   //   ② **只声明自定义属性的规则豁免**（`--we-x: …` / `--dsw-…: …`）：它们自己不画任何像素，
   //      是"派生变量 / 宿主令牌"的定义点；真正画东西的是**消费**它们的那些规则，而消费者带门控
   //      （这正是 ⑨ 组在查的"门控覆盖率"）。把定义点也算成"必须有门控"是把范围放错了地方。
-  // ⚠️ 门控属性与按面变量的**写入**现在都在 `src/glass.js`（R3b 第一步搬的，见 wip §10.13）；
+  // ⚠️ 门控属性与按面变量的**写入**现在都在 `packages/glass/src/glass.js`；
   //    `data-we-wallpaper` 仍由 `src/live-layer.js` 的 ACTIVE_ATTR 挂 ⇒ 两个来源都要收。
   const gateSrc = GLASS_SRC.concat(liveText());
   const jsGates = [...new Set([
@@ -2075,7 +2076,7 @@ console.log('\n⑬ CSS 契约（按面变量零兜底 / 门控许可证 / 双向
 }
 
 // ═══ ⑭ 三方对账：经 setProperty 写出的变量必须有人读（R4）════════════════════════
-// R4 的验收口径（wip §10.6）不能是"我看了一遍"，而是这条**不变量**。
+// R4 的验收口径不能是"我看了一遍"，而是这条**不变量**。
 // 口径（单向，故意不判反向）：
 //   · **写出** = 客户端模块里 `setProperty("--we-x"` 的**字面量**调用
 //     （`"--we-host-" + k` 这种动态拼名不算 —— 它没有确定的变量名）
@@ -2118,7 +2119,7 @@ console.log('\n⑭ 三方对账：写出的变量必须有人读（R4 死码清�
   // 变量属于"对外可观测契约"，删它要先改观察者。
   //   · `--we-glass-color` —— `test/compat-harness-pages.mjs` 用 `getComputedStyle(body)` 读它，
   //     并要求非空 + 与 DSH 设置窗口 token 同源。该 harness **不在任何 npm 脚本里**（要浏览器页面）
-  //     ⇒ 在此环境无法验证"改完观察者仍旧绿"，所以先保留写入、在这里显式登记（wip §10.18）。
+  //     ⇒ 在此环境无法验证"改完观察者仍旧绿"，所以先保留写入、在这里显式登记。
   //     正确顺序：先改 harness 的观察点为 `--we-surface-tint-light`，再删写入 + 删这条登记。
   // 下面那条"登记表不空转"会**逼**着这条登记在条件变化时被复核。
   const OBSERVED_ONLY = new Set(['--we-glass-color']);
@@ -2464,7 +2465,7 @@ console.log('\n⑱ 宿主模糊令牌覆盖（#156①：值本身必须真的模
 
 console.log('\n⑲ 标记值跟走 resolver（t9-001 运行级断言：真跑 weSurfaceRefresh 的 stub DOM）');
 {
-  // 真 `src/glass-surfaces.js` 装进 `new Function` + with-scope 替身 DOM，把
+  // 真 `packages/glass/src/glass-surfaces.js` 装进 `new Function` + with-scope 替身 DOM，把
   // weSurfaceRefresh 真正跑起来 —— 源码子串断言看不见运行期的标记值漂移
   // （t9-001：resolver 返回 extra-fallback 时标记仍停留 "extra"，CSS 规则全不匹配）。
   const SURF_SRC = readFileSync(join(ROOT, 'packages', 'glass', 'src', 'glass-surfaces.js'), 'utf8');

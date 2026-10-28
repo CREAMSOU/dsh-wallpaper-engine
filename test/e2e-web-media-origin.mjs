@@ -396,7 +396,7 @@ function productPrimaryActions(src, scope, element = 'button') {
   }
   return n;
 }
-// 产品里真正画这张卡片的是 src/panel-tabs.js:79 的 `we-picker__current-actions`（抽屉/弹窗两种
+// 产品里真正画这张卡片的是 src/panel-tabs.js 的 `we-picker__current-actions`（抽屉/弹窗两种
 // 形态共用），主操作区里就一枚「选择壁纸」。镜像 DOM 只是把这枚按钮照抄了一份，所以判据必须
 // 落在产品源码上，别落在镜像的字面量上。
 const PRODUCT_DRAWER_ACTIONS_SCOPE = 'className: "we-picker__current-actions"';

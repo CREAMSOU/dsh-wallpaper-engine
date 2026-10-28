@@ -21,6 +21,8 @@ import { fileURLToPath } from 'node:url';
 import { cssBodyOf } from './tools/src-scope.mjs';
 // 剥 CSS 注释走共享实现（此前这里是一行朴素正则 —— 模块布局守卫规则 ⑦ 的针眼）。
 import { stripCssComments } from './tools/css-text.mjs';
+// 可读性下限常量（ADR-0016 第四刀起随玻璃 CSS 出户）的唯一读法：match 失败即 throw，不返回 NaN。
+import { readabilityFloors } from './tools/readability-floors.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 // 读**构建产物**（与 verify-readability 同源）：它才是实际注入浏览器的字符串。
@@ -34,17 +36,17 @@ function check(name, ok, detail) {
 }
 
 // 注入的样式表：与 verify-readability 同法求值（选择器本身不含插值，但保持同一来源）。
-// ⚠️ 锚点**锚在行首且容忍缩进**（产物把内联模块整段缩进过）：否则注释/散文里出现同样的
-//    声明字面量会把锚点带偏，取出的"模板"会从注释一直吃到文件尾。
 // （刀3）：样式表拆成 8 个域模板 + 组装点 ⇒ 取文改走 cssBodyOf（按声明顺序拼回
 // 一份 CSS 体，与旧单模板取文逐字节相同）；取不到任何模板会抛错，不再静默拿空串当"通过"。
 const GLASS_BUNDLE = readFileSync(new URL('../packages/glass/lib/client.glass.js', import.meta.url), 'utf8');
 const CSS_BODY = cssBodyOf(SRC + GLASS_BUNDLE);
-const num = (re) => Number((SRC.match(re) || [])[1]);
+// 可读性下限常量随玻璃 CSS 出户（ADR-0016 第四刀）⇒ 从玻璃包源读；旧写法从主产物 SRC 取
+// ⇒ undefined ⇒ NaN 被插进求值后的样式表（P1 修复前的实害）。
+const FLOOR = readabilityFloors();
 let CSS = '';
 try {
   CSS = new Function('READABILITY_FLOOR', 'READABILITY_FLOOR_DARK', 'return `' + CSS_BODY + '`;')(
-    num(/const READABILITY_FLOOR = ([\d.]+);/), num(/const READABILITY_FLOOR_DARK = ([\d.]+);/));
+    FLOOR.light, FLOOR.dark);
 } catch { CSS = CSS_BODY; }
 // 剥注释走共享实现（等长替换 ⇒ 这里按下标切片的口径不变；未配对即抛，不静默留半份样式）。
 CSS = stripCssComments(CSS);

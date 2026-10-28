@@ -62,9 +62,9 @@ const SCRATCH = join(ROOT, '.test-cache', 'host-teardown');
 // 历史：2026-02 实测 32（全部 15 族都在门面）。S5c 刀2 把 9 族 21 条搬进 `packages/media-bridge`
 // （组件行 `applyComponent` 装载，不经门面 `apply()` 的注册面）⇒ 门面自己的注册面收缩到
 // 5 族 9 条；S5d 刀3 又把 occlusion 族 1 条随 hub 搬进包内 ⇒ 门面只剩 4 族 8 条
-// （diag 4 / presets 1 / settings 1 / cache-dir 2）；包内 22 条由 `test/verify-scene-live.mjs`
-// 等行为臂覆盖。地板随实测降到 8：任何一族在门面里静默掉线都会立刻低于地板（防"mock 没接上
-// 真注册链、判据真空为真"）。
+// （diag 4 / presets 1 / settings 1 / cache-dir 2）；包内路由按 `docs/ROUTE-INDEX.md` 现算 38 条
+// （= 全表 46 − 门面 8），由 `test/verify-scene-live.mjs` 等行为臂覆盖。地板随实测降到 8：
+// 任何一族在门面里静默掉线都会立刻低于地板（防"mock 没接上真注册链、判据真空为真"）。
 const ROUTE_FLOOR = 8;
 
 let failed = 0;

@@ -345,7 +345,7 @@ function prefixAlignment(hostSrc, routeSrc, clientSrc, pageSrc) {
 
 // ── N8 模块级代码不得引用 apply 作用域的 log（真机事故：宿主被杀、DSH 反复重启）──
 // 事故形态（晚·官方壳，崩溃日志原文）：
-//   `dsh: fatal load failure: ReferenceError: log is not defined at lib/index.js:1235`
+//   `dsh: fatal load failure: ReferenceError: log is not defined at lib/index.js`
 // 一个**模块级**助手在失败分支里写了 `log.warn(...)`，而 `log` 只在 `apply()` 体内存在：
 // ReferenceError 抛在 catch 里 ⇒ 那个 async 任务以 reject 收场且无人接管 ⇒ Node 24 按
 // "未处理拒绝"杀掉宿主进程 ⇒ 壁纸整段时间出不来（用户看到的是"开屏纯色帧 + 切几张后崩溃重启"）。
@@ -528,7 +528,7 @@ const wiredUp = (importsSrc, consoleSrc = importsSrc) =>
     JSON.stringify(forced.terminal));
   check('R3 negative control: 旧的 `✔ <文案>` 形状不再被认作提示行',
     isNotice({ terminal: ['out:✔ ok0\n'] }) === 0 && isNotice({ terminal: ['out:[wallpaper-engine] ok0 ✔\n'] }) === 1);
-  // 判据只数投递失败次数，不断文案（`/投递失败/` 抄自 `lib/notice.js:56`，改名会假红）。
+  // 判据只数投递失败次数，不断文案（`/投递失败/` 抄自 `lib/notice.js`，改名会假红）。
   check('R4 投递失败（同步抛错 / 回调 err）恰好一条 warn，成功路径零日志',
     failedSync.length === 1 && failedCallback.length === 1
     && forced.logs.length === 0 && ttyOn.logs.length === 0,

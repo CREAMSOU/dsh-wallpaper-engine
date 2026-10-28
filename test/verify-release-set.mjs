@@ -10,7 +10,7 @@
  *     与发布集里的 tarball 一一对应"，以及每个子包 tarball 里是不是真有它自己 `exports['./client']`
  *     指向的浏览器半边。
  *
- * 为什么它值得一条硬档：用户在 DSH 里执行 `pnpm add dsh-plugin-wallpaper-engine` 时，主包的七条
+ * 为什么它值得一条硬档：用户在 DSH 里执行 `pnpm add dsh-plugin-wallpaper-engine` 时，主包的八条
  * 精确依赖只要有一条在 registry 上找不到，安装就在**用户机器上**以
  * `ERR_PNPM_FETCH_404 … This error happened while installing the dependencies of
  * dsh-plugin-wallpaper-engine@<v>` 失败并整体回滚 —— 这是"只拿到母包、其他包都找不到"的唯一形态，

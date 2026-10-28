@@ -56,6 +56,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { cssBodyOf } from './tools/src-scope.mjs';
+import { readabilityFloors } from './tools/readability-floors.mjs';
 
 const results = [];
 function check(name, ok, detail) {
@@ -67,11 +68,11 @@ const CLIENT = process.argv[2] || fileURLToPath(new URL('../lib/client.js', impo
 const SRC = readFileSync(CLIENT, 'utf8');
 
 // ── source → the stylesheet the plugin injects ──────────────────────────────
-const FLOOR = {
-  light: Number((SRC.match(/const READABILITY_FLOOR = ([\d.]+);/) || [])[1]),
-  dark: Number((SRC.match(/const READABILITY_FLOOR_DARK = ([\d.]+);/) || [])[1]),
-};
-// ⚠️ 锚点锚在行首且容忍缩进（产物把内联模块整段缩进过）：散文里出现同样的声明字面量会把锚点带偏。
+// 可读性下限常量随玻璃 CSS 出户（ADR-0016 第四刀）⇒ 从玻璃包源读（test/tools/readability-floors.mjs，
+// match 失败即 throw）。旧写法从主产物 `SRC` 取 ⇒ 取到 undefined ⇒ NaN 被插进求值后的样式表，
+// 判据对着一份不是插件真正注入的样式报绿（P1 修复前的实害）。
+const FLOOR = readabilityFloors();
+// （helper 的取数锚点同样行首锚定并容忍缩进：散文里出现同样的声明字面量不会把锚点带偏。）
 // （刀3）：样式表由单个 CSS 模板拆成 8 个域模板 + 组装点 ⇒ 取文改走 cssBodyOf
 // （按声明顺序把族内每个域模板拼回一份 CSS 体）。与旧单模板取文**逐字节相同**（实测 276,804 B），
 // 且一个模板都取不到时会**抛错**，不再像旧写法那样静默返回空串让本文件全部判据恒真。

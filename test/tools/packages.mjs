@@ -1,7 +1,7 @@
 /**
- * 包发现层（BUNDLE-SPLIT §10.2 顺序纪律第 1 条 / P-B 基石）。
+ * 包发现层（ADR-0014 S8 / P-B 基石）。
  *
- * 本仓从「一个包」拆成「主包 + 7 个 standalone 子包」后（P-F 收口、`lib/components/` 已删 ⇒ 发现层
+ * 本仓从「一个包」拆成「主包 + 8 个 standalone 子包」后（P-F 收口、`lib/components/` 已删 ⇒ 发现层
  * 当前只有 standalone 形态；包数以 `FLOORS` 与磁盘为准，本文件不写死任何包名），
  * "有哪些包、每包的清单 / patch / 浏览器半边产物 / 主 patch 行"这几张脸散落在 build 与
  * 各守卫里各写一遍，已经开始互相漂移。这里把它们收敛成**一份数据模型**：
@@ -597,24 +597,27 @@ function runSelftest() {
   const clone = (m) => JSON.parse(JSON.stringify(m));
   const abs = (rel) => absOf(ROOT, rel);
   // P-F 批 1c 起三格组件也已出户 ⇒ 发现层不再有任何 `kind === 'subpath'` 的包；"没有浏览器半边的包"
-  // 改从**任意** kind 里找（today = about-notice / mascot-avatar / wallpaper 三个 standalone）。
+  // 改从**任意** kind 里找（today = about-notice / mascot-avatar 两个 standalone ——
+  // 原名 wallpaper 的那格早已改名 media-bridge 且自出产物，不再是无产物包）。
   // 负对照不许依赖"盘面上恰好有某个形态的包"（≥ P-C 那次 `subNoClient` 崩掉的教训）。
   const subNoClient = base.packages.find((p) => p.clientArtifact === null);
   if (!subNoClient) throw new Error('[selftest] 负对照 ③/⑦ 需要至少一个不带浏览器半边的包（main 之外的任一形态）');
   const standaloneClient = base.packages.find((p) => p.kind === 'standalone' && p.clientArtifact !== null);
 
   // ① 模型里删掉一个包（挑带浏览器半边的 standalone：删它同时摘掉 clientPackages 一项 ⇒
-  //    产物数 6→5 低于地板 6 —— "删包"这一个缺陷的因果链里因此同时含产物地板，
+  //    产物数 7→6 低于地板 7 —— "删包"这一个缺陷的因果链里因此同时含产物地板，
   //    预期标签已含 floor/clientArtifacts）。
   //    ⚠️ 曾经这里挑的是"不带浏览器半边的 standalone"（当时的 host-only 包）；P-C 之后字体包
   //    也有产物了、本仓已无这种真实包 ⇒ 该写法会 `undefined.dir` 崩掉。负对照不许依赖
   //    "盘面上恰好有某个形态的包"这种会随重构漂移的前提（否则重构一落地，判据自己先烂）。
-  //    ✅ 已收（P-F 批 1c，2026-10-16）：`FLOORS.clientArtifacts` 已抬到 4（main+fonts+fx+parallax）；
-  //    pet-link 收口（PR #5，2026-10-17）再 4→5（+ packages/pet-link/lib/client.pet-link.js），
+  //    ✅ 已收（P-F 批 1c，）：`FLOORS.clientArtifacts` 已抬到 4（main+fonts+fx+parallax）；
+  //    pet-link 收口（PR #5，）再 4→5（+ packages/pet-link/lib/client.pet-link.js），
   //    且 `test/verify-client-sync.mjs` 的产物地板**直接 import 同一个常量** ⇒ 两处不会再一高一低
   //    （它那边的"地板 − 1 份 ⇒ 不达标"负对照也自动跟着走）。
-  //    P-D S3a（2026-10-18）再 5→6（+ packages/media-bridge/lib/client.media-bridge.js：
+  //    P-D S3a再 5→6（+ packages/media-bridge/lib/client.media-bridge.js：
   //    壁纸子包浏览器半边「自定义壁纸」节的产物）。
+  //    ADR-0016 第四刀再 6→7（+ packages/glass/lib/client.glass.js：玻璃包的浏览器
+  //    半边）；`FLOORS.clientArtifacts` 现为 7 ⇒ 本负对照的"7→6 低于地板 7"始终差 1。
   {
     const m = clone(base);
     const victim = m.packages.find((p) => p.kind === 'standalone' && p.clientArtifact !== null);

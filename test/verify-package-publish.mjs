@@ -145,7 +145,7 @@ function usedByClosure(dep, list = bare) {
   return [...list].some((s) => s === dep || s.startsWith(dep + '/'));
 }
 /** `cordis.patch.yml` 里每个模块行的 `name:` = **宿主加载该模块用的 specifier**。
- *  与 `test/verify-package-files.mjs:86` 的 `patchRowNames` 同一口径（逐字对齐其取词正则；
+ *  与 `test/verify-package-files.mjs` 的 `patchRowNames` 同一口径（逐字对齐其取词正则；
  *  那条正则与 `lib/subpackage-boot.js` 的 `subpackageSpecifiers` 同源）。逐行剥 `#` 注释。
  *
  *  为什么 ④ 要消费它（**别把这条当假阳性删掉**）：子包（`packages/**`）不是被主包 `import`

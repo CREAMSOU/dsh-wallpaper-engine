@@ -378,7 +378,7 @@ async function main() {
     // 公告快通道守卫（verify-notice-routing）+ 预设弹窗浏览器实测各加一步：verify 90 → 91，all 103 → 104。
     // 事前认领审批门禁增加一条硬档；推广弹窗下线时其浏览器实测同步删除（净回到 91 / 104）。
     // 发布集**字节**守卫（`test/verify-release-set.mjs`）加一步：verify 91 → 92，all 104 → 105。
-    // 2026-10-27：合流 upstream v1.4.0（sync/upstream-1.4.0）后按**本树**实测重取 —— 上游步骤集
+    // ：合流 upstream v1.4.0（sync/upstream-1.4.0）后按**本树**实测重取 —— 上游步骤集
     // （桌宠/发布/治理/浏览器等）与本地 P-D 的两条（verify-layer-ownership / verify-token-domain）
     // 并存：verify 92→94、all 105→107（docs / smoke 仍各 6）。地板只许抬、不许降。
     // 再：verify 94→95 / all 107→108 —— 新增 `test/verify-occlusion-debounce.mjs`（#288 可见性防抖契约）。

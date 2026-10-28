@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /**
- * verify-subpackage-toggle-roundtrip.mjs -- BUNDLE-SPLIT 7.6(4) 开关往返（对 patch 里的每一行）
+ * verify-subpackage-toggle-roundtrip.mjs -- ADR-0014 S3/S5 开关往返（对 patch 里的每一行）
  *
  * 7.6(4) 要求对**每一行**做 关 -> 开 -> 再关，每步满足：
  *   1. 该行路由整族在场/缺席与声明一致（声明面 = tools/host-route-index.mjs 的 buildIndex().routes.length）；
  *   2. 可见面按状态面渲染 -- 浏览器面按**包声明**数据驱动：只有声明了 dsh.client 的包才有浏览器半边
- *      （P-A 里 fonts 是宿主半边行、fx/parallax 才是浏览器包），渲染面的双向对账由既有守卫
+ *      （P-A 之后字体 / fx / parallax / media-bridge / glass 均按包声明自出浏览器产物），渲染面的双向对账由既有守卫
  *      test/verify-component-visibility.mjs 承担，本文件只查"声明了浏览器面的包其产物在不在"；
  *   3. 停用后零残留（本文件用 mock webServer 表 + 定时器/进程监听/活动句柄探针量出来）；
  *   4. 这一关**只**动它自己那一行（其余行的路由账逐条不变）。

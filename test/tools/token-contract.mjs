@@ -3,17 +3,17 @@
  * token-contract.mjs — `--dsw-*` 令牌契约的**生成与核对**（共存审计 S2 的核心）。
  *
  * 为什么需要它（COEXISTENCE-AUDIT §一 M1）：本插件把宿主的设计令牌层
- * （`--dsw-alias-*` 等 46 个 token）整层改写成玻璃配方，而 DSH 官方给插件作者的
+ * （`--dsw-alias-*` 等令牌）整层改写成玻璃配方，而 DSH 官方给插件作者的
  * 规范就是「用 `--dsw-alias-*` 上色」⇒ **任何按规范写的第三方 UI 插件都会自动
  * 继承我们的玻璃** —— 这是全仓最大的隐式耦合面，但今天没有任何一份文件列出
  * 「我们到底改写了哪些 token、在哪个门控下」。手写清单一定会烂，所以本工具从
- * **样式族**（`src/styles-base.js` … `src/styles-ext.js`，刀3 由单一
- * `src/styles.js` 按视觉域拆出）的 CSS 模板**现算**出契约，`test/verify-token-contract.mjs`
+ * **样式族**（`src/styles-base.js` … `src/styles-ext.js`，由主包 7 个样式域模块
+ * + 玻璃包 `packages/glass/src/glass-css.js` 的 CSS 模板**现算**出契约，`test/verify-token-contract.mjs`
  * 重算并逐字节比对 `docs/TOKEN-CONTRACT.md`。
  *
  * 解析口径（与审计复算脚本同形，两处必须守住）：
  *   ① **只计真实声明**：`--dsw-x: v;` 出现在属性位才算；值里的 `var(--dsw-…)`
- *      是**读**不是写，一律排除（否则 284 处引用会淹掉 135 条声明）。
+ *      是**读**不是写，一律排除（否则值里的 `var()` 引用会淹掉真实声明）。
  *   ② **花括号栈定门控**：每条声明按其选择器链归桶 ——
  *      链上有 `[data-we-glass-*]` ⇒ 玻璃；只有 `[data-we-wallpaper]` ⇒ 壁纸；
  *      两者都不挂 ⇒ **无门控**（M1 的全部暴露面，审计量化为 19 条，全部落在

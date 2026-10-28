@@ -73,7 +73,7 @@ function check(name, ok, detail) {
 }
 
 const SRC = readFileSync(new URL('../lib/client.js', import.meta.url), 'utf8');
-// ADR-0016 第二刀起玻璃设置节的 UI 行（原 src/glass-panel.js）住玻璃子包产物 ⇒ 需要"UI 行
+// ADR-0016 第二刀起玻璃设置节的 UI 行（现 packages/glass/src/glass-panel.js）住玻璃子包产物 ⇒ 需要"UI 行
 // 在不在 / 文案过不过 weT"这类**面板文本**判据的，读双工件拼接面（主包 + packages/glass）；
 // 数值/配方判据仍以主包 SRC 为准（玻璃量写入仍在 src/effects.js，第三刀才随包走）。
 const GLASS_BUNDLE_SRC = readFileSync(new URL('../packages/glass/lib/client.glass.js', import.meta.url), 'utf8');

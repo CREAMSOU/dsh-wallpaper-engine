@@ -4,14 +4,14 @@
  *
  * ── 它守的是什么 ────────────────────────────────────────────────────────────
  * 壁纸媒体通路的令牌域是 `mediaMap`：`token → 磁盘绝对路径`。**铸造面**（写）是
- * `lib/kernel/host-session.js:161-166` 的 `tokenFor()`（`lib/inventory.js` 的清单构建器与
+ * `lib/kernel/host-session.js` 的 `tokenFor()`（`lib/inventory.js` 的清单构建器与
  * `/upload` 一族经它签发 token）；**消费面**（读）是六个族里的 `mediaMap.get(token)`。两边
  * **必须是同一张 Map 实例**，否则 `/inventory` 签发的 token 在 `/media`、`/scene-frame` 上
  * 全部 404 —— 静默、无日志、用户只看到"壁纸黑屏"。
  *
  * S5c 刀2 把这 9 族路由搬进 `packages/media-bridge/`。危险点是：包内**也能**建自己的
  * `createComponentSession()`，而它会 `new Map()` 一张**自己的** mediaMap（
- * `lib/kernel/component-session.js:192`）⇒ 包内自建会话的 `serveFile` 查不到主包签发的 token。
+ * `lib/kernel/component-session.js`）⇒ 包内自建会话的 `serveFile` 查不到主包签发的 token。
  * 所以单主权不是靠"记得别写错"，而是靠三条结构事实：
  *   ① 整簇同侧：所有需要 apply 面实例的族**整簇**住在同一个包里（搬一半 = 中间态坏态）；
  *   ② 单一来源：这些族只能经 `...keys`（键表 `apply:` 源型）取实例，**不许**覆盖
@@ -67,7 +67,7 @@ const MEDIA_CONSUME_KEYS = ['mediaMap'];
 /**
  * 判「这一族要从 apply 会话取实例」的指纹键 = `APPLY_TOKEN_KEYS` 里**只在 apply 面存在**的那批。
  * 排除三类「主包自己也在合法消费」的键，否则会把留主包的正常族误算进 token 簇：
- *   · `serveFile` —— 组件会话也交一个同名 `serveFile`（`lib/kernel/component-session.js:192`
+ *   · `serveFile` —— 组件会话也交一个同名 `serveFile`（`lib/kernel/component-session.js`
  *     自建 mediaMap 的那份），about-notice/mascot-avatar/diag/settings/now-playing/we-assets 都合法用；
  *     它是「who 用了谁那份」的危险点，由 ④ 的调用点覆盖判据盯，不能用来划簇；
  *   · `mediaOriginApi` / `componentsProbe` —— 主包 `settings`（媒体源诊断设置）与 `diag`

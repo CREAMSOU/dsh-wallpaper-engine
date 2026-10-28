@@ -1,19 +1,19 @@
 #!/usr/bin/env node
 /**
- * verify-layer-ownership.mjs -- P-D S4：壁纸层所有权收口（ADR-0013 D12 / BUNDLE-SPLIT §7.4 / §13 风险 9）
+ * verify-layer-ownership.mjs -- P-D S4：壁纸层所有权收口（ADR-0013 D12 / ADR-0013 D12 / §13 风险 9）
  *
  * 背景（为什么需要这条守卫）：
  *   壁纸层是**进程内单例 DOM 节点**，靠固定 id 相互引用：
- *     `#dsh-wallpaper-engine-layer`（src/client.js:63 `LAYER_ID`，壁纸层，含 iframe/video/img 子树）、
- *     `#dsh-wallpaper-engine-scrim`（src/client.js:64 `SCRIM_ID`，可读性暗化层）。
+ *     `#dsh-wallpaper-engine-layer`（src/client.js `LAYER_ID`，壁纸层，含 iframe/video/img 子树）、
+ *     `#dsh-wallpaper-engine-scrim`（src/client.js `SCRIM_ID`，可读性暗化层）。
  *   P-D 要把渲染半边搬进 `packages/media-bridge`，最大的结构性风险不是"搬不动"，而是**搬出第二份
  *   层生命周期**：两个半边各建一次层 = 同 id 两节点、各自退役 = 一个半边拆的层另一个还在引用；
- *   这正是 BUNDLE-SPLIT §13 风险 9（层/iframe 单例 id 撞车）写下的后果。S4 的口径（task-12）：
+ *   这正是 ADR-0013 D12（层/iframe 单例 id 撞车）写下的后果。S4 的口径（task-12）：
  *   **层所有权 = 主包渲染内核独占，子包不得建层/退层/持层引用；零行为改动，只钉判据与注释。**
  *
  * 四条判据（P1–P4，全部先红后绿；每条都在内存里带负对照，负对照不落盘）：
  *   P1 层单例声明：`LAYER_ID` / `SCRIM_ID` 在**源码面**（src/ + packages/<pkg>/src/，不含构建产物）
- *      恰各声明 1 处，且钉在 `src/client.js:63-64`；`id =` 赋值只许出现在 `src/live-layer.js`
+ *      恰各声明 1 处，且钉在 `src/client.js`；`id =` 赋值只许出现在 `src/live-layer.js`
  *      （当前 4 处：obtainLayerNode 建层 / 领养、syncScrimElement 建 scrim、:399 领养回写）；
  *      字面量 id 串只许出现在声明行；子包源码面零引用这两个标识符。
  *   P2 body 挂载白名单：`document.body.appendChild(` 的每个点都必须在白名单里、且**逐点归属**
@@ -614,7 +614,7 @@ check('P4.1 iframe 创建点恰 5 处（3 文件）+ 创建函数体不直接挂
 // ── 汇总 ────────────────────────────────────────────────────────────────────
 if (failed) {
   console.log('\nLAYER OWNERSHIP CHECKS FAILED -- ' + failed + ' failed');
-  console.log('口径：层所有权 = 主包渲染内核独占（ADR-0013 D12 / BUNDLE-SPLIT §7.4 / §13 风险 9）。');
+  console.log('口径：层所有权 = 主包渲染内核独占（ADR-0013 D12）。');
   console.log('子包要渲染壁纸，只能经 host 键面拿渲染器与状态，不许自己建层/退层/持 #layer 引用。');
   process.exit(1);
 }

@@ -271,8 +271,14 @@ assert.ok(pageGlassBlock && pageGlassBlock.includes('--dsw-alias-bg-layer-1')
 // ⚠️ 作用域是**整页**，不是聊天流：5cabb9e1 曾把它收窄成 :where([data-chat-flow])，
 //    于是宿主自己的侧栏按钮 / 右栏页签栏 / 设置窗卡片全部退回实底（用户报障）。
 //    这条负对照把"再收窄回去"钉成红。
-assert.ok(!code.includes('body[data-we-glass-page] :where([data-chat-flow])'),
+//    扫面 = 玻璃产物（ADR-0016 第四刀后 CSS 门控选择器只住 `packages/glass/lib/client.glass.js`；
+//    旧写法扫主产物 `code` ⇒ 选择器根本不在那个文件里，判据恒真）。
+const narrowsPageGlassToChatFlow = (face) => /body\[data-we-glass-page\]\s*:where\(\[data-chat-flow\]\)/.test(face);
+assert.ok(!narrowsPageGlassToChatFlow(glassCode),
   'page-glass token mapping must stay page-wide (host chrome outside the chat flow needs it too)');
+// 负对照自证（牙）：同一个谓词喂一处合成字符串必须判红 —— 否则"没扫到"与"不存在"分不清。
+assert.ok(narrowsPageGlassToChatFlow('body[data-we-glass-page] :where([data-chat-flow]) { --dsw-alias-bg-layer-1: red; }'),
+  'negative control: the narrowing predicate must see the exact regression shape');
 assert.ok(wallpaperBlock && wallpaperBlock.includes('--dsw-alias-bg-base: transparent')
   && !wallpaperBlock.includes('--dsw-alias-bg-layer-1'),
   'the page-let-the-wallpaper-through block stays wallpaper-only (no glass mapping inside)');
@@ -436,7 +442,7 @@ const SUBPACKAGE_CLIENT_ARTIFACTS = [
   // P-C 第一刀：字体节（「字体自定义」那一节）已随子包出产物 —— 设置页/外观页要看到它，
   // 挂载台就必须像真实 loader 那样把这份 bundle 也求值掉（它的 factory 会往面板节注册表注册）。
   ['../packages/fonts/lib/client.fonts.js', 'dsh-plugin-wallpaper-engine-fonts'],
-  // pet-link 收口（2026-10-17）：桌宠联动的浏览器半边也出产物了。它的 factory 会调
+  // pet-link 收口：桌宠联动的浏览器半边也出产物了。它的 factory 会调
   // 主 bundle 显式键集里的 registerPetLink 把服务登记回主包（门面缓冲 + 登记到达时补做）。
   // 求值在 apply() **之前** ⇒ 这里正是"子包先到"那一半的真实形态。
   ['../packages/pet-link/lib/client.pet-link.js', 'dsh-plugin-wallpaper-engine-pet-link'],
@@ -1291,7 +1297,7 @@ setTimeout(async () => {
       }
       // ── 三号模块（3D 效果）：默认关 ⇒ 只画总开关 + 说明；开了才长三个参数 ──
       //    它跟另两个模块最大的不同是**它一个 DOM 节点都不建**（行为层只往 body 写 CSS
-      //    变量，位移在 src/styles.js 的视差段里算）⇒ 岛这一侧的判据只盯"控件真的按开关
+      //    变量，位移在主包样式域模块的视差段里算）⇒ 岛这一侧的判据只盯"控件真的按开关
       //    长出来、关掉就收起"，屏上真的挪了多少像素由 verify-scene-live 的源码口径与
       //    样式段判据钉住（无头环境看不见像素）。
       const parOn = findCtlInput(extTree, '启用 3D 效果');
@@ -1685,7 +1691,7 @@ setTimeout(async () => {
     JSON.stringify(tree);
     assert.ok(findCtlInput(tree, '侧栏玻璃·独立配置'), '关掉跟随 ⇒ 侧栏「独立配置」出现:');
     // ⚠️ 基线交付给下面 #132 的判据主体：跟随关着 ⇒ 它的开关流/量程/退役判据照原样跑。
-    // ⚠️ 本批（wip §10.24）：侧栏家族与内容面的滑块挂在**各自的「独立配置」**下面 ——
+    // ⚠️ 本批：侧栏家族与内容面的滑块挂在**各自的「独立配置」**下面 ——
     //    登记表那四个子面一直是这个口径（参数只在独立配置打开后才出现），而这两个既有面
     //    原先**没有开关**、滑块是**死的**；补上入口后行为与那四个统一。
     //    判据用 `findSliderRow`（**精确标签**）而不是 `treeText.includes` —— 后者会被别处的
@@ -1712,7 +1718,7 @@ setTimeout(async () => {
       assert.ok(findCtlInput(tree, '侧栏玻璃·独立配置'), 'master on restores the independent switch:');
     }
     // 打开「侧栏玻璃·独立配置」⇒ 它自己的三个滑块出现，且量程与 KINDS 一致。
-    // R4 量纲统一（wip §10.19）：侧栏家族的量程从 0–200 收到**规范刻度**
+    // R4 量纲统一：侧栏家族的量程从 0–200 收到**规范刻度**
     //（模糊 0–60 px 与全局雾化同刻度；透明度 0–100 %）。这里钉住"面板与规范刻度一致"。
     findCtlInput(tree, '侧栏玻璃·独立配置').props.onChange({ target: { checked: true } });
     tree = renderSidePane();
@@ -1836,7 +1842,7 @@ setTimeout(async () => {
     //    ⇒ 拖过 60 就跳回 20（用户实测"最多只能拉到 20%"）。面板量程 + 处理器取值域**两边都要钉**，
     //    加上第 ⑦ 组钉住 KINDS 本身，三者同源才闭环。
     assert.equal(sliderMax(findSliderRow(tree, '玻璃透明度')), '100', '玻璃透明度上限必须是 100（与 KINDS 同源）');
-    // 本批（wip §10.20）：「设置窗口液态玻璃」这个 master 开关**已退役** ——
+    // 本批：「设置窗口液态玻璃」这个 master 开关**已退役** ——
     // 它的功能由「设置窗口玻璃·独立配置」接管（行为与开启时逐位一致）。这里两头都钉：
     // 退役的开关**不许**再出现，接管的那个独立配置**必须**在。
     assert.ok(!treeText.includes('设置窗口液态玻璃'), 'retired「设置窗口液态玻璃」switch must be gone:');
@@ -2807,7 +2813,7 @@ setTimeout(async () => {
 
     // ── 模态框**标记等价**（搬迁前后逐字未变）────────────────────────────────
     // 模态框那棵子树被 116 个 `.we-picker__*` 选择器按**层级 / 相邻关系**选元素
-    // （src/styles.js 586–1603），test/e2e-web-media-origin.mjs 里另有一份**手抄**的
+    // （主包样式域模块，picker 族在 styles-panel.js），test/e2e-web-media-origin.mjs 里另有一份**手抄**的
     // picker DOM 镜像 —— 标记只要改一个类名、或只挪一层嵌套，CSS 与那份镜像都会**静默**漂，
     // 所以"搬走这段渲染"必须证明逐字未变。判据：以 `we-picker__modal` 为根深度优先遍历，
     // 把每个元素的 class 令牌按「深度:令牌」摊平成序列，与搬迁前录下的 golden 逐项相等。

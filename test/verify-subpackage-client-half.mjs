@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * verify-subpackage-client-half.mjs -- BUNDLE-SPLIT 7.6(2) 浏览器半边在场（P-A 子包族）
+ * verify-subpackage-client-half.mjs -- ADR-0014 S3/S5 浏览器半边在场（P-A 子包族）
  *
  * 故障形态（2.2 + C2）：浏览器半边只能被"活动的 Loader 行"发现 -- 行不在某个已选中 bundle 的
  * patch 里、或包没有 dsh.client / exports["./client"] 时，客户端拿不到那份代码，宿主不报任何错。
@@ -214,7 +214,7 @@ check('packages/ 下至少有一个子包（P-A 未落判红）', pkgs.length > 
 check('每个子包 manifest 可解析', usable.length === pkgs.length, pkgs.filter((p) => p.error).map((p) => p.dir + '：' + p.error).join('；'));
 
 // P-C 契约 §1 / ADR-0014 S3.1：字体包的浏览器半边**不再是"明确排除"**，而是必被覆盖。
-// P-D S3a（2026-10-18）起壁纸子包（packages/media-bridge）也出浏览器半边（「自定义壁纸」节），
+// P-D S3a起壁纸子包（packages/media-bridge）也出浏览器半边（「自定义壁纸」节），
 // 同属必被覆盖。
 // 棘轮（有意硬编码）：这张清单只许随契约显式改动；每个包名都必须在 packages/ 下命中真实目录，
 // 否则改名/搬家会让棘轮**静默失效**（判据变成恒真）—— 命中 0 处即红。

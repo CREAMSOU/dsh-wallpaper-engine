@@ -350,7 +350,7 @@ const persistSrc = read('src/persistence.js');
 const adapterSrc = read('src/adapter.js');
 
 /** 判据只看真实规则行：注释由共享的 `stripComments`（字符串感知）剥掉。
- *  样式表住在 `src/styles.js` 的模板字面量里，而共享实现按设计**不剥模板内容** ⇒ 先把模板
+ *  样式表住在主包样式域模块与 `packages/glass/src/glass-css.js` 的模板字面量里，而共享实现按设计**不剥模板内容** ⇒ 先把模板
  *  分隔符换成空格，让同一份实现也按块注释（CSS 与 JS 同形）剥这份文本；读取的仍是源文件。 */
 function shellSelectorLines(s) {
   return stripComments(s.replace(/`/g, ' ')).split('\n').filter((l) => /data-dsh-desktop-mode=|data-we-mica=/.test(l));

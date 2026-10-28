@@ -67,7 +67,7 @@ export function scopeText(prefix, sep = '\n;\n') {
 }
 
 /**
- * 样式族（`src/styles*`：8 个域模块 + 组装点 `src/styles.js`），顺序 = 构建期内联顺序。
+ * 样式族（主包 `src/styles*`：7 个域模块 + 组装点 `src/styles.js`；玻璃 CSS 在 `packages/glass/src/glass-css.js`），顺序 = 构建期内联顺序。
  *
  * 为什么需要它：整份样式表原先是**一个** `const CSS = \`…\`` 模板；按视觉域切成 8 个域模块后，
  * "样式表文本"不再是单一文件。守卫要判的仍然是**运行时真实作用域的并集**，于是取文口径从

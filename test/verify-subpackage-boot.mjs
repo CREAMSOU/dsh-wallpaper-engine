@@ -14,7 +14,7 @@
  *        · `assertSubpackagesResolvable(rows, resolve)` → 全部可解析时正常返回；**任一失败必须抛 Error**，
  *          消息里逐条带上失败的 `name` 与行 `id`
  *      且 `lib/index.js` 的 `apply` 体里必须**调用**它（文本兜底）。
- *   ②b **宿主腿**（2026-10-16 三行 `failed to import` 的加固）：还必须导出
+ *   ②b **宿主腿**（三行 `failed to import` 的加固）：还必须导出
  *       `assertSubpackagesResolvableInHost(rows, { mainName, env, resolveInRoot })` —— 仓库腿的解析根是
  *       **本仓** `node_modules`，而宿主按裸包名从 `<profile>/cordis.yml` 旁解析（§8.1 spike）⇒
  *       少了这条腿时"仓库里在、profile 侧缺链接"恒过。本判据钉四件事：
@@ -392,7 +392,7 @@ if (mod && typeof mod.subpackageIds === 'function' && typeof mod.subpackageKeys 
   }
 }
 check('每个已登记 id（含出户的组件行）都能通过服务面取到一份**非空**键集（组件半边零主包说明符的物理前提）',
-  mod ? mod.subpackageIds().length >= 4 && componentKeyIssues.length === 0 : false,
+  mod ? mod.subpackageIds().length >= 6 && componentKeyIssues.length === 0 : false,
   componentKeyIssues.join('；') || (mod ? mod.subpackageIds().map((id) => id + '(' + mod.subpackageKeyNames(id).length + ')').join(' ') : 'n/a'));
 // 不再捆绑 fork：服务登记必须与实际目录逐项一致，不允许残留 pet 幽灵项。
 const expectedIds = PACKAGE_DIRS_ON_DISK.map(dir => dir.slice(PACKAGES_PREFIX.length)).sort();
@@ -487,7 +487,7 @@ if (mod && typeof mod.subpackageSpecifiers === 'function' && typeof mod.assertSu
     mutBad.length > 0, JSON.stringify(mutBad));
 }
 
-// ── ②b 宿主腿（§7.6① 的**第二条腿**；2026-10-16 三行 `failed to import` 的加固）──────────
+// ── ②b 宿主腿（§7.6① 的**第二条腿**；三行 `failed to import` 的加固）──────────
 // 仓库腿（②）的解析根是**本仓** `node_modules`；宿主却按裸包名从 `<profile>/cordis.yml` 旁解析
 // 行名（§8.1 spike：本版 `boot()` 只传 4 实参 ⇒ `bareModuleBaseUrl` 恒 undefined）⇒ 少了这条腿时
 // "仓库里在、profile 侧缺链接"**恒过**：三行在宿主里 failed to import，主包却报自检通过。
@@ -598,7 +598,7 @@ check('宿主腿默认解析根（不注入）：合成 profile 里**没装**的
   realNegErr instanceof Error && realNegErr.message.includes(notInstalledName),
   realNegErr ? realNegErr.message : '没有抛错');
 
-// b3) **同名但另一个版本**的 profile **不归本版管**（2026-10-18 真机事故）。
+// b3) **同名但另一个版本**的 profile **不归本版管**（真机事故）。
 //     现场：开发机 `dshwe132` 钉着 1.3.0-r2 的**打包产物**（那个版本的 patch 只有一条主包行、
 //     根本没有子包行），而它同样满足"装了同名主包"的形态 ⇒ 被旧口径扫进检查面 ⇒ 新版 apply
 //     在自检里抛错 ⇒ **六条路由一条都没注册** ⇒ 设置页「壁纸引擎」整屏 404

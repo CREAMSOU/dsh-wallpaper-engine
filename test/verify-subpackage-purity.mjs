@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * verify-subpackage-purity.mjs -- BUNDLE-SPLIT 7.6(3) 跨包纯度（P-A 子包族）
+ * verify-subpackage-purity.mjs -- ADR-0014 S3/S5 跨包纯度（P-A 子包族）
  *
  * 2.1/2.2：包边界就是卸载边界。子包之间的任何 import（裸名或相对跨到 packages/<other>）都会把
  * 两个包在模块图上粘死：关掉其中一个，另一个还握着它的模块实例。

@@ -2,7 +2,7 @@
 /**
  * ci-workflow.mjs — `.github/workflows/verify.yml` 的**作业结构判据**（纯函数库：不读盘、不写盘、无副作用）。
  *
- * ## 守的是什么实害（BUNDLE-SPLIT §13.1 R-7 + CI 分流第一阶段）
+ * ## 守的是什么实害（ADR-0004 / ADR-0014 S9 + CI 分流第一阶段）
  * 这个 workflow 是"提交前必须绿"那条铁律在 CI 上的**唯一**执行者。但它自己的**接线**
  * —— 跑哪些作业、哪条路径跑哪些步骤、什么顺序、哪一步允许失败 —— 此前**没有任何判据**：
  * 删掉 `verify:static` 或 `verify:bridge` 一步、把 `continue-on-error` 从软档挪到硬档、

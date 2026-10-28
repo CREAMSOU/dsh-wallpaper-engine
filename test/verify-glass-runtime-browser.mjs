@@ -4,6 +4,7 @@ import { readFileSync, writeFileSync, mkdirSync, mkdtempSync, existsSync, openSy
 import { resolve, join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { cssBodyOf } from './tools/src-scope.mjs';
+import { readabilityFloors } from './tools/readability-floors.mjs';
 import { createHash } from 'node:crypto';
 import { verifyPetSidebarGlassBrowser } from './verify-pet-sidebar-glass-browser-case.mjs';
 
@@ -11,7 +12,10 @@ const bundle = readFileSync(resolve('lib/client.js'), 'utf8');
 // ADR-0016 第三刀：玻璃运行时（glass-surfaces / glass-extra）随玻璃包出产物 ⇒
 // 模块提取面改读**玻璃包产物**（主 bundle 的 officialPull 等主包段仍读主产物）。
 const glassBundle = readFileSync(resolve('packages/glass/lib/client.glass.js'), 'utf8');
-const css = new Function('READABILITY_FLOOR', 'READABILITY_FLOOR_DARK', 'return `' + cssBodyOf(bundle + glassBundle) + '`;')(0.45, 0.59);
+// 可读性下限常量随玻璃 CSS 出户（ADR-0016 第四刀）⇒ 唯一读法在 test/tools/readability-floors.mjs
+// （旧写法在这里硬编码 0.45 / 0.59：常量一改就静默对不上真注入的样式）。
+const FLOOR = readabilityFloors();
+const css = new Function('READABILITY_FLOOR', 'READABILITY_FLOOR_DARK', 'return `' + cssBodyOf(bundle + glassBundle) + '`;')(FLOOR.light, FLOOR.dark);
 function moduleText(name) {
   // 子包产物的内联 marker 带**全路径**（packages/glass/src/<name>.js），与主 bundle 的 src/<name>.js 不同。
   const start = glassBundle.indexOf('// ── 内联模块：packages/glass/src/' + name + '.js');
@@ -106,7 +110,7 @@ try {
       document.documentElement.style.cssText='background:white';
       document.body.innerHTML='<div id="wall"></div><main id="app"><div id="left"><div data-slot="sidebar"><span>Sidebar</span><div id="modal" role="dialog" aria-modal="true"><section id="dialog-panel"><button id="modal-close">Close</button></section></div></div></div><section id="main"><button id="composer">Composer</button></section></main><aside id="right" data-sidebar-right-panel="push" data-sidebar-right-open><div data-dockkit-host="dock">Dock</div></aside><div id="unknown" class="extra"></div>';
       const fixture=document.createElement('style');fixture.textContent=
-        'body{margin:0;font:16px sans-serif;--we-readability-floor:${dark ? '0.59' : '0.45'};--we-surface-tint-light:#8fd0ff;--we-surface-tint-dark:#0d1524;--we-left-sidebar-alpha:.12;--we-left-sidebar-blur:14px;--we-sidebar-blur:14px;--we-sidebar-saturate:1.3;--we-sidebar-color:${dark ? '#151515' : '#ffffff'};--we-sidebar-tint:20%;--we-panel-color:${dark ? '#151515' : '#ffffff'};--we-panel-sheen-a:.1;--we-panel-sheen-b:.03;--we-panel-sheen-c:.05;--we-sidebar-sheen-a:.1;--we-sidebar-sheen-b:.03;--we-sidebar-sheen-c:.05;--we-sidebar-sheen:1;--we-blur:14px}' +
+        'body{margin:0;font:16px sans-serif;--we-readability-floor:${dark ? FLOOR.dark : FLOOR.light};--we-surface-tint-light:#8fd0ff;--we-surface-tint-dark:#0d1524;--we-left-sidebar-alpha:.12;--we-left-sidebar-blur:14px;--we-sidebar-blur:14px;--we-sidebar-saturate:1.3;--we-sidebar-color:${dark ? '#151515' : '#ffffff'};--we-sidebar-tint:20%;--we-panel-color:${dark ? '#151515' : '#ffffff'};--we-panel-sheen-a:.1;--we-panel-sheen-b:.03;--we-panel-sheen-c:.05;--we-sidebar-sheen-a:.1;--we-sidebar-sheen-b:.03;--we-sidebar-sheen-c:.05;--we-sidebar-sheen:1;--we-blur:14px}' +
         '#wall{position:fixed;inset:0;z-index:-2;background:repeating-linear-gradient(90deg,#244f46 0 4px,#e6b929 4px 8px)}#app{display:flex;height:820px}#left{width:30%;height:100%;background:transparent}#main{flex:1;position:relative;z-index:1}#composer{position:fixed;left:38vw;top:150px;width:58vw;height:220px;background:#128a4d;border:0;z-index:10}#modal{position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.25)}#dialog-panel{position:fixed;left:38vw;top:150px;width:58vw;height:220px;background:#b32235}#modal-close{position:absolute;left:12px;top:12px;width:90px;height:38px}#right{position:fixed;right:0;bottom:0;width:25%;height:180px}#unknown{position:fixed;left:10px;bottom:10px;width:30px;height:30px;z-index:20;background:#57a0e0}';
       document.head.append(fixture);
       const style=document.createElement('style');style.dataset.testBundle='on';style.textContent=${JSON.stringify(css)};document.head.append(style);
@@ -124,14 +128,14 @@ try {
     })()`);
     await evaluate('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');
     const tag = (dark ? 'dark-' : 'light-') + width;
-    // 两段配方解析器（t9-003 computed 取证）：与 src/glass-extra.js:63-73 / src/styles-panel.js:378-400
+    // 两段配方解析器（t9-003 computed 取证）：与 packages/glass/src/glass-extra.js / src/styles-panel.js
     // 同构 —— base@readability-floor 叠 tint 段@settings-window-alpha×0.9。序列化兼容
     // rgba(...) 与 Chrome 新式 color(srgb r g b / a)。floor/tint 按 loop 的 dark 取值，
     // 与 fixture 注入一致；base 不再硬编码（t30 F1：#151515/#ffffff 与产品真源
-    // src/styles-base.js:554/585 的 tint 链自相矛盾）—— 读解析后的 --we-readability-base，
+    // src/styles-base.js/585 的 tint 链自相矛盾）—— 读解析后的 --we-readability-base，
     // 期望与真实级联同源；解析失败 ⇒ NaN 让 own-four 如实 FAIL（detail 带原始文本）。
     const hex1 = (h) => parseInt(h, 16) / 255;
-    const floor = dark ? 0.59 : 0.45;
+    const floor = dark ? FLOOR.dark : FLOOR.light;
     const baseHex = await evaluate("getComputedStyle(document.body).getPropertyValue('--we-readability-base').trim()");
     const baseMatch = /^#([0-9a-fA-F]{6})$/.exec(baseHex);
     const tintHex = dark ? '0d1524' : '8fd0ff';
@@ -406,9 +410,9 @@ try {
     check(tag+' 编辑内容底板受控且语法选区不改',compat.editor!=='rgb(255, 255, 255)' && compat.syntax==='rgb(197, 104, 228)' && compat.selection==='rgb(60, 80, 160)',compat);
     check(tag+' 本插件页签与上传区不继承宿主黑色实底',compat.ownTab!=='rgb(0, 0, 0)' && compat.ownUploads!=='rgb(0, 0, 0)',compat);
     // own 面 computed 精确配方（t8 修复的浏览器级验证）：玻璃页门别名块
-    // （src/styles-panel.js:375-400）在 .we-picker 根上把 --dsw-alias-bg-layer-1 换成
+    // （src/styles-panel.js）在 .we-picker 根上把 --dsw-alias-bg-layer-1 换成
     // 两段 color-mix（tint×alpha×0.9 + floor 地板）；.we-tabs(:249)/.we-picker__current(:208)/
-    // .we-picker__uploads(:258)/.we-ext__module(styles-ext.js:222) 消费同一令牌 ⇒
+    // .we-picker__uploads(:258)/.we-ext__module(styles-ext.js) 消费同一令牌 ⇒
     // 四元素 computed 必须等于配方解析值，且不等于宿主黑实底/宿主灰。深浅主题分叉由
     // tint 色相差异体现（light #8fd0ff / dark #0d1524，mixOut 已按主题取值）。
     const ownMix = mixOut(0.15); // phase-two fixture 显式给了 --we-settings-window-alpha:.15
@@ -479,11 +483,11 @@ try {
     check(tag+' 内容preserve恢复原生画布',await evaluate("getComputedStyle(document.querySelector('#editor')).backgroundColor==='rgb(255, 255, 255)'"));
     await screenshot(tag+'-settings');
     // extra 端值 × 双主题（t9-003，真实参数合同取证）。真实范围（源码实测，非虚构滑杆）：
-    // --we-settings-window-alpha ∈ [0.10, 0.25]（src/glass.js:103 Math.max(0.10, 0.25-pct/100*0.15)，
-    // 不是自有设置窗 5..42/5..50）；--we-blur ∈ [0,60]px（packages/glass/src/glass-panel.js SliderRow(cn.blur,0,60,1)）。
-    // extra normal 霜读 --we-blur（src/glass-extra.js:59-61），底色两段 color-mix 消费
-    // --we-settings-window-alpha×0.9 + readability-floor 地板（src/glass-extra.js:63-73）；
-    // own-current 走同一配方表（src/styles-panel.js:378）⇒ 同一断言面。phase-two 此处
+    // --we-settings-window-alpha ∈ [0.10, 0.25]（packages/glass/src/glass.js Math.max(0.10, 0.25-pct/100*0.15)，
+    // 不是自有设置窗 5..42/5..50）；--we-blur ∈ [0,60]px（packages/glass/packages/glass/src/glass-panel.js SliderRow(cn.blur,0,60,1)）。
+    // extra normal 霜读 --we-blur（packages/glass/src/glass-extra.js），底色两段 color-mix 消费
+    // --we-settings-window-alpha×0.9 + readability-floor 地板（packages/glass/src/glass-extra.js）；
+    // own-current 走同一配方表（src/styles-panel.js）⇒ 同一断言面。phase-two 此处
     // 已无 #settings（:248 移除），霜载体读 extra 面 ::before 本体。
     await evaluate(`(() => {
       __selection.extraGlassSelectors='.extra';

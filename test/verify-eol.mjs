@@ -40,8 +40,8 @@ import { createCheck } from './tools/assert-harness.mjs';
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
 const { check, stats } = createCheck();
 
-/** 覆盖面地板（实测 2026-10-16 = 452 个入库文件，其中 binary 白名单面 29 个）。只许抬高。 */
-const FILE_FLOOR = 400;
+/** 覆盖面地板（实测入库文件 = 585）。只许抬高。 */
+const FILE_FLOOR = 500;
 
 /** `.gitattributes` 里的 `binary` 白名单：`*.png binary` 这一形态。 */
 const BINARY_LINE_RE = /^\*\.(\w+)[ \t]+binary[ \t]*$/;
