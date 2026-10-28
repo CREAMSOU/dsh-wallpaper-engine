@@ -3065,8 +3065,8 @@ setTimeout(async () => {
     // 删除列表：**面板内两下**。第一下只置令牌（不删、且出现问句行），问句行的「确认」才删；
     // 「取消」把令牌清掉。三步都读**渲染出的**证据。
     const groupsBefore = persisted().rotationGroups.length;
-    // 判据读**渲染出的**状态，不读 localStorage：`deleteGroup` 直接改内存（splice）而不落盘，
-    // 拿 localStorage 比会得到一条恒真的空转判据（取消也"通过"）。
+    // 判据读**渲染出的**状态：`deleteGroup` 的落盘断言在下面单独用 `persisted()` 查（#292 起它会
+    // `persistSelection()`），这里先只看面板内两下确认的渲染证据。
     const groupOptionCount = (t) => findByProp(t, 'aria-label', '轮播列表').children
       .filter((o) => o && o.props && o.props.value).length;
     const delBtn = () => findBtnByText(tree, '删除');
@@ -3095,6 +3095,12 @@ setTimeout(async () => {
     assert.equal(findByProp(tree, 'aria-label', '轮播列表').props.value, '', '删掉活动列表 ⇒ 选择回落为空（不留悬空 id）');
     assert.ok(textOf(findByProp(tree, 'aria-label', '轮播列表')).includes('暂无轮播列表'),
       '删光之后下拉显示「暂无轮播列表」（而不是一个空下拉）');
+    // #292：删除是结构变更，必须落盘。旧实现只 `splice` 内存、不调 `persistSelection()`，
+    // 用户看到的是「删掉的列表重启后复活」；这里读 localStorage 的整段缓存（flush 后同步写入）。
+    flushPersistTimers();
+    assert.equal(persisted().rotationGroups.length, groupsBefore - 1,
+      '#292：删除列表必须落盘（persisted().rotationGroups 从 ' + groupsBefore + ' 减到 '
+      + (groupsBefore - 1) + '，实测 ' + persisted().rotationGroups.length + '）');
 
     // 新建 / 保存：此刻列表已被删空 ⇒ 保存后应恰好回到 1 个（断言是确定的）
     assert.ok(findBtnByText(tree, '新建'), '轮播列表必须有「新建」');

@@ -818,6 +818,59 @@ console.log('\n⑦ 客户端差分：只发改动键、按 ns 分组、首启迁
     && same(putsOf(partial.calls).filter((p) => p.url.endsWith('/appearance')).map((p) => p.body),
       [{ blur: 26 }, { blur: 16 }]),
     '宿主 blur=' + partial.saved.blur + '，fx=' + partial.saved.fxEnabled);
+
+  // ⑦ j 复合键（#292）：轮播列表 / 隐藏清单是**就地改**（push/splice）的数组。
+  //    缺陷形态：`serializeSettings` 只做浅拷贝、基线又存了同一引用 ⇒ 就地改同时改到基线，
+  //    引用比较永远相等 ⇒ 复合键从第二次起永远进不了 PUT 体（用户侧：重启后轮播列表消失、
+  //    隐藏的壁纸复活）。修法是**基线冻结 + 按值比较**，两件事缺一不可（见 src/persistence.js 不变量）。
+  const compositeHost = schema.sanitizeFromSchema({ id: 'host-id', blur: 20 }, 'host');
+  const c5 = await loadPersist({ hostSettings: compositeHost });
+  await c5.mod.loadPersisted();
+  c5.selection.rotationGroups.push(
+    { id: 'grp-a', name: 'A', interval: 30, order: 'sequence', trigger: 'interval', wallpaperIds: ['w1', 'w2'] });
+  c5.selection.hiddenIds.push('w3');
+  c5.mod.flushPersist();
+  await drain();
+  const core5 = putBody(c5.calls, 'core') || {};
+  check('⑦ 复合键就地修改（push 到与基线共用的数组）必须进 PUT 体：rotationGroups + hiddenIds 都在',
+    Array.isArray(core5.rotationGroups) && core5.rotationGroups.some((g) => g.id === 'grp-a')
+    && Array.isArray(core5.hiddenIds) && core5.hiddenIds.includes('w3'),
+    'core body=' + JSON.stringify(core5));
+  // 基线推进后再 flush：无改动 ⇒ 一个请求都不发。冻结基线若配引用比较，这里会退化成每次都发。
+  const compositePuts = putsOf(c5.calls).length;
+  c5.mod.flushPersist();
+  await drain();
+  check('⑦ 复合键：基线推进后无改动 ⇒ 不再发（按值比较不能退化成每次全量重发）',
+    putsOf(c5.calls).length === compositePuts,
+    '多发了 ' + (putsOf(c5.calls).length - compositePuts) + ' 条');
+  // 第二次就地修改（splice 删除）同样要被发现 —— 只修「第一次」不算修好。
+  // 取**最后一条** core PUT：同一实例的第二轮改动会追加一条，`putBody` 取首条会读到上一轮。
+  const lastCoreBody = (calls) => {
+    const list = putsOf(calls).filter((c) => c.url === SETTINGS_URL + '/core');
+    return list.length ? list[list.length - 1].body : null;
+  };
+  c5.selection.rotationGroups.splice(0, 1);
+  c5.mod.flushPersist();
+  await drain();
+  const core5b = lastCoreBody(c5.calls) || {};
+  check('⑦ 复合键：splice 删除也要被发现（第二次就地修改照样进 PUT 体）',
+    Array.isArray(core5b.rotationGroups) && !core5b.rotationGroups.some((g) => g.id === 'grp-a')
+    && !('hiddenIds' in core5b),
+    'core body=' + JSON.stringify(core5b));
+  // 负对照：只把「载入宿主值后冻结基线」这一处退回旧写法（基线 = 同一引用）⇒ 同一序列必须判红。
+  const unfrozenSrc = persistSrc.replace(
+    'pushedSnapshot = cloneSettingsSnapshot(serializeSelection());',
+    'pushedSnapshot = serializeSelection();');
+  check('负对照的改写必须真的命中源码（去掉基线冻结）', unfrozenSrc !== persistSrc);
+  const c6 = await loadPersist({ hostSettings: compositeHost, source: unfrozenSrc });
+  await c6.mod.loadPersisted();
+  c6.selection.rotationGroups.push(
+    { id: 'grp-b', name: 'B', interval: 30, order: 'sequence', trigger: 'interval', wallpaperIds: ['w9'] });
+  c6.mod.flushPersist();
+  await drain();
+  const core6 = putBody(c6.calls, 'core') || {};
+  check('⑦ 负对照（基线不冻结 ⇒ 原缺陷）：就地 push 的复合键必须进不了 PUT 体（判据因此有牙）',
+    !('rotationGroups' in core6), 'core body=' + JSON.stringify(core6));
 }
 
 // ═══ ⑧ 刻度：组件写路径的 patch 值按"当前刻度"落盘（P1-FIX）════════════════════
