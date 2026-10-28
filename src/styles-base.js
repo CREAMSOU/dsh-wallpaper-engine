@@ -487,9 +487,11 @@ const CSS_BASE = `
      ⚠️ 页签那一项设在 body 级：state-business-primary 的消费者不止页签（还有焦点环与几处
         状态标记），它们一起跟色才自洽 —— 面板里的标签如实写作「页签 / 焦点环」。
      ⚠️ 锚点一律取宿主自带的 data-* 属性；本仓纪律：**不猜 CSS 模块哈希**。
+     ⚠️ 门控：本组映射挂 **data-we-ui-color**（主包 effects.js 恒挂；ADR-0016 第三刀勘误 ——
+        历史上借用玻璃的 data-we-glass-page 门，玻璃运行时出户后停玻璃行会连坐本功能）。
      ⚠️ 本段在**模板字符串**里：注释内**不许出现反引号**（会把 CSS 字符串提前终止，
         build-client 报 "postfix operation" 一类的怪错）。示范令牌名时不加引号。 */
-  body[data-we-glass-page] {
+  body[data-we-ui-color] {
     --dsw-alias-link: var(--we-ui-link, #4f8cff);
     --dsw-alias-label-deep-diving: var(--we-ui-deep-diving, #4f8cff);
     /* 微光伴生色：由主色推出（往白里提一档），不新增设置键。 */
@@ -501,7 +503,7 @@ const CSS_BASE = `
      verify-glass-compositing 的 G8 要求「任何 alias 接管都必须在浅 / 深两个 body 级块里
      各出现一次」，它防的是"只改浅色、漏了深色孪生"那类漂移。缺了这一块 G8 会判红，
      而那个红是对的牙 —— 不为自己的功能把守卫放松。 */
-  body[data-ds-dark-theme][data-we-glass-page] {
+  body[data-ds-dark-theme][data-we-ui-color] {
     --dsw-alias-link: var(--we-ui-link, #4f8cff);
     --dsw-alias-label-deep-diving: var(--we-ui-deep-diving, #4f8cff);
     --dsw-alias-label-deep-diving-shimmer: color-mix(in srgb, var(--we-ui-deep-diving, #4f8cff) 62%, #ffffff);
@@ -515,13 +517,13 @@ const CSS_BASE = `
         判红且判错（真正的失效模式是"关掉对话玻璃后还剩玻璃味"，与本条无关）。
         座位是输入卡的**祖先**（宿主：座位里就有 data-composer-card），覆盖范围等价、
         锚点同样是宿主的稳定 data-* 属性 ⇒ 不改产品行为，只避免被误归类。 */
-  body[data-we-glass-page] [data-composer-seat] {
+  body[data-we-ui-color] [data-composer-seat] {
     --dsw-alias-button-info-fill: var(--we-ui-send, #4f8cff);
     --dsw-alias-button-info-hover: color-mix(in srgb, var(--we-ui-send, #4f8cff) 82%, #000000);
   }
   /* 文件图标（</>）：同令牌的第二处作用域 ⇒ 内层更近的祖先胜出，于是与「链接文字」分开可调。
      锚点对不上时（宿主改结构）本条不匹配，图标回落成「跟随链接文字」——**优雅降级**，不炸。 */
-  body[data-we-glass-page] [data-presented-file] {
+  body[data-we-ui-color] [data-presented-file] {
     --dsw-alias-link: var(--we-ui-file-icon, #4f8cff);
   }
 

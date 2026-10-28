@@ -453,6 +453,12 @@ function applyEffects(opts) {
   // 令牌 → 宿主消费者的实证（DSH 产物 CSS，不是推断）见 lib/settings-schema.js 的 DEFAULTS
   // 注释与 src/styles.js 的「全局 UI 配色」段。
   const uiColor = (key) => selection[key] || selection.accent;
+  // 全局 UI 配色的**独立门**（ADR-0016 第三刀勘误）：样式表里那四个别名映射块
+  // （--dsw-alias-link / label-deep-diving / state-business-primary / button-info-fill）
+  // 历史上挂在 data-we-glass-page 上 —— 玻璃运行时随包走之后，若继续借用玻璃的门，
+  // 停用玻璃行会**连坐**这个与玻璃无关的主包功能（UI 配色死了但用户没关它）。
+  // 本属性由主包恒挂（主行启用即挂，与玻璃行无关），停主行时随 clearEffects 摘。
+  document.body.setAttribute("data-we-ui-color", "on");
   s.setProperty("--we-ui-send", uiColor("uiColorSend"));
   s.setProperty("--we-ui-link", uiColor("uiColorLink"));
   s.setProperty("--we-ui-file-icon", uiColor("uiColorFileIcon"));
@@ -574,6 +580,7 @@ function clearEffects() {
   s.removeProperty("--we-accent-ink");
   s.removeProperty("--we-popup-row-checked-ink");
   // 全局 UI 配色（与上面那组写入成对）：卸载 / 禁用后 DOM 上不留变量。
+  document.body.removeAttribute("data-we-ui-color"); // 全局 UI 配色门随 fiber 注销（与写入成对）
   s.removeProperty("--we-ui-send");
   s.removeProperty("--we-ui-link");
   s.removeProperty("--we-ui-file-icon");
