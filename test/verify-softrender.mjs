@@ -263,8 +263,10 @@ function loadClient({
         : null;
     },
     styleCss() {
+      // ADR-0016 第四刀：样式表拆成主包 sheet + 玻璃包 sheet 两个 <style data-plugin-css>
+      // ⇒ 按**注入顺序拼接**（= 真实层叠序），不再只取最后一个标签。
       const tags = headEl.children.filter((c) => c && c.dataset && c.dataset.pluginCss);
-      return tags.length ? String(tags[tags.length - 1].textContent || '') : '';
+      return tags.map((t) => String(t.textContent || '')).join('\n');
     },
   };
 }

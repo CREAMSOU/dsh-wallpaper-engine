@@ -21,41 +21,6 @@
  * 契约：需要的外界**无**；对外提供本域的样式表常量。不变量：浏览器安全（无 import / require / Node API）、
  * 不得有顶层可执行语句去读宿主状态（内联位置早于 client.js 正文）、整体是**纯数据**。
  */
-// ── Text-surface readability floor (upstream #82) ───────────────────────────
-// The wallpaper may be dimmed/blended so it "does not dominate", but TEXT MUST
-// STAY READABLE. IDEA's background-image feature has ONE knob (image opacity)
-// and still "just works" because the image always sits BEHIND the editor /
-// tool-window surfaces, which keep a background of their own
-// (https://www.jetbrains.com/help/idea/setting-background-image.html). This
-// plugin lacked exactly that structural property: every text-bearing surface
-// was painted as glass colour @ --we-glass-alpha, and in dark mode that alpha
-// is additionally multiplied by 0.4 — worst case 0.03 × 0.4 = 0.012, i.e. no
-// frost at all, so conversation text scrolling behind the composer read
-// straight through.
-//
-// The floor is a THEME-BASE LAYER composited OVER that glass tint at a fixed
-// weight no slider can lower: the tint's alpha only scales the other operand,
-// so the effective coverage is floor + a·(1−floor) ≥ floor. Clamping the tint
-// alpha itself with max() cannot work here — in dark mode the tint is a WHITE
-// glaze, so over the brightest plausible wallpaper pixel the surface composites
-// to white at ANY alpha and white body text keeps exactly 1.00:1 (the measured
-// before row below). In light mode such a clamp would work but would have to
-// sit at 0.44, above every alpha the slider can reach (max 0.25) — it would
-// flatten the slider completely. The theme-base layer fixes both themes and
-// keeps the slider alive above the floor.
-//
-// Both values come from measurement (test/verify-readability.mjs recomputes
-// the same grid): 玻璃透明度 {0,15,30,45,60} × theme {light,dark} ×
-// 壁纸透明度 {0,50,90}, theme text colour (light #000 / dark #fff) against the
-// surface composited onto the worst-case backdrop (light: darkest plausible
-// wallpaper pixel #000; dark: brightest #fff):
-//   light  exact 0.44194 → 0.45   worst case 4.63:1  (bubble @ 玻璃透明度=60)
-//   dark   exact 0.58136 → 0.59   worst case 4.63:1  (settings layer-3 @ 0)
-// The floor is independent of 壁纸透明度: it never reads --we-wallpaper-opacity,
-// which keeps affecting .we-layer only. Values are interpolated into the CSS
-// below so the stylesheet and this comment can never drift apart.
-const READABILITY_FLOOR = 0.45;
-const READABILITY_FLOOR_DARK = 0.59;
 
 // ── Styles ──────────────────────────────────────────────────────────────────
 const CSS_BASE = `
@@ -223,227 +188,19 @@ const CSS_BASE = `
     --dsw-alias-bg-base: transparent;
     --dsw-specific-sidebar-fill: transparent;
   }
-
-  /* ── 页面玻璃总锚点（data-we-glass-page）——**与有没有壁纸无关** ───────────────
-     由 src/glass.js 恒挂（插件启用即挂，与 data-we-glass-chat / -window / -floaters
-     同族）。壁纸只是玻璃的**背景来源**之一，不是玻璃的前提：没有壁纸时玻璃面照旧
-     拿到地板色 / 霜 / 釉光 / 发丝边，压在宿主自己的基色与内容之上（用户口径：
-     「页面玻璃效果不设置壁纸也要生效」）。
-     ⚠️ 本锚点**不**等于 data-we-wallpaper：后者是"页面让开、露出壁纸层"，前者是
-     "玻璃配方生效"。两者正交 —— 壁纸在场时同时成立，无壁纸时只有本锚点。
-     raise border alpha for visibility, and apply the frosted-glass effect to
-     opaque surfaces. */
-  body[data-we-glass-page] {
-    /* ── 表面令牌（#80）——在**令牌源头**接管，不逐面补选择器 ────────────────────
-       宿主的对话框 / 面板 / 抬高按钮面读的都是别名层：--dsw-alias-bg-layer-1/2/3 是
-       面板梯度（浅色三层同为白；深色 bluish-875/850/800 逐层抬亮），
-       --dsw-alias-button-elevated-fill 是「抬高按钮」的实色（侧栏「新建会话」、
-       工作区重命名输入框 —— 上游 #71 报的那类没玻璃的按钮）。它们保持宿主实色时，
-       壁纸既透不出来、也没有自己的模糊，只有设置窗口那三档被接管过。
-       这里套用**与设置窗口同一张配方表**：主题底色压可读性下限 + --we-surface-tint-light/dark
-       按 --we-glass-alpha 混合，三档沿用 0.9 / 1.0 / 1.1 的层权重，抬高按钮再高半档
-       （深色主题下必须比 layer-3 更亮，否则按钮与容器压平成同一块玻璃）。于是
-       玻璃透明度 / 玻璃颜色 对 harness 自带的面同样生效，无需知道任何 CSS 模块哈希。
-       代码块家族（--dsw-alias-markdown-code-block(-banner)）与行内代码 / 标签 / 分段
-       同属下面「markdown 代码块 / 行内代码」那段映射 —— 裁定档案 harness-ui-surfaces.json 同源。
-       ⚠️ 作用域是**整个页面玻璃锚点**，不是聊天流：宿主自己的侧栏按钮、右栏页签栏、
-       设置窗内的卡片都读这一族令牌。5cabb9e1 的「表面所有权」重构曾把这里收窄成
-       :where([data-chat-flow])，这些面于是全部退回宿主实底（用户原话：「这些我用红色
-       矩形框选的类型的组件的玻璃效果又丢失了」）。已恢复为页面级；第三方插件的可读性
-       由每条 color-mix 里的 --we-readability-floor 兜住，不是"无下限透明"。 */
-    --dsw-alias-bg-layer-1: color-mix(in srgb,
-      var(--we-readability-base) calc(var(--we-readability-floor) * 100%),
-      color-mix(in srgb, var(--we-surface-tint-light, #ffffff) calc(var(--we-glass-alpha, 0.5) * 0.9 * 100%), transparent) calc((1 - var(--we-readability-floor)) * 100%));
-    --dsw-alias-bg-layer-2: color-mix(in srgb,
-      var(--we-readability-base) calc(var(--we-readability-floor) * 100%),
-      color-mix(in srgb, var(--we-surface-tint-light, #ffffff) calc(var(--we-glass-alpha, 0.5) * 1.0 * 100%), transparent) calc((1 - var(--we-readability-floor)) * 100%));
-    --dsw-alias-bg-layer-3: color-mix(in srgb,
-      var(--we-readability-base) calc(var(--we-readability-floor) * 100%),
-      color-mix(in srgb, var(--we-surface-tint-light, #ffffff) calc(var(--we-glass-alpha, 0.5) * 1.1 * 100%), transparent) calc((1 - var(--we-readability-floor)) * 100%));
-    --dsw-alias-button-elevated-fill: color-mix(in srgb,
-      var(--we-readability-base) calc(var(--we-readability-floor) * 100%),
-      color-mix(in srgb, var(--we-surface-tint-light, #ffffff) calc(var(--we-glass-alpha, 0.5) * 1.15 * 100%), transparent) calc((1 - var(--we-readability-floor)) * 100%));
-    /* ── 全表面玻璃（issue #71 的 glass-patch.css 收编）─────────────────────────
-       覆盖壳层**其余**能画出实色面的别名 token（浮起按钮、弹层、工具条、引用块、
-       占位图…），治的是「个别面仍是突兀实色块」。层权重沿用那份补丁的角色分档，
-       但**每条都包上可读性下限**（补丁的裸 rgba 在花壁纸上会把菜单文字直接露给
-       壁纸 —— 与 #82 同一条教训）。语义状态色（button-info-fill 等）与 accent 系
-       按补丁原文**保持原生**。 */
-    --dsw-alias-bg-overlay: color-mix(in srgb,
-      var(--we-readability-base) calc(var(--we-readability-floor) * 100%),
-      color-mix(in srgb, var(--we-surface-tint-light, #ffffff) calc(var(--we-glass-alpha, 0.5) * 1.3 * 100%), transparent) calc((1 - var(--we-readability-floor)) * 100%));
-    --dsw-alias-bg-module-platform: color-mix(in srgb,
-      var(--we-readability-base) calc(var(--we-readability-floor) * 100%),
-      color-mix(in srgb, var(--we-surface-tint-light, #ffffff) calc(var(--we-glass-alpha, 0.5) * 1.15 * 100%), transparent) calc((1 - var(--we-readability-floor)) * 100%));
-    --dsw-alias-bg-multi-select: color-mix(in srgb,
-      var(--we-readability-base) calc(var(--we-readability-floor) * 100%),
-      color-mix(in srgb, var(--we-surface-tint-light, #ffffff) calc(var(--we-glass-alpha, 0.5) * 1.2 * 100%), transparent) calc((1 - var(--we-readability-floor)) * 100%));
-    --dsw-alias-button-floating-fill: color-mix(in srgb,
-      var(--we-readability-base) calc(var(--we-readability-floor) * 100%),
-      color-mix(in srgb, var(--we-surface-tint-light, #ffffff) calc(var(--we-glass-alpha, 0.5) * 1.1 * 100%), transparent) calc((1 - var(--we-readability-floor)) * 100%));
-    --dsw-alias-button-ghost-active-fill: color-mix(in srgb,
-      var(--we-readability-base) calc(var(--we-readability-floor) * 100%),
-      color-mix(in srgb, var(--we-surface-tint-light, #ffffff) calc(var(--we-glass-alpha, 0.5) * 0.9 * 100%), transparent) calc((1 - var(--we-readability-floor)) * 100%));
-    --dsw-alias-button-tool-bar-fill: color-mix(in srgb,
-      var(--we-readability-base) calc(var(--we-readability-floor) * 100%),
-      color-mix(in srgb, var(--we-surface-tint-light, #ffffff) calc(var(--we-glass-alpha, 0.5) * 1.0 * 100%), transparent) calc((1 - var(--we-readability-floor)) * 100%));
-    --dsw-alias-interactive-bg-active: color-mix(in srgb,
-      var(--we-readability-base) calc(var(--we-readability-floor) * 100%),
-      color-mix(in srgb, var(--we-surface-tint-light, #ffffff) calc(var(--we-glass-alpha, 0.5) * 0.9 * 100%), transparent) calc((1 - var(--we-readability-floor)) * 100%));
-    --dsw-alias-interactive-bg-hover-solid: color-mix(in srgb,
-      var(--we-readability-base) calc(var(--we-readability-floor) * 100%),
-      color-mix(in srgb, var(--we-surface-tint-light, #ffffff) calc(var(--we-glass-alpha, 0.5) * 1.0 * 100%), transparent) calc((1 - var(--we-readability-floor)) * 100%));
-    --dsw-alias-markdown-citation: color-mix(in srgb,
-      var(--we-readability-base) calc(var(--we-readability-floor) * 100%),
-      rgba(var(--we-surface-tint-rgb-light, 255, 255, 255), calc(var(--we-glass-alpha, 0.15) * 0.9)) calc((1 - var(--we-readability-floor)) * 100%));
-    --dsw-alias-markdown-placeholder: color-mix(in srgb,
-      var(--we-readability-base) calc(var(--we-readability-floor) * 100%),
-      rgba(var(--we-surface-tint-rgb-light, 255, 255, 255), calc(var(--we-glass-alpha, 0.15) * 1.1)) calc((1 - var(--we-readability-floor)) * 100%));
-    /* ── markdown 代码块 / 行内代码（"重点文字"）的底：与气泡**同一张配方表** ──────────
-       用户口径（现场要求）："代码块和重点文字背景也需要和对话框背景一样进行玻璃化覆盖"。
-       把底**纳入同一条可读性下限**（不能只做透明化：代码块底是 shiki 固定配色的画布，
-       直接透出壁纸会让注释 / 字符串掉到不可读的对比）：
-       底 = 主题底色@下限 + 玻璃色@玻璃透明度，而 shiki 的**前景色一个都不动** ——
-       玻璃感进来了，最坏情况的对比仍由下限兜住（与气泡 / 输入卡片逐字同一条公式；
-       下限的数学与实测见 test/verify-readability.mjs 的文件头）。
-       ⚠️ 宿主这几条别名不是层令牌的派生（实测是 --dsw-static-neutral-bluish-50/900
-       这类**静态**调色板），"映射层令牌"那条路对它们无效，两者不重叠。
-       层权重：**代码块与标题条 = 气泡那一档（0.8 / 0.4）**（用户要的就是"和对话框一样"）；
-       **行内代码 / 标签 / 未选中的分段 = 高一档（1.0 / 0.5）** —— 小色块要"比底稍亮"
-       才留得住"这是一枚 chip"的读法（与抬高按钮高半档同一条层权重规矩）。 */
-    --dsw-alias-markdown-code-block: color-mix(in srgb,
-      var(--we-readability-base) calc(var(--we-readability-floor) * 100%),
-      rgba(var(--we-surface-tint-rgb-light, 255, 255, 255), calc(var(--we-glass-alpha, 0.15) * 0.8)) calc((1 - var(--we-readability-floor)) * 100%));
-    --dsw-alias-markdown-code-block-banner: color-mix(in srgb,
-      var(--we-readability-base) calc(var(--we-readability-floor) * 100%),
-      rgba(var(--we-surface-tint-rgb-light, 255, 255, 255), calc(var(--we-glass-alpha, 0.15) * 0.8)) calc((1 - var(--we-readability-floor)) * 100%));
-    --dsw-alias-markdown-inline-code: color-mix(in srgb,
-      var(--we-readability-base) calc(var(--we-readability-floor) * 100%),
-      rgba(var(--we-surface-tint-rgb-light, 255, 255, 255), var(--we-glass-alpha, 0.15)) calc((1 - var(--we-readability-floor)) * 100%));
-    --dsw-alias-markdown-tag: color-mix(in srgb,
-      var(--we-readability-base) calc(var(--we-readability-floor) * 100%),
-      rgba(var(--we-surface-tint-rgb-light, 255, 255, 255), var(--we-glass-alpha, 0.15)) calc((1 - var(--we-readability-floor)) * 100%));
-    --dsw-alias-markdown-code-segment-unselected: color-mix(in srgb,
-      var(--we-readability-base) calc(var(--we-readability-floor) * 100%),
-      rgba(var(--we-surface-tint-rgb-light, 255, 255, 255), var(--we-glass-alpha, 0.15)) calc((1 - var(--we-readability-floor)) * 100%));
-    /* 选中的分段（代码卡的多文件页签）：**再高一档（1.15，与抬高按钮同档）** ——
-       选中态靠"比未选中的那枚更亮"读出来，而不是靠回到实色（实色在这张玻璃卡上像一块白板）。 */
-    --dsw-alias-markdown-code-segment-selected: color-mix(in srgb,
-      var(--we-readability-base) calc(var(--we-readability-floor) * 100%),
-      rgba(var(--we-surface-tint-rgb-light, 255, 255, 255), calc(var(--we-glass-alpha, 0.15) * 1.15)) calc((1 - var(--we-readability-floor)) * 100%));
-    /* Border emphasis: neutral gray so it reads on both light and dark themes;
-       alpha is driven by the "边框" slider through --we-border-alpha. */
-    --dsw-alias-border-l1: rgba(180, 180, 180, var(--we-border-alpha, 0.35));
-    --dsw-alias-border-l2: rgba(180, 180, 180, var(--we-border-alpha, 0.35));
-    --dsw-alias-border-l2-darkmode-thin: rgba(180, 180, 180, var(--we-border-alpha, 0.35));
-  }
-  /* DSH rc.7+ injects the theme palette (design-platform.css) as a plugin-owned
-     stylesheet appended to <head> AFTER this one, so in dark mode the shell's
-     body[data-ds-dark-theme] rules (equal specificity 0,1,1, later in the
-     document) win the cascade and repaint the app frame / sidebar / borders
-     with their opaque dark colors — hiding the wallpaper behind them. Repeat
-     the transparency + border-emphasis overrides under the higher-specificity
-     dark selector (0,2,1) so the wallpaper always wins regardless of stylesheet
-     order. */
   body[data-ds-dark-theme][data-we-wallpaper] {
     --dsw-alias-bg-base: transparent;
     --dsw-specific-sidebar-fill: transparent;
   }
+
   /* 壁纸仅清宿主挂载点的外壳；不得按类名子串清任意插件子树。 */
   body[data-we-wallpaper][data-we-adapter="browser"],
   body[data-we-wallpaper][data-we-adapter="browser"] > #root > [class*="_frame"]:not([data-we-surface-preserve]),
   body[data-we-wallpaper][data-we-adapter="browser"] > #root > [class*="_frame"]:not([data-we-surface-preserve]) > [class*="_root"]:not([data-we-surface-preserve]) {
     background: transparent !important;
   }
-  /* 深色档的**页面玻璃**映射：与上面那块逐条同形（同一张配方表、同一组层权重），
-     只有玻璃色的**缺省值**不同：深色玻璃底色是深海军蓝。 */
-  body[data-ds-dark-theme][data-we-glass-page] {
-    --dsw-alias-bg-layer-1: color-mix(in srgb,
-      var(--we-readability-base) calc(var(--we-readability-floor) * 100%),
-      color-mix(in srgb, var(--we-surface-tint-dark, #0d1524) calc(var(--we-glass-alpha, 0.5) * 0.9 * 100%), transparent) calc((1 - var(--we-readability-floor)) * 100%));
-    --dsw-alias-bg-layer-2: color-mix(in srgb,
-      var(--we-readability-base) calc(var(--we-readability-floor) * 100%),
-      color-mix(in srgb, var(--we-surface-tint-dark, #0d1524) calc(var(--we-glass-alpha, 0.5) * 1.0 * 100%), transparent) calc((1 - var(--we-readability-floor)) * 100%));
-    --dsw-alias-bg-layer-3: color-mix(in srgb,
-      var(--we-readability-base) calc(var(--we-readability-floor) * 100%),
-      color-mix(in srgb, var(--we-surface-tint-dark, #0d1524) calc(var(--we-glass-alpha, 0.5) * 1.1 * 100%), transparent) calc((1 - var(--we-readability-floor)) * 100%));
-    --dsw-alias-button-elevated-fill: color-mix(in srgb,
-      var(--we-readability-base) calc(var(--we-readability-floor) * 100%),
-      color-mix(in srgb, var(--we-surface-tint-dark, #0d1524) calc(var(--we-glass-alpha, 0.5) * 1.15 * 100%), transparent) calc((1 - var(--we-readability-floor)) * 100%));
-    /* 全表面玻璃的深色档（issue #71，与浅色逐条同形；层权重见浅色块的注释）。 */
-    --dsw-alias-bg-overlay: color-mix(in srgb,
-      var(--we-readability-base) calc(var(--we-readability-floor) * 100%),
-      color-mix(in srgb, var(--we-surface-tint-dark, #0d1524) calc(var(--we-glass-alpha, 0.5) * 1.3 * 100%), transparent) calc((1 - var(--we-readability-floor)) * 100%));
-    --dsw-alias-bg-module-platform: color-mix(in srgb,
-      var(--we-readability-base) calc(var(--we-readability-floor) * 100%),
-      color-mix(in srgb, var(--we-surface-tint-dark, #0d1524) calc(var(--we-glass-alpha, 0.5) * 1.15 * 100%), transparent) calc((1 - var(--we-readability-floor)) * 100%));
-    --dsw-alias-bg-multi-select: color-mix(in srgb,
-      var(--we-readability-base) calc(var(--we-readability-floor) * 100%),
-      color-mix(in srgb, var(--we-surface-tint-dark, #0d1524) calc(var(--we-glass-alpha, 0.5) * 1.2 * 100%), transparent) calc((1 - var(--we-readability-floor)) * 100%));
-    --dsw-alias-button-floating-fill: color-mix(in srgb,
-      var(--we-readability-base) calc(var(--we-readability-floor) * 100%),
-      color-mix(in srgb, var(--we-surface-tint-dark, #0d1524) calc(var(--we-glass-alpha, 0.5) * 1.1 * 100%), transparent) calc((1 - var(--we-readability-floor)) * 100%));
-    --dsw-alias-button-ghost-active-fill: color-mix(in srgb,
-      var(--we-readability-base) calc(var(--we-readability-floor) * 100%),
-      color-mix(in srgb, var(--we-surface-tint-dark, #0d1524) calc(var(--we-glass-alpha, 0.5) * 0.9 * 100%), transparent) calc((1 - var(--we-readability-floor)) * 100%));
-    --dsw-alias-button-tool-bar-fill: color-mix(in srgb,
-      var(--we-readability-base) calc(var(--we-readability-floor) * 100%),
-      color-mix(in srgb, var(--we-surface-tint-dark, #0d1524) calc(var(--we-glass-alpha, 0.5) * 1.0 * 100%), transparent) calc((1 - var(--we-readability-floor)) * 100%));
-    --dsw-alias-interactive-bg-active: color-mix(in srgb,
-      var(--we-readability-base) calc(var(--we-readability-floor) * 100%),
-      color-mix(in srgb, var(--we-surface-tint-dark, #0d1524) calc(var(--we-glass-alpha, 0.5) * 0.9 * 100%), transparent) calc((1 - var(--we-readability-floor)) * 100%));
-    --dsw-alias-interactive-bg-hover-solid: color-mix(in srgb,
-      var(--we-readability-base) calc(var(--we-readability-floor) * 100%),
-      color-mix(in srgb, var(--we-surface-tint-dark, #0d1524) calc(var(--we-glass-alpha, 0.5) * 1.0 * 100%), transparent) calc((1 - var(--we-readability-floor)) * 100%));
-    --dsw-alias-markdown-citation: color-mix(in srgb,
-      var(--we-readability-base) calc(var(--we-readability-floor) * 100%),
-      rgba(var(--we-surface-tint-rgb-dark, 13, 21, 36), calc(var(--we-glass-alpha, 0.15) * 0.9)) calc((1 - var(--we-readability-floor)) * 100%));
-    --dsw-alias-markdown-placeholder: color-mix(in srgb,
-      var(--we-readability-base) calc(var(--we-readability-floor) * 100%),
-      rgba(var(--we-surface-tint-rgb-dark, 13, 21, 36), calc(var(--we-glass-alpha, 0.15) * 1.1)) calc((1 - var(--we-readability-floor)) * 100%));
-    /* ── markdown 代码块家族的深色档 ──────────────────────────────────────────
-       与浅色档逐条同形（公式 / 层权重逐字一致，只有 tint 换 --we-surface-tint-rgb-dark）：
-       深色模式下宿主的静态黑画布会按级联赢回（浅色档 0,1,1 撞不过宿主
-       body[data-ds-dark-theme] 的后置同权重规则），代码块整块黑底 ⇒ 必须在此逐条覆盖。 */
-    --dsw-alias-markdown-code-block: color-mix(in srgb,
-      var(--we-readability-base) calc(var(--we-readability-floor) * 100%),
-      rgba(var(--we-surface-tint-rgb-dark, 13, 21, 36), calc(var(--we-glass-alpha, 0.15) * 0.8)) calc((1 - var(--we-readability-floor)) * 100%));
-    --dsw-alias-markdown-code-block-banner: color-mix(in srgb,
-      var(--we-readability-base) calc(var(--we-readability-floor) * 100%),
-      rgba(var(--we-surface-tint-rgb-dark, 13, 21, 36), calc(var(--we-glass-alpha, 0.15) * 0.8)) calc((1 - var(--we-readability-floor)) * 100%));
-    --dsw-alias-markdown-inline-code: color-mix(in srgb,
-      var(--we-readability-base) calc(var(--we-readability-floor) * 100%),
-      rgba(var(--we-surface-tint-rgb-dark, 13, 21, 36), var(--we-glass-alpha, 0.15)) calc((1 - var(--we-readability-floor)) * 100%));
-    --dsw-alias-markdown-tag: color-mix(in srgb,
-      var(--we-readability-base) calc(var(--we-readability-floor) * 100%),
-      rgba(var(--we-surface-tint-rgb-dark, 13, 21, 36), var(--we-glass-alpha, 0.15)) calc((1 - var(--we-readability-floor)) * 100%));
-    --dsw-alias-markdown-code-segment-unselected: color-mix(in srgb,
-      var(--we-readability-base) calc(var(--we-readability-floor) * 100%),
-      rgba(var(--we-surface-tint-rgb-dark, 13, 21, 36), var(--we-glass-alpha, 0.15)) calc((1 - var(--we-readability-floor)) * 100%));
-    --dsw-alias-markdown-code-segment-selected: color-mix(in srgb,
-      var(--we-readability-base) calc(var(--we-readability-floor) * 100%),
-      rgba(var(--we-surface-tint-rgb-dark, 13, 21, 36), calc(var(--we-glass-alpha, 0.15) * 1.15)) calc((1 - var(--we-readability-floor)) * 100%));
-    --dsw-alias-border-l1: rgba(180, 180, 180, var(--we-border-alpha, 0.35));
-    --dsw-alias-border-l2: rgba(180, 180, 180, var(--we-border-alpha, 0.35));
-    --dsw-alias-border-l2-darkmode-thin: rgba(180, 180, 180, var(--we-border-alpha, 0.35));
-  }
 
-  /* #73 增强模式 + Win10（无 Mica）：桌面外壳只在系统材质可用时让左侧工作区
-     (.dshDesktopSidebarSurface) 保持透明（壁纸透出）；material 回退 off 时它改用
-     --dsw-alias-bg-layer-1 实心绘制该区域，并把内部 sidebar 的
-     --dsw-specific-sidebar-fill 也改成实心色 —— 壁纸在这里完全不生效，只剩一块与
-     系统材质绑定的死底色。detectMicaSupport() 把「无 Mica」作为稳定钩子挂到
-     body[data-we-mica="off"]，这里用插件自己的近不透明玻璃面接管该区域：配方与
-     无 backdrop-filter 的内容面回退完全一致（主题面板色 + --we-content-surface-alpha，
-     由「内容面透明度 / 内容面底色」控制，默认 70% 不透明，壁纸仍有一层微光），
-     同时放行内部 fill token，让这块面重新与壁纸 + 暗化层同步。Mica 可用时该属性
-     不存在，本规则不参与匹配，行为与今天逐字节相同。
-     整条规则再经 [data-we-adapter^="desktop-"] 门控：壳层材质只可能是桌面壳的
-     事，原生浏览器形态（body[data-we-adapter="browser"]）不参与匹配。 */
-  body[data-we-adapter^="desktop-"][data-we-mica="off"][data-we-wallpaper] .dshDesktopSidebarSurface {
-    --dsw-specific-sidebar-fill: transparent !important;
-    background-color: color-mix(in srgb, var(--we-content-surface-color, var(--we-panel-color, #1e1f26)) max(calc(var(--we-readability-floor) * 100%), var(--we-content-surface-alpha, 88%)), transparent) !important;
-  }
+
 
   /* ── Light-scheme text contrast boost ──────────────────────────────────────
      In light mode the grays (tertiary/caption/secondary) were tuned against a
@@ -526,20 +283,6 @@ const CSS_BASE = `
   body[data-we-ui-color] [data-presented-file] {
     --dsw-alias-link: var(--we-ui-file-icon, #4f8cff);
   }
-
-  /* ── 文字面可读性下限 (text-surface readability floor, #82) ───────────────
-     动机、IDEA 模型与 4.5:1 目标见 JS 的 READABILITY_FLOOR 注释（数值的唯一
-     来源，下面用模板插值注入，二者不会漂移）。写法：每个承载文字的面都从
-         <原玻璃色 @ 原 alpha>
-     变成
-         color-mix(in srgb, <主题底色> floor%, <原玻璃色 @ 原 alpha> (1-floor)%)
-     —— color-mix 在预乘空间按权重插值，权重会乘上操作数自身的 alpha，
-     所以这条声明恰好等于「主题底色 @floor 压在 原玻璃色 之上」：
-         effective alpha = floor + a_glass × (1 − floor) ≥ floor
-     玻璃透明度 与 暗主题的 ×0.4 只改 a_glass（另一项权重），floor 这一项
-     固定不动 —— 下限因此不可能被滑杆削弱；floor 之上仍是原来的玻璃配方，
-     只是压了一层主题底色（壁纸在亮/暗极端像素处不再吃掉文字）。
-     --we-wallpaper-opacity 不参与本层：壁纸透明度仍只作用于 .we-layer。 */
   /* 插件自己的「不透明面板色」(solid panel colour)：宿主别名 --dsw-alias-bg-layer-*
      会被**改写成玻璃配方**（见上面 body[data-we-glass-page] 的令牌映射；壁纸不在场时
      也生效），
@@ -547,33 +290,7 @@ const CSS_BASE = `
      backdrop-filter 的插件模态框、壁纸层的垫底画面（垫底不能透明，见 buildLivePoster）。
      它们改读这个令牌，从而与别名映射解耦。取值直接取宿主静态调色板里**别名本身的来源**
      （浅色 neutral-bluish-00 / 深色 neutral-bluish-875），静态令牌缺席时退回字面量。 */
-  /* 染色地板：--we-readability-base 是玻璃色经亮度钳制后的按主题版本
-     （effects.js 的 weClampSurfaceColor 计算、--we-surface-tint-* 注入）
-     —— 色相跟随用户选择，亮度钳制保住 #82 的 ≥4.5:1 正文判据。缺省回落原值。
-     玻璃保真度（glassFidelity，默认 100）：--we-readability-floor = floor 常量
-     × --we-glass-fidelity（effects.js 注入 0–1，缺省 1 = 现状、任何旧设置文件
-     无此键时也不变）。拉低保真度 = 地板覆盖度同比例减薄 + 釉色向用户原色回退
-     （回退在 effects.js 的 weClampSurfaceColor 第三参），颜色更贴用户原色、
-     正文可读性让位 —— 这是唯一的权衡旋钮。 */
   body {
-    --we-readability-floor-base: ${READABILITY_FLOOR};
-    --we-readability-floor: calc(var(--we-readability-floor-base) * var(--we-glass-fidelity, 1));
-    --we-readability-base: var(--we-surface-tint-light, #ffffff);
-    /* 对话栏专属的一对（独立保真度旋钮 chatGlassFidelity）：**只**被对话栏的框架
-       玻璃面消费 —— 气泡（--dsw-specific-bubble）与输入卡片（--dsw-specific-input-major，
-       含读同一 token 的工具弹卡）。正文里的 markdown 内容面（代码块 / 行内代码 /
-       标签 / 引用）**不**跟本旋钮：它们是内容渲染面，与侧边栏一起跟全局保真度
-       （用户口径：代码块不和输入框一起）。缺省 1 = 与全局完全同值。 */
-    --we-chat-readability-floor: calc(var(--we-readability-floor-base) * var(--we-chat-glass-fidelity, 1));
-    --we-chat-readability-base: var(--we-chat-surface-tint-light, #ffffff);
-    /* ⚠️ 这两条必须排在 --we-readability-base **之后**：verify-readability 的 F1c 按
-       "floor 紧跟 base" 的正则取这两条声明（插在中间会让整条可读性网格读到 null）。
-       侧栏「跟随全局」用的玻璃色：与其余面板**同一个**按主题钳制后的染色地板值 ——
-       内联写死会盖掉"按主题"，所以由样式表给；effects 里只写 var(--we-follow-tint)。
-       侧栏的釉（镜面渐变三档）也收在这里：原生左栏与 dsh-better-sidebar 两侧栏共用同一道，
-       否则"跟随全局"之后两侧栏仍会差一层白釉。 */
-    --we-follow-tint: var(--we-surface-tint-light, #ffffff);
-    --we-panel-sheen-a: 0.10; --we-panel-sheen-b: 0.03; --we-panel-sheen-c: 0.05;
     --we-panel-color: var(--dsw-static-neutral-bluish-00, #ffffff);
     /* ── #164：原生 select 弹层的行配对（不透明底 + 与底成对比的墨）────────────
        Chromium 的弹层是一份**独立文档**：画布只在 select 自身背景**不透明**时才取
@@ -587,18 +304,12 @@ const CSS_BASE = `
     --we-popup-row-ink: var(--we-popup-row-ink-light, var(--dsw-alias-label-primary, #1f2328));
   }
   body[data-ds-dark-theme] {
-    --we-readability-floor-base: ${READABILITY_FLOOR_DARK};
-    --we-readability-floor: calc(var(--we-readability-floor-base) * var(--we-glass-fidelity, 1));
-    --we-readability-base: var(--we-surface-tint-dark, #0d1524);
-    --we-chat-readability-floor: calc(var(--we-readability-floor-base) * var(--we-chat-glass-fidelity, 1));
-    --we-chat-readability-base: var(--we-chat-surface-tint-dark, #0d1524);
-    --we-follow-tint: var(--we-surface-tint-dark, #0d1524);
-    --we-panel-sheen-a: 0.07; --we-panel-sheen-b: 0.02; --we-panel-sheen-c: 0.03;
     --we-panel-color: var(--dsw-static-neutral-bluish-875, #1e1f26);
     /* #164 深色档：见浅色块的说明。缺省墨用深色主题惯用的浅字，未自定义时逐位还原现状。 */
     --we-popup-row-bg: var(--we-popup-row-bg-dark, var(--we-panel-color, #1e1f26));
     --we-popup-row-ink: var(--we-popup-row-ink-dark, var(--dsw-alias-label-primary, #e6e8eb));
   }
+
 
 `;
 

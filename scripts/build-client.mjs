@@ -122,23 +122,21 @@ const INLINE_MODULES = [
   },
   {
     file: 'src/styles-base.js',
-    why: '样式域 base（原 styles.js 61–592）：画布兜底 · 玻璃总锚点与表面令牌 · markdown 底 · 对比度 · 全局 UI 配色 · 可读性下限常量（与消费它的 CSS 同处一文件）',
-    markers: ['const CSS_BASE = `', 'const READABILITY_FLOOR = ', 'const READABILITY_FLOOR_DARK = ', '/* ── 画布兜底色'],
+    why: '样式域 base（原 styles.js 61–592；ADR-0016 第四刀玻璃段出户后）：画布兜底 · 全局 UI 配色 · 面板色与弹层行配对',
+    markers: ['const CSS_BASE = `', '/* ── 画布兜底色', '--we-popup-row-bg'],
   },
   {
     file: 'src/styles-shell.js',
-    why: '样式域 shell（原 styles.js 593–1134）：iOS liquid glass · 思考触发条 · 输入座位 · composer card · 轨迹霜 · 吸顶条 · 原生左栏底 · 外壳画布底',
-    markers: ['const CSS_SHELL = `', '/* ── iOS liquid glass'],
+    why: '样式域 shell（ADR-0016 第四刀玻璃段出户后）：原生左栏模式底 · 外壳画布底（壁纸让位两段）',
+    markers: ['const CSS_SHELL = `', '/* ── 原生左栏在 extended/advanced 窗口模式下的不透明底', '/* ── 外壳画布底'],
   },
-  {
-    file: 'src/styles-sidebar.js',
-    why: '样式域 sidebar（原 styles.js 1135–1622）：左侧栏液态玻璃 · 四角圆角 · 标题栏玻璃与模糊层 · better-sidebar glass · 官方右侧栏 · 内容面',
-    markers: ['const CSS_SIDEBAR = `', '/* ── 左侧栏液态玻璃'],
-  },
+  // ── ADR-0016 第四刀（2026-10-28）：styles-sidebar.js **整文件**随玻璃包走（该域全部是
+  //    玻璃接管：左栏 / 四角圆角 / 标题栏 / better-sidebar / 官方右栏 / 内容面）——
+  //    内容住 packages/glass/src/glass-css.js 的 CSS_GLASS，主包组装式不再有 CSS_SIDEBAR 段。
   {
     file: 'src/styles-chrome.js',
-    why: '样式域 chrome（原 styles.js 1623–1915）：统一控件 token · 原生设置整窗玻璃 · 插件源浮层 · corner-shape 兼容(#74)',
-    markers: ['const CSS_CHROME = `', '/* ── 统一控件 token'],
+    why: '样式域 chrome（ADR-0016 第四刀玻璃段出户后）：统一控件 token · corner-shape 兼容(#74)',
+    markers: ['const CSS_CHROME = `', '/* ── 统一控件 token', '/* ── DSH harness corner-shape 兼容'],
   },
   {
     file: 'src/styles-settings.js',
@@ -157,13 +155,13 @@ const INLINE_MODULES = [
   },
   {
     file: 'src/styles-ext.js',
-    why: '样式域 ext（原 styles.js 3358–3742）：软件渲染回退(#95) · 「关于」页签 · 扩展槽位与三号模块 · 侧栏全透明(#137)',
-    markers: ['const CSS_EXT = `', '/* ── 软件渲染回退'],
+    why: '样式域 ext（ADR-0016 第四刀玻璃段出户后）：「关于」页签 · 扩展槽位与三号模块',
+    markers: ['const CSS_EXT = `', '/* ── 「关于」页签：静态页'],
   },
   {
     file: 'src/styles.js',
-    why: '样式族**组装点**（8 个域模块按本清单顺序相加 ⇒ 与原单模板逐字节相同；可读性下限由 styles-base.js 声明并导出）',
-    markers: ['const CSS = CSS_BASE + CSS_SHELL + CSS_SIDEBAR + CSS_CHROME + CSS_SETTINGS + CSS_PANEL + CSS_QUICK + CSS_EXT;',
+    why: '样式族**组装点**（域模块按本清单顺序相加；ADR-0016 第四刀起玻璃段住 packages/glass/src/glass-css.js 的 CSS_GLASS，由玻璃包自注入）',
+    markers: ['const CSS = CSS_BASE + CSS_SHELL + CSS_CHROME + CSS_SETTINGS + CSS_PANEL + CSS_QUICK + CSS_EXT;',
       'export { CSS };'],
   },
   {

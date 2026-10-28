@@ -3,6 +3,15 @@
   "artifact": "lib/client.glass.js",
   "inline": [
     {
+      "file": "src/glass-css.js",
+      "why": "玻璃样式表（ADR-0016 第四刀）：原 src/styles-{base,shell,sidebar,chrome,ext}.js 的全部玻璃段逐字节搬来，CSS_GLASS 由入口的 ensureGlassCss() 在求值期注入独立 <style data-plugin-css> 标签（主包 sheet 之后，层叠关系与搬移前同构）",
+      "markers": [
+        "const READABILITY_FLOOR = 0.45;",
+        "const CSS_GLASS = `",
+        "/* ── 左侧栏液态玻璃"
+      ]
+    },
+    {
       "file": "src/glass-surfaces.js",
       "why": "统一表面策略、安全载体、动态几何与可撤销生命周期（原 src/glass-surfaces.js，ADR-0016 第三刀整文件逐字搬来）；weGlassSurfaceStatus 经入口的 registerGlassStatus 登记回主包（外观 ctx 的诊断投影）",
       "markers": [

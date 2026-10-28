@@ -26,6 +26,6 @@
  *     插值只引用样式族自己的常量 ⇒ 不触发 TDZ。
  *   · 这是**纯数据**：逻辑（何时注入、何时移除、代际标记）留在 src/client.js。
  */
-const CSS = CSS_BASE + CSS_SHELL + CSS_SIDEBAR + CSS_CHROME + CSS_SETTINGS + CSS_PANEL + CSS_QUICK + CSS_EXT;
+const CSS = CSS_BASE + CSS_SHELL + CSS_CHROME + CSS_SETTINGS + CSS_PANEL + CSS_QUICK + CSS_EXT;
 
 export { CSS };

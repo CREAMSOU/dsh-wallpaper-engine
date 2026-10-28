@@ -8,7 +8,8 @@ import { braceBody } from './tools/assert-harness.mjs';
 
 const root = resolve('.');
 const bundle = readFileSync(resolve(root, 'lib/client.js'), 'utf8');
-const css = stripCssComments(cssBodyOf(bundle));
+const glassBundle = readFileSync(new URL('../packages/glass/lib/client.glass.js', import.meta.url), 'utf8');
+const css = stripCssComments(cssBodyOf(bundle + glassBundle));
 const left = css.match(/body\[data-we-glass-page\]\[data-we-left-sidebar\] div:has\(> \[data-slot="sidebar"\]\)[^{]*\{([^}]+)\}/)?.[1] || '';
 assert.ok(left, '必须读取真实构建的左栏绘制规则');
 assert.ok(!/(?:^|[;\s])z-index:\s*0\b/.test(left), '左栏不得为负层载体新增 z-index:0 围栏');

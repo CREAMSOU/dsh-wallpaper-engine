@@ -78,6 +78,7 @@ const SRC = readFileSync(new URL('../lib/client.js', import.meta.url), 'utf8');
 // 数值/配方判据仍以主包 SRC 为准（玻璃量写入仍在 src/effects.js，第三刀才随包走）。
 const GLASS_BUNDLE_SRC = readFileSync(new URL('../packages/glass/lib/client.glass.js', import.meta.url), 'utf8');
 const PANEL_SRC_ALL = SRC + GLASS_BUNDLE_SRC;
+const GLASS_CSS_SRC = readFileSync(new URL('../packages/glass/src/glass-css.js', import.meta.url), 'utf8');
 
 // ── source → values ─────────────────────────────────────────────────────────
 function num(re, text = SRC) {
@@ -87,8 +88,9 @@ function num(re, text = SRC) {
 
 // 1) the named JS constants (single source of truth for both floor values)
 const FLOOR_JS = {
-  light: num(/const READABILITY_FLOOR = ([\d.]+);/),
-  dark: num(/const READABILITY_FLOOR_DARK = ([\d.]+);/),
+  // ADR-0016 第四刀：常量随玻璃 CSS 走（packages/glass/src/glass-css.js）⇒ 从玻璃包源提取。
+  light: num(/const READABILITY_FLOOR = ([\d.]+);/, GLASS_CSS_SRC),
+  dark: num(/const READABILITY_FLOOR_DARK = ([\d.]+);/, GLASS_CSS_SRC),
 };
 
 // 2) the injected stylesheet: evaluate the CSS template literal with exactly
@@ -96,7 +98,7 @@ const FLOOR_JS = {
 // ⚠️ 锚点锚在行首且容忍缩进（产物把内联模块整段缩进过）：散文里出现同样的声明字面量会把锚点带偏。
 // （刀3）：样式表拆成 8 个域模板 + 组装点 ⇒ 取文改走 cssBodyOf（按声明顺序拼回一份
 // CSS 体，与旧单模板取文逐字节相同）；取不到任何模板会抛错，不再静默返回空串让判据恒真。
-const CSS_BODY = cssBodyOf(SRC);
+const CSS_BODY = cssBodyOf(SRC + readFileSync(new URL('../packages/glass/lib/client.glass.js', import.meta.url), 'utf8'));
 let CSS = '';
 let cssError = null;
 try {

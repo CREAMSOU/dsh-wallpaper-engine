@@ -11,7 +11,7 @@ const bundle = readFileSync(resolve('lib/client.js'), 'utf8');
 // ADR-0016 第三刀：玻璃运行时（glass-surfaces / glass-extra）随玻璃包出产物 ⇒
 // 模块提取面改读**玻璃包产物**（主 bundle 的 officialPull 等主包段仍读主产物）。
 const glassBundle = readFileSync(resolve('packages/glass/lib/client.glass.js'), 'utf8');
-const css = new Function('READABILITY_FLOOR', 'READABILITY_FLOOR_DARK', 'return `' + cssBodyOf(bundle) + '`;')(0.45, 0.59);
+const css = new Function('READABILITY_FLOOR', 'READABILITY_FLOOR_DARK', 'return `' + cssBodyOf(bundle + glassBundle) + '`;')(0.45, 0.59);
 function moduleText(name) {
   // 子包产物的内联 marker 带**全路径**（packages/glass/src/<name>.js），与主 bundle 的 src/<name>.js 不同。
   const start = glassBundle.indexOf('// ── 内联模块：packages/glass/src/' + name + '.js');

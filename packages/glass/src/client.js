@@ -81,6 +81,28 @@ const {
 //   ② 不写 `order`：本节的位置由主包的内置桩锚定，不参与注册表排序（fonts 落默认位 100 是
 //      因为它在尾部；本节不同 —— 排序值没人读，写了反而误导）。
 // 注册表为空（本行未装 / 被关）⇒ 主包占位桩返回 null ⇒ 缺的是这一节，不是这一页（D3①/D3③）。
+/* ===== 玻璃样式表注入（ADR-0016 第四刀）===== */
+
+// 与主包 ensurePluginCss 同款（src/client.js）：求值期把 CSS_GLASS 写进本包自己的
+// <style data-plugin-css> 标签。时序保证层叠正确：loader 先求值主 bundle（它的 sheet 先进
+// head），再求值本 bundle ⇒ 玻璃 sheet 排在后，与搬移前「玻璃配方压令牌映射、回退块压配方」
+// 的相对顺序同构。同 id 旧标签按当前内容刷新（HMR / 重载不叠层）。
+// 玻璃行停用 ⇒ 本 bundle 不被加载 ⇒ sheet 整体消失 + 门控属性无人写 ⇒ 宿主回原生。
+function ensureGlassCss() {
+  if (typeof document === "undefined") return null;
+  const TAG = "dsh-wallpaper-engine/glass";
+  let tag = document.querySelector("style[data-plugin-css=" + JSON.stringify(TAG) + "]");
+  if (tag === null) {
+    tag = document.createElement("style");
+    tag.dataset.plugin = "dsh-wallpaper-engine";
+    tag.dataset.pluginCss = TAG;
+    (document.head || document.documentElement).appendChild(tag);
+  }
+  if (tag.textContent !== CSS_GLASS) tag.textContent = CSS_GLASS;
+  return tag;
+}
+ensureGlassCss();
+
 registerPanelSection('appearance', 'glass', {
   id: 'glass',
   get title() { return weT("玻璃 UI"); },

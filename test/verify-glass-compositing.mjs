@@ -75,7 +75,9 @@ const FLOOR = {
 // （刀3）：样式表由单个 CSS 模板拆成 8 个域模板 + 组装点 ⇒ 取文改走 cssBodyOf
 // （按声明顺序把族内每个域模板拼回一份 CSS 体）。与旧单模板取文**逐字节相同**（实测 276,804 B），
 // 且一个模板都取不到时会**抛错**，不再像旧写法那样静默返回空串让本文件全部判据恒真。
-const CSS_BODY = cssBodyOf(SRC);
+// ADR-0016 第四刀：玻璃段随玻璃包产物 ⇒ CSS 取文 = 主产物 + 玻璃产物（顺序 = 运行时注入序）。
+const GLASS_BUNDLE = readFileSync(new URL('../packages/glass/lib/client.glass.js', import.meta.url), 'utf8');
+const CSS_BODY = cssBodyOf(SRC + GLASS_BUNDLE);
 let CSS = '';
 let cssError = null;
 try {

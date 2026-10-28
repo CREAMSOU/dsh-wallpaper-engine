@@ -249,10 +249,11 @@ const code = readFileSync(process.env.DSH_MUT_LIB || new URL('../lib/client.js',
 // 涉及"写入面"的判据读双产物拼接；CSS 门控选择器仍只住主包产物（第四刀才随包走）。
 const glassCode = readFileSync(new URL('../packages/glass/lib/client.glass.js', import.meta.url), 'utf8');
 const writeFace = code + glassCode;
+// ADR-0016 第四刀：选择器随玻璃 CSS 走（玻璃包产物）⇒ 读双产物拼接面。
 const independentSidebarSelector = 'body[data-we-glass-page][data-we-sidebar-glass] [data-we-surface-plate="right-sidebar"]';
 const wallpaperGatedSidebarSelector = 'body[data-we-sidebar-glass][data-we-wallpaper] [data-dsh-better-sidebar]';
-assert.ok(code.includes(independentSidebarSelector), 'sidebar glass must not require an active wallpaper');
-assert.ok(!code.includes(wallpaperGatedSidebarSelector), 'legacy wallpaper-gated sidebar selector must be removed');
+assert.ok(glassCode.includes(independentSidebarSelector), 'sidebar glass must not require an active wallpaper');
+assert.ok(!glassCode.includes(wallpaperGatedSidebarSelector), 'legacy wallpaper-gated sidebar selector must be removed');
 // ── 页面玻璃的门（用户报障：玻璃只在设了壁纸后才生效）────────────────────────────
 // 口径：整页的玻璃令牌映射挂 **data-we-glass-page**（glass.js 恒挂：插件在跑就挂，
 // 与有没有壁纸无关）；**data-we-wallpaper** 只剩"页面让开、露出壁纸层"那两条
@@ -260,8 +261,8 @@ assert.ok(!code.includes(wallpaperGatedSidebarSelector), 'legacy wallpaper-gated
 // 会变透明（窗口底板透出来）。下面两条互为负对照：把映射锚回壁纸门 ⇒ 第一条红；
 // 把让开那两条挪进页面玻璃块 ⇒ 第二条红。
 // 朴素块体切片：实现在 `test/tools/assert-harness.mjs`（契约 = 两个 `indexOf`，不跳字符串/注释）。
-const blockBodyOf = (needle) => naiveBlockBody(code, needle);
-const pageGlassBlock = blockBodyOf('body[data-we-glass-page] {');
+const blockBodyOf = (needle, face) => naiveBlockBody(face || code, needle);
+const pageGlassBlock = blockBodyOf('body[data-we-glass-page] {', glassCode); // ADR-0016 第四刀：页玻璃锚点在玻璃包产物里
 const wallpaperBlock = blockBodyOf('body[data-we-wallpaper] {');
 assert.ok(pageGlassBlock && pageGlassBlock.includes('--dsw-alias-bg-layer-1')
   && pageGlassBlock.includes('--dsw-alias-markdown-code-block'),
@@ -276,7 +277,7 @@ assert.ok(wallpaperBlock && wallpaperBlock.includes('--dsw-alias-bg-base: transp
   'the page-let-the-wallpaper-through block stays wallpaper-only (no glass mapping inside)');
 assert.ok(/setAttribute\("data-we-glass-page", "on"\)/.test(writeFace)
   && /removeAttribute\("data-we-glass-page"\)/.test(writeFace),
-  'the page-glass anchor must be mounted by glass.js and removed on dispose (paired; both halves in the glass bundle since ADR-0016 cut 3)');assert.ok(code.includes('body[data-we-sidebar-glass] :where([data-we-surface-runtime="content"])'),
+  'the page-glass anchor must be mounted by glass.js and removed on dispose (paired; both halves in the glass bundle since ADR-0016 cut 3)');assert.ok(glassCode.includes('body[data-we-sidebar-glass] :where([data-we-surface-runtime="content"])'),
   'sidebar content surfaces must follow both the sidebar switch and runtime ownership',
 );
 assert.ok(code.includes('body[data-we-wallpaper] {') && code.includes('body[data-we-wallpaper]:not([data-ds-dark-theme])'),
