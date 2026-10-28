@@ -109,14 +109,15 @@ HTML 里注入 WE API shim（运行期从 `webwallgl` 包的 `webwallgl.mjs` 中
 
 ### 宿主 / 客户端分工
 
-- **Host 端**（`lib/index.js` 门面 + `lib/kernel/` 内核 + 各组件包 `packages/<组件名>/lib/` + 独立子包 `packages/{fx,parallax,fonts}` 与可选的 `packages/pet-link` + 主包自己的 `lib/routes/*.js`，跨包服务面 = `lib/subpackage-boot.js`）：bundle patch 里的**多行** —— 主包一行 + 每个组件行 / 子包行各一行（行集真源 = 根 `cordis.patch.yml`），每行都是宿主眼里的独立 plugin / fiber。跨包通道只有一条：主包 `apply()` 第一步提供 Cordis 服务 `wallpaperEngineHost`（冻结七键、只读），子包的 `inject` 必须声明它、只读消费，且**零主包说明符**（[`adr/0014`](adr/0014-subpackage-contract.md) S5.1/S5.4）。**开关口径 = A 语义（宿主行级）**：停用某个组件行 ⇒ 该组件的宿主路由**整族不注册**（浏览器侧照常加载，「关掉即不下载」是**非目标 N5**，见 [`adr/0013`](adr/0013-bundle-multi-component-rows.md)）。它负责
+- **Host 端**（`lib/index.js` 门面 + `lib/kernel/` 内核 + 各组件包 `packages/<组件名>/lib/` + 独立子包 `packages/{fx,parallax,fonts,glass}` 与可选的 `packages/pet-link` + 主包自己的 `lib/routes/*.js`，跨包服务面 = `lib/subpackage-boot.js`）：bundle patch 里的**多行** —— 主包一行 + 每个组件行 / 子包行各一行（行集真源 = 根 `cordis.patch.yml`），每行都是宿主眼里的独立 plugin / fiber。跨包通道只有一条：主包 `apply()` 第一步提供 Cordis 服务 `wallpaperEngineHost`（冻结七键、只读），子包的 `inject` 必须声明它、只读消费，且**零主包说明符**（[`adr/0014`](adr/0014-subpackage-contract.md) S5.1/S5.4）。**开关口径 = A 语义（宿主行级）**：停用某个组件行 ⇒ 该组件的宿主路由**整族不注册**（浏览器侧照常加载，「关掉即不下载」是**非目标 N5**，见 [`adr/0013`](adr/0013-bundle-multi-component-rows.md)）。它负责
   1. 先定出 **Steam 根**（`DSH_WE_STEAM_ROOT` 显式覆盖 → 注册表 → 常见安装目录 → WSL 的 `/mnt`；显式覆盖排在最前，且列出的根没命中时会继续往后找），再从 `libraryfolders.vdf` 取库列表，最后在各库与默认位置里找 Wallpaper Engine（所以 Steam 装在非默认盘也能用）。**"已安装"的判据是标记文件、不是某一个 exe 的位置**：经典布局看顶层 `wallpaper32.exe` / `wallpaper64.exe`，当前版本把 exe 放进 `distribution\`（旁边有稳定的 `version.json`），两种都认；无论命中哪个标记，返回的始终是**安装根**（`projects/` 与 `config.json` 所在处，因为 portable 项目扫描与 WE 播放列表都挂在这层）。Steam 库的判据同理只认**真正会被扫描的那个目录** `<库>/steamapps/workshop/content/431960`，不以安装夹是否存在为准；
   2. 从 `projects/defaultprojects`、`projects/myprojects` 以及 `steamapps/workshop/content/431960/*` 枚举壁纸；
   3. 在 DSH webserver 上注册同源 HTTP 路由，让浏览器端直接获取数据和流式加载媒体。按职责分族
      （跨主包与壁纸子包）：**素材** · **转码** · **实时渲染** · **出图与抓帧** · **设置与系统**。
      **族随所属行走、注册点在行入口**：组件行与独立子包的私有族各自在 `packages/<pkg>/lib/routes/`
      （about-notice 的二维码与 star 数、mascot-avatar 的立绘与头像、fonts 的字体集与本机字体、
-     media-bridge 的场景 / 媒体 / 上传 / 遮挡 / now-playing / we-assets / token 簇），`lib/routes/` 只剩**主包自己**
+     media-bridge 的场景 / 媒体 / 上传 / 遮挡 / now-playing / we-assets / token 簇、glass 的行状态
+     `packages/glass/lib/routes/glass-row.js`（`GET <base>/glass-row-state`，路由存在 = 行启用，见下文「玻璃行停用」）），`lib/routes/` 只剩**主包自己**
      的族（`settings` / `presets` / `diag` / `cache-dir`）。
      **权威清单（含每条路由的名称、来源行、注册形态与 context 契约）见 [`ROUTE-INDEX.md`](./ROUTE-INDEX.md)** ——
      本文件不手写路径表，也不写条数（手写的必烂，且除生成物外没人复算它）。
@@ -301,6 +302,8 @@ Windows PowerShell 的 `InstalledFontCollection` / Linux `fc-list`）；都拿�
 - **行启用**（默认）：与既有版本观感逐字节一致 —— 包括 better-sidebar 读 `--dsw-alias-bg-layer-1` 的着色（玻璃的令牌映射照常生效）。
 - **行停用**：玻璃样式表与行为层整体退场，`data-we-glass-*` 门控属性无人写 ⇒ 全部玻璃配方失效，宿主回到原生主题。better-sidebar / parallax / 官方 pet 联动不受影响（它们读到的是宿主原生令牌值 —— 这本来就是无玻璃时宿主的默认）；壁纸域的让位规则（画布兜底 / 宿主清底）留在主包，壁纸功能不随玻璃行停用而受损。
 - **主包行停用**：玻璃行随服务面级联停靠（[ADR-0014](./adr/0014-subpackage-contract.md) S7.2），整族退场。
+
+**运行中停用 / 启用即时生效、无需重启宿主**：桌面宿主的行开关不触发已加载页面的客户端重载，所以玻璃 bundle 自带一条自观测通道 —— 它每 3 秒探测一次 `GET <base>/glass-row-state`（页面隐藏时暂停、恢复可见立即探测），**路由存在 = 本行启用**（行停用 ⇒ 宿主 prune 该行 fiber ⇒ 404）。探测到 404 后，浏览器半边撤掉自己的玻璃样式表、跑行为层 `disposeGlassLayer()`（`data-we-glass-*` 门控属性与 `--we-*` 变量整族摘除）、停下设置节渲染并清空表面状态投影；重新启用则原样恢复（样式表回注 + `sync` 重跑）。所以停用后**除内容区壁纸外，界面回仓原生外观**；单次探测失败保持现状，不因网络抖动翻转观感。
 
 ### 客户端异常也留痕（`client-error`）
 

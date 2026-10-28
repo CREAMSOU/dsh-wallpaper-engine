@@ -51,11 +51,10 @@ npm run verify:static # 静态门禁（棘轮 + 负对照；CI 里是**独立步
 
 ## 1. 加一条宿主路由
 
-**落点**：`lib/routes/<族>.js`；若这一族**属于某个组件行**（路由与浏览器可见面随行开关启停）
-⇒ `packages/<组件>/lib/routes/<族>.js`（如 `packages/about-notice/`；
-**必须落 `lib/routes/` 这一层**，否则 `docs/ROUTE-INDEX.md` 会静默少行），
-由该行入口装配（归属判据见 `CODE-STRUCTURE.md` §2.4）。只有当这一族**已经成规模**时才单独成文件，
-否则就近放在已有的族里（准入条件见 `CODE-STRUCTURE.md` §4）。
+**落点**：落**主包** `lib/routes/` 或 `packages/<pkg>/lib/routes/`（组件行 / 独立子包的族随行落自己包里，
+如 `packages/about-notice/lib/routes/`）；**两者都进 `docs/ROUTE-INDEX.md`** —— 索引按调用点把每个族放回
+所属行，所以别落到这两层之外（否则会静默少行）。由所属行入口装配（归属判据见 `CODE-STRUCTURE.md` §2.4）。
+只有当这一族**已经成规模**时才单独成文件，否则就近放在已有的族里（准入条件见 `CODE-STRUCTURE.md` §4）。
 
 **形状**（以诊断族为样板 —— 注册返回值必须推进 `disposers`，否则卸载 / HMR 后路由仍挂着）：
 
@@ -346,7 +345,7 @@ node test/tools/host-route-index.mjs --write   # 重算并写入 docs/ROUTE-INDE
 | `child-out.mjs` | **拿子进程输出的唯一方式**（本仓）：受限环境**禁子进程管道**，而 `execFileSync` / `spawnSync` 默认就是 pipe ⇒ `EPERM`，判据里"读 runner 的 `--list-json` / 检查子进程输出"会因此**假红**（看起来像链坏了）。收敛到这一处：`runNodeCaptured()` 把 stdout 落到 `.test-cache` 临时文件再读回，`runNodeStatus()` 只要退出码（`stdio: 'ignore'`，不建管道） | 守卫 `import` 消费（如 `test/verify-package-files.mjs`），无 CLI |
 | `ci-routing.mjs` | **CI 变更分类 + 文档快通道 + 公告快通道**的判据库（`scripts/ci-routing.mjs` 是它的薄 CLI 壳）：把"哪些改动算纯文档 / 纯公告"变成机器事实 —— 文档白名单逐个列（不用 `assets/**` 通配）、`docs/TOKEN-CONTRACT.md` 这类机器派生契约不豁免、删除 / 重命名 / 未知状态 / 差异超 `DIFF_FLOOR=300` / 取不到差异一律 fail-closed 走 `full`。四条路径常量 `MODE_DOCS` / `MODE_DOCS_ASSETS` / `MODE_NOTICE` / `MODE_FULL` 就是 `ci/result` 只认的那四个值。**公告快通道是内容级的**（`judgeNoticeEdit`）：公告文件的 `UPDATE NOTICE COPY` 区块**外**逐字节一致、区块**内**代码骨架一致（`noticeSkeleton` 挖空字符串内容但保留引号 / 逗号 / 括号）⇒ 只许改引号里的字；增删条目 / 改 props / 加分支都会让骨架变 ⇒ 回落 `full`。**允许只改单文件**（改中文措辞时英文常可原样复用），漏译由 `noticeKeysWithoutTranslation` 单独核：区块内每个 `weT("原文")` 都必须在**词表族**（含 `i18n-copy-core.js`，不只是公告词表文件）里有键。**不读盘、不写盘、无副作用**：正判据与负对照都喂同一个纯函数 | 守卫 `import` 消费；CLI 在 `node scripts/ci-routing.mjs check\|docs\|notice` |
 | `ci-routing-red.mjs` | 分流第一阶段的**最小**守卫（链上正式硬档）：对着 `.github/workflows/verify.yml` 原文断言两件事 —— 有固定名 `ci/result` 汇总作业、分类 / 文档审计 / 汇总真的在跑 `node scripts/ci-routing.mjs`。防的是工作流被整体换回旧的单 `verify` 矩阵时链上无声脱钩；**完整**的作业结构 / 覆盖责任 / 负对照不在这里 | `node test/tools/ci-routing-red.mjs` |
-| `ci-routing-selftest.mjs` | **分类器与文档审计的自检**（91 条）：白名单边界、删除 / 重命名 / 未知状态 / 超大差异的 fail-closed、`--base-mode` 档位（PR=merge-base、push=exact、dispatch 保守 full）、`judgeResult` 的失败 / 取消 / 缺失 / 意外跳过 / 未知 mode 五种不放行。断言对象是 `test/tools/ci-routing.mjs` 的纯函数，不碰真工作流 | `node test/tools/ci-routing-selftest.mjs` |
+| `ci-routing-selftest.mjs` | **分类器与文档审计的自检**（条数以工具输出为准）：白名单边界、删除 / 重命名 / 未知状态 / 超大差异的 fail-closed、`--base-mode` 档位（PR=merge-base、push=exact、dispatch 保守 full）、`judgeResult` 的失败 / 取消 / 缺失 / 意外跳过 / 未知 mode 五种不放行。断言对象是 `test/tools/ci-routing.mjs` 的纯函数，不碰真工作流 | `node test/tools/ci-routing-selftest.mjs` |
 | `ci-workflow.mjs` | **CI 步骤表自身**的解析与判据（`test/verify-ci-steps.mjs` 用它，R-7）：刻意**零 import**（链上零裸依赖，也不引 YAML 库）⇒ 手写行扫描把 `.github/workflows/verify.yml` 折成步骤表，`auditCiWorkflow()` 判 `npm run` 序列恰好、脚本名真实存在、`continue-on-error` 只允许且必须出现在 `verify:docs`、存在带 `git ls-files` 的 bash 出库步、`npm ci …` 在首个 `npm run` 之前（**逐行**判，多行 `run` 里藏在第二行也算，见 `installsDeps`）、顶层 `permissions:` 存在且 `contents: read` 且无任何 scope 取 write；**正判据与全部负对照共用这一个纯函数**（变异文本喂回它，真文件不动） | 守卫 `import` 消费，无 CLI |
 | `css-text.mjs` | **CSS 源码的文本级工具**（剥块注释的**唯一真源**）：逐字符扫描、等长替换且保换行（行号不漂）、未配对即抛错。为什么不复用 `js-text.mjs` —— 那个认 `//` 行注释，而 CSS 里 `url(//host/x)` 是合法值，套 JS 词法会把 URL 后半段当注释删掉。`token-contract` 与玻璃样式侧的剥注释都走这一处 | `node test/tools/css-text.mjs selftest` |
 | `diagnose-web-blank.mjs` | 网页壁纸「白屏」排查台（无头真浏览器） | `node test/tools/diagnose-web-blank.mjs` |

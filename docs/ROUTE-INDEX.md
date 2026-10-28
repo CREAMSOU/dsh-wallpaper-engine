@@ -1,4 +1,4 @@
-# 宿主路由索引（P2-11 前置 1 · 自动生成，勿手改）
+# 宿主路由索引（自动生成，勿手改）
 
 > 生成：`node test/tools/host-route-index.mjs --write`；核对：`node test/verify-route-index.mjs`
 > （守卫会在索引与代码不一致时失败 —— 索引因此不会烂掉）。
@@ -11,7 +11,7 @@
 > 两条注册（渲染页按根路径上报，只挂一条会静默 404）。**守卫提及**列的口径：该路由以
 > 路由形状（尾边界，`/media` 不被 `/media-info` 误算）出现在几个守卫/冒烟文件的**代码**里；
 > `lib/…`、`src/…`、`test/…` 这类**代码路径**先被遮掉 ⇒ 也不会被 `lib/media/mp4-probe.js`
-> 这类源文件路径误算（提及 ≠ 有断言；零提及 = 拆前无安全网）。
+> 这类源文件路径误算（提及 ≠ 有断言；零提及 = 没有守卫安全网）。
 
 共 **46** 条路由。
 
@@ -64,7 +64,7 @@
 | 45 | `/pet-link/official` | packages/pet-link/lib/routes/official-pet.js:49 | async 箭头 | disposers http | 5 |
 | 46 | `/pet-link/official/assets/` | packages/pet-link/lib/routes/official-pet.js:83 | 箭头 | disposers http | **0** |
 
-**零提及（拆分前必须先补守卫）**：`/glass-row-state`、`/pet-link/official/assets/`
+**零提及（暂无守卫覆盖，建议补）**：`/glass-row-state`、`/pet-link/official/assets/`
 
 **被最多路由引用的闭包状态（context 字段优先级，仅 `lib/index.js` 内的路由）**：
 

@@ -19,7 +19,7 @@
 pnpm 会拿这些版本去 **registry** 解析，与"主包 tgz 从哪来"无关。在隔离 profile 上实测过：
 
 ```text
-# 探针 A：只装发布形态主包 tarball
+# 探针 A：只装发布形态主包 tarball（历史样例；版本号是当时的值，不是当前版本）
 [ERR_PNPM_FETCH_404] GET https://registry.npmjs.org/dsh-plugin-wallpaper-engine-media-bridge: Not Found - 404
 This error happened while installing the dependencies of dsh-plugin-wallpaper-engine@1.3.3
 ```
@@ -32,7 +32,7 @@ This error happened while installing the dependencies of dsh-plugin-wallpaper-en
 ```text
 # 探针 C2：profile 的 pnpm-workspace.yaml 里写 overrides（子包名 → file:<tgz>）+ 主包 file: 依赖
 Progress: resolved 13, added 13, done            # exit 0
-ALL 8 top-level packages present; createRequire(profile/cordis.yml).resolve() OK ×8
+ALL 8 top-level packages present; createRequire(profile/cordis.yml).resolve() OK ×8   # 示例值：探针当时的包数；现发布集为九包
 ```
 
 结论：
@@ -153,7 +153,7 @@ VERSION=<本次版本>
 gh release create "v$VERSION" \
   .test-cache/release/set-XXXXXX/*.tgz \
   .test-cache/release/set-XXXXXX/release-set.json \
-  --title "v$VERSION" --notes-file CHANGELOG.md
+  --title "v$VERSION" --notes-file docs/CHANGELOG.md
 ```
 
 选配 `SHA256SUMS.txt`（`sha256sum *.tgz > SHA256SUMS.txt`）。**不要**只挂主包 tgz —— 那是一个装不上的
@@ -204,7 +204,7 @@ foreach ($file in $index.publishOrder) {
 | `EPUBLISHCONFLICT` | 该版本已存在 | 不能覆盖；补发其它包，或升版本整组重发 |
 | 子包发到一半中断 | 主包若已发 = 用户装不上 | 先补发缺的子包（立刻恢复），不要动已发版本 |
 | 用户装完只有主包 / 报 404 | 该版本子包缺失或镜像未同步 | `npm view` 查缺哪个；补发或等镜像同步 |
-| `ERR_PNPM_MISSING_TARBALL_INTEGRITY` | pnpm 11.0–11.8 在 hoisted 下对裸 URL 无 integrity | 用 11.9+（本机 11.22.0 正常）；离线装走 `install-release.mjs` |
+| `ERR_PNPM_MISSING_TARBALL_INTEGRITY` | pnpm 11.0–11.8 在 hoisted 下对裸 URL 无 integrity | 用 11.9+（实测备注：本机 11.22.0 正常，仅作参考、不是版本要求）；离线装走 `install-release.mjs` |
 | DSH 报 `ambiguous-install` | 一次 add 改变了多个依赖 | 一次只装一个 spec；九件套用脚本 |
 | 装完界面出现重复行 | 子包被单独选成 bundle | 只选主包（`retainMainBundle` 逻辑，脚本已自动处理） |
 

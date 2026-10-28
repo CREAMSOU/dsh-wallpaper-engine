@@ -1,7 +1,7 @@
 # ADR-0011: 预设从「玻璃子集快照」升为「整机配置快照」（preset: glass-subset snapshot → full-profile snapshot）
 
 - **Date**: 2026-10-11
-- **Status**: Proposed
+- **Status**: Accepted
 - **Deciders**: 用户（产品口径）+ 实现（本仓）
 - **Amends**: ADR-0008 D4 的「预设方案 = 高级配置」分类前提不变；本 ADR 只改**快照范围**
 - **Revised**: 2026-10-11（同日二次修订）—— 用户追加三条口径，**取代**初版对应条目：

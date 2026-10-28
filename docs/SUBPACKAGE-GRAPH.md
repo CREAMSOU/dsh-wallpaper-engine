@@ -59,7 +59,7 @@ graph LR
   SVC -->|"只读 + 自带 webServer 面"| AN["packages/about-notice 宿主半边<br/>inject ['webServer','wallpaperEngineHost']<br/>packages/about-notice/lib/routes/about-qr.js · github-stars.js"]
   SVC -->|"同上"| MA["packages/mascot-avatar 宿主半边<br/>inject ['webServer','wallpaperEngineHost']<br/>packages/mascot-avatar/lib/routes/avatar.js · mascot.js"]
   SVC -->|"同上"| MB["packages/media-bridge 宿主半边<br/>inject ['webServer','wallpaperEngineHost']<br/>packages/media-bridge/lib/routes/（族名见 docs/ROUTE-INDEX.md）"]
-  SVC -->|"同上"| PL["packages/pet-link 宿主半边<br/>inject ['webServer','wallpaperEngineHost']<br/>packages/pet-link/lib/routes/pet-link.js（仅 /pet-link/capability）"]
+  SVC -->|"同上"| PL["packages/pet-link 宿主半边<br/>inject ['webServer','wallpaperEngineHost']<br/>packages/pet-link/lib/routes/official-pet.js：/pet-link/official + /pet-link/official/assets/（无 capability）"]
   SVC -->|"只读"| GL["packages/glass 宿主半边<br/>inject ['webServer', 'wallpaperEngineHost']<br/>注册 glass-row 状态路由（/glass-row-state 一条；路由存在 = 行启用，ADR-0016）"]
   FX --- N1["零主包说明符"]
   PX --- N2["零主包说明符"]

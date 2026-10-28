@@ -10,7 +10,7 @@
 - **中文在 `docs/` 根，英文在 `docs/en/`，basename 相同** —— 这样"某文档有没有英文版"是**目录级可枚举事实**，
   改一份时对应文件一眼可见（后缀式命名要靠逐个文件猜，也容易漂成 `X-en-v2.md` 这类形态）。
 - **每份同名文档顶部都有语言切换链接**；改任一侧请**同步另一侧**（文档头已写明）。
-- **例外（有意不译）**：`adr/`（决策记录，中文为权威版本）、`ROUTE-INDEX.md` 与 `TOKEN-CONTRACT.md`（生成物）、
+- **例外（有意不译）**：`adr/`（决策记录，中文为权威版本）、`ROUTE-INDEX.md`、`GUARD-MAP.md` 与 `TOKEN-CONTRACT.md`（生成物）、
   `archive/`（历史记录）；`CHANGELOG.md` 的英文版在 [`en/CHANGELOG.md`](./en/CHANGELOG.md)。
 - **维护者向文档只留中文**：`CODE-STRUCTURE.md` / `DEV-GUIDE.md` 等 —— 读者是维护者本人，
   双语只是双份维护成本。面向用户的 `README` / `UPGRADING` / `HOW-IT-WORKS` / `TROUBLESHOOTING` / `CHANGELOG` 仍中英成对
@@ -42,7 +42,7 @@
 |---|---|
 | [UPGRADING.md](./UPGRADING.md) | **升级指南** —— 前置条件、兼容矩阵、正确更新顺序与「顺序反了怎么恢复」 |
 | [CHANGELOG.md](./CHANGELOG.md) | **变更记录** —— 逐版本功能与修复（新版在前）。**英文版在 [`en/CHANGELOG.md`](./en/CHANGELOG.md)**（与其它文档同布局：basename 相同、顶部互换链接） |
-| [HOW-IT-WORKS.md](./HOW-IT-WORKS.md) | **工作原理** —— 出图来源链（实时渲染 → 内嵌 MP4 → 实时抓帧 → 自定义画面 → 空态）、宿主 / 客户端分工、**字体集通道**、遮挡暂停与客户端异常留痕、HTTP 路由表；**含「共存」一节**（玻璃表面与其它 UI 插件、逐面回退、插件作者声明与排查） |
+| [HOW-IT-WORKS.md](./HOW-IT-WORKS.md) | **工作原理** —— 出图来源链（实时渲染 → 内嵌 MP4 → 实时抓帧 → 自定义画面 → 空态）、宿主 / 客户端分工、**字体集通道**、遮挡暂停与客户端异常留痕、路由族总览（路径表见 [`ROUTE-INDEX.md`](./ROUTE-INDEX.md)）；**含「共存」一节**（玻璃表面与其它 UI 插件、逐面回退、插件作者声明与排查） |
 | [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) | **排障** —— 安装失败排查与「症状 → 先看哪里」速查 |
 
 **分层约定**：门面 `README.md` / `README.en.md` 只放**不随版本变化、且新访客决策必需**的事实；
@@ -55,7 +55,7 @@
 |---|---|
 | [CODE-STRUCTURE.md](./CODE-STRUCTURE.md) | **唯一的代码结构手册** —— `lib/` 与 `src/` 的分工规范、目录约定与准入门槛、两个半边与路由族、构建期内联、启停生命周期、数据流、**状态真源清单**、层间边界表、在册守卫；**§2.4 与上游形态的差异与迁移**、**§3.3 字体子系统**也并入本文 |
 | [SUBPACKAGE-GRAPH.md](./SUBPACKAGE-GRAPH.md) | **子包依赖图（人工维护速查，可能滞后；以代码与守卫为准）** —— 行树（组件行 vs 独立子包行）、**两张平面**的 Mermaid 图、允许/禁止边表；规范条款在 [`adr/0014`](./adr/0014-subpackage-contract.md)，登记点与条数由守卫现算 |
-| [DEV-GUIDE.md](./DEV-GUIDE.md) | **二次开发指南** —— "怎么加一个 X" 的配方（加路由 / 加设置项 / 加浏览器端代码）；**§4 是验证与测试**：三层结构、两档判据、运行矩阵、覆盖范围、`test/tools/` 清单、写判据的八条约定 |
+| [DEV-GUIDE.md](./DEV-GUIDE.md) | **二次开发指南** —— "怎么加一个 X" 的配方（加路由 / 加设置项 / 加浏览器端代码）；**§4 是验证与测试**：三层结构、两档判据、运行矩阵、覆盖范围、`test/tools/` 清单、写判据的十条约定 |
 | [DSH-UI-INTERFACES.md](./DSH-UI-INTERFACES.md) | **我们去依赖了 DSH 的哪些 UI 接口** —— 按"客户端产物 / node 宿主 / 桌面壳 / 第三方插件"四层记账：哪些是宿主刻意提供的稳定契约（设计令牌、源码作者写的数据属性）、哪些是构建哈希或第三方私有类名、哪些**与预想不同**（宿主有正式的槽系统而我们钉渲染后的 DOM；`data-dsh-desktop-mode` 其实是桌面壳的 URL 参数）。含**复算方法**（asar 直读 + 偏移→包索引），升级前照它重跑 |
 | [ROUTE-INDEX.md](./ROUTE-INDEX.md) | 宿主路由的**生成索引**（由 `test/tools/host-route-index.mjs` 重算并逐字节比对 —— 手写必烂） |
 | [GUARD-MAP.md](./GUARD-MAP.md) | **守卫 ↔ 模块的双向派生映射**（"改了某个模块该跑哪几条"）：守卫→模块、模块→守卫两张表，由 `test/tools/guard-targets.mjs` 从**守卫代码里**派生（`--write` 重算，逐字节比对；生成物，不手改） |
@@ -88,7 +88,7 @@
 | [0013](./adr/0013-bundle-multi-component-rows.md) | **插件拆分**：终态 = **多包**（主包 + 子包，版本一致），单包多行是**起点**；核心目标 = **降复杂度 / 锚定模块边界 / 解耦合**三件并列；**行级开关 = 宿主路由 ＋ 该组件的浏览器可见面**（可见面由宿主行状态派生、双向对账、"宁可显示不可静默消失"）；**不做**每组件一格客户端开关 / 包内懒块 |
 | [0014](./adr/0014-subpackage-contract.md) | **子包规范**：`packages/<pkg>` 独立子包行的成文契约（条款号 `S*`）—— 术语（独立子包行 vs 组件行、宿主/浏览器半边）、布局、清单契约、行与接线、**依赖方向（两张平面 + 禁止边）**、生命周期、开关与重启、发布形态、登记点；判据只加在**代码与磁盘**，**不新增任何 markdown 判据**；依赖图是人工维护的 Mermaid（[`SUBPACKAGE-GRAPH.md`](./SUBPACKAGE-GRAPH.md)） |
 | [0015](./adr/0015-glass-surface-ownership.md) | **玻璃表面所有权统一**：统一背景所有权、安全装饰叶节点、未知面原生回退与外部模态让路；修订全局背景令牌泛化接管 |
-| [0016](./adr/0016-glass-subpackage.md) | **玻璃子包**：液态玻璃抽离为独立子包行（`wallpaper-engine-glass`），设置面板 / 运行时 / CSS 逐刀出户；停用该行 ⇒ 宿主回到原生外观（ADR-0010 D2 的 wallpaper-only 态转正） |
+| [0016](./adr/0016-glass-subpackage.md) | **玻璃子包**：液态玻璃抽离为独立子包行（`wallpaper-engine-glass`），设置面板 / 运行时 / CSS 逐刀出户；停用该行 ⇒ 除内容区壁纸外宿主回到原生外观（ADR-0010 D2 的 wallpaper-only 态转正） |
 | [0017](./adr/0017-code-is-truth-docs-reference-source.md) | **代码即真相**：文档只引用源码位置与复算命令，不复制源码与清单；取消文档类门禁与「文档同步」审阅约束（取代 ADR-0006；原编号 0016，与 glass 子包撞号后让位顺延） |
 
 ## 已归档（`archive/`，只作记录）
@@ -104,7 +104,7 @@
 
 > ⚠️ **别把归档物和现行实现混起来**：场景 / 网页壁纸走本仓**内置且在用**的 WebWallGL 实时渲染器
 > （`lib/webwallgl/`）—— 分工见 [`CODE-STRUCTURE.md`](./CODE-STRUCTURE.md)，行为见 [`HOW-IT-WORKS.md`](./HOW-IT-WORKS.md)。
-> 两件一次性记录（`dev-notes-bom-and-dsh-boot.md` / `awesome-dsh-plugin-pr-guide.md`）留在 `archive/` 根下，
+> 三件一次性记录（`dev-notes-bom-and-dsh-boot.md` / `awesome-dsh-plugin-pr-guide.md` / `REFACTOR-ASSESSMENT.md`）留在 `archive/` 根下，
 > 其中仍然生效的结论已离开它们（见各自文首）。
 
 ## 其它

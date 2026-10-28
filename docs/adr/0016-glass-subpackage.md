@@ -4,7 +4,7 @@
 - **Status**: Accepted（四刀全部落地：骨架 → 面板 → 运行时 → CSS；「仅壁纸」态闭环）
 - **Deciders**: 用户批准「仓库内子包 + 完整抽离」方向（形态与深度二选一均经确认）
 - **Amends**: ADR-0010 D2（wallpaper-only 总开关从「未实现」转正为行级开关）；沿用 ADR-0014 全部条款（S1–S10），本决策不放宽其中任何一条
-- **编号与版本备注**: 本决策占 0016（code-is-truth 决策顺延为 [ADR-0017](./0017-code-is-truth-docs-reference-source.md)）；并入本分支后仓内版本号暂维持 `1.4.0`（发布号由主线统筹），决策内容不变。
+- **编号与版本备注**: 本决策占 0016（code-is-truth 决策顺延为 [ADR-0017](./0017-code-is-truth-docs-reference-source.md)）；并入本整合线后仓内版本号暂维持 `1.4.0`（发布号由主线统筹），决策内容不变。
 
 ## Context
 
@@ -64,7 +64,7 @@ watch）留主包。
 
 ## Consequences
 
-- 发布集 8→9 包（`publishOrder` 子包先行、主包殿后不变）；版本九包同号（首带玻璃行的版本为 1.5.0）。
+- 发布集 8→9 包（`publishOrder` 子包先行、主包殿后不变）；版本九包同号（首带玻璃行的发布号由主线统筹；仓内暂维持 1.4.0）。
 - 玻璃守卫族（`verify-glass-*`、`verify-token-contract`、`verify-softrender`、`verify-readability`）的
   取证点改为「主包产物 + 玻璃包产物」双工件；`--dsw-*` 令牌账本出现跨包边（改写随玻璃包、消费方在
   主包与第三方），TOKEN-CONTRACT 重算时逐条标注。

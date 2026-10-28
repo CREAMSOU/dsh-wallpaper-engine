@@ -67,7 +67,7 @@
 
 - **壁纸**：Scene / Web 实时渲染，Video 直接播放；支持自定义图片 / 视频上传与 WE 项目目录。
 - **外观**：设置窗、对话区与侧栏液态玻璃；配色、透明度、模糊、边框与字体可调。
-- **玻璃子包**：液态玻璃是独立子包行 `wallpaper-engine-glass`，可在插件管理器单独停用；停用后宿主回到原生外观，壁纸、字体与吉祥物等功能不受影响。
+- **玻璃子包**：液态玻璃是独立子包行 `wallpaper-engine-glass`，可在插件管理器单独停用；停用后，除内容区壁纸外界面回到宿中原生外观，壁纸、字体与吉祥物等功能不受影响。
 - **扩展**：吉祥物、会话头像、点击 / 拖尾特效、3D 视差；可选官方 `dsh-pet` 联动。
 - **壁纸库**：筛选、隐藏 / 恢复、自动轮播；外观预设整套导入导出。
 
@@ -86,7 +86,7 @@ Application（应用）类壁纸需要启动第三方程序，**不支持**，�
 
 前置：**Node.js >= 22.12.0**、**DSH 0.2 内核**（含 `0.2.0-rc.1/rc.2`）与 **pnpm**。安装前完全退出 DSH。
 
-**npm（推荐，1.4.0 起）**
+**npm（推荐）**
 
 ```sh
 dsh plugin --profile web add dsh-plugin-wallpaper-engine
@@ -94,7 +94,7 @@ dsh plugin --profile web add dsh-plugin-wallpaper-engine
 
 桌面端把 `web` 改为 `desktop`。
 
-本仓的发布形态是**九包发布集**：主包 + 八个子包（含 `wallpaper-engine-glass`）同版本、共九个 tarball，`publishOrder` 为八个子包先行、主包殿后 —— 装主包时八个子包会一起解析下来。
+本仓按**多包发布集**发布：主包与同版本子包一起解析（具体包数、tarball 数与 `publishOrder` 见[发布说明](docs/RELEASING.md)，各版本变化见[变更记录](docs/CHANGELOG.md)）。
 
 **源码**
 

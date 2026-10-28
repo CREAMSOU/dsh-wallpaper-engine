@@ -67,7 +67,7 @@ Bring local **Wallpaper Engine** Scene, Web and Video wallpapers into DSH, with 
 
 - **Wallpapers**: live Scene / Web rendering, video playback, local image / video uploads and WE project directories.
 - **Appearance**: liquid glass for settings, conversation and sidebar; colors, transparency, blur, borders and fonts.
-- **Glass subpackage**: liquid glass is a standalone subpackage row, `wallpaper-engine-glass`, which can be disabled on its own in the plugin manager; with it disabled the host returns to its native look while wallpapers, fonts and mascots keep working.
+- **Glass subpackage**: liquid glass is a standalone subpackage row, `wallpaper-engine-glass`, which can be disabled on its own in the plugin manager; with it disabled the host — except for the wallpaper shown in the content area — returns to its native look, while wallpapers, fonts and mascots keep working.
 - **Extensions**: mascots, conversation avatars, click / pointer-trail effects, 3D parallax and optional official `dsh-pet` integration.
 - **Library**: filters, hide / restore, rotation lists and whole-configuration preset import / export.
 
@@ -86,7 +86,7 @@ Application wallpapers require launching third-party executables and are **not s
 
 Requires **Node.js >= 22.12.0**, a **DSH 0.2 kernel** (including `0.2.0-rc.1/rc.2`) and **pnpm**. Close DSH completely before installing.
 
-**npm (recommended, available since 1.4.0)**
+**npm (recommended)**
 
 ```sh
 dsh plugin --profile web add dsh-plugin-wallpaper-engine
@@ -94,7 +94,7 @@ dsh plugin --profile web add dsh-plugin-wallpaper-engine
 
 Use `desktop` instead of `web` for the desktop host.
 
-This repository ships a **nine-package release set**: the main package plus eight subpackages (including `wallpaper-engine-glass`) at the same version, nine tarballs in total; `publishOrder` puts the eight subpackages first and the main package last, so installing the main package resolves all of them.
+The repository ships a **multi-package release set**: installing the main package resolves the same-version subpackages (current package/tarball counts and `publishOrder` live in [RELEASING](docs/RELEASING.md); per-version changes in [CHANGELOG](docs/CHANGELOG.md)).
 
 **From source**
 

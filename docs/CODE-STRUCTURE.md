@@ -120,7 +120,8 @@ graph TB
   行的装载形态由 `test/verify-bundle-rows.mjs` 钉住。
 - **子包行与跨包服务面**（分包形态；契约 = [`adr/0014`](./adr/0014-subpackage-contract.md)）——
   根 `cordis.patch.yml` 是**行集唯一真源**：主包一行 + 组件行（about-notice / mascot-avatar / media-bridge）＋
-  独立子包行（fx / parallax / fonts，可选 pet-link），行的 `name` 一律是子包**真名**（不是主包子路径）。
+  独立子包行（fx / parallax / fonts / glass，可选 pet-link；glass 的宿主半边自带 `/glass-row-state` 状态路由 ——
+  路由存在 = 行启用，ADR-0016），行的 `name` 一律是子包**真名**（不是主包子路径）。
   主包 `apply()` 的**第一步**经 `lib/subpackage-boot.js` 的 `provideSubpackageHost()` 提供 Cordis 服务
   `wallpaperEngineHost`，值 = `createSubpackageHost()` 的**冻结七键** `ids` / `keyNames` / `keys` /
   `handOff` / `schema` / `http` / `apply`（`apply` = 惰性的 per-apply 实例视图）；子包宿主入口
@@ -163,7 +164,7 @@ graph LR
 `verify-module-layout` 的『路由模块不得"继承" lib/index.js 的 import』一节钉住。
 
 **为什么门面不拆干净**：一部分共享可变状态（媒体源地址、载荷账本、缓存索引）必须与 `/inventory`
-同作用域。本分支把这组闭包搬进 `lib/kernel/host-session.js`（一次 apply 一段，工厂在 `apply()` 里
+同作用域。当前形态把这组闭包放在 `lib/kernel/host-session.js`（一次 apply 一段，工厂在 `apply()` 里
 被调用），但仍只能以**访问器**跨模块出去 —— 传值就是陈旧快照。
 
 ### 2.1 启动与生命周期
@@ -231,7 +232,7 @@ disposer、要门面闭包状态的，留在路由族或 `apply()` 里。
 
 ### 2.3 `lib/index.js` 现在还剩什么
 
-本分支的门面是**薄适配层**（P0 库化 / P1 内核化）：它只 import 各段、把内核返回的键按**真实引用面**
+当前形态的门面是**薄适配层**（P0 库化 / P1 内核化）：它只 import 各段、把内核返回的键按**真实引用面**
 投影回模块作用域、在 `apply()` 里按族注册并按 disposer 回卷。剩下的都是"必须与一次 apply 同生命周期，
 或必须留判据锚点"的东西，不是待拆的巨石：
 
@@ -263,7 +264,7 @@ disposer、要门面闭包状态的，留在路由族或 `apply()` 里。
 
 上游（`origin/main`）的宿主半边是**单包单行**：`cordis.patch.yml` 只插一行 `wallpaper-engine`（`name` = 裸包名），
 `lib/index.js` 是"门面即宿主" —— 定位 WE 安装、枚举壁纸、服务清单与字节、注册全部路由族都在同一个文件里。
-本分支把它拆成**主包 + 组件行 + 内核化**三段；决策与代价见
+当前形态把它拆成**主包 + 组件行 + 内核化**三段；决策与代价见
 [`adr/0013`](./adr/0013-bundle-multi-component-rows.md)，浏览器半边的构建期内联见
 [`adr/0003`](./adr/0003-build-time-module-inlining.md)。
 
@@ -272,7 +273,7 @@ graph LR
     HOST["DSH 宿主"] --> P["cordis.patch.yml<br/>一 bundle 多行"]
     P --> MAIN["主包行<br/>lib/index.js（门面）"]
     P --> C["组件行<br/>about-notice / mascot-avatar / media-bridge"]
-    P --> S["独立子包行<br/>fx / parallax / fonts（可选 pet-link）"]
+    P --> S["独立子包行<br/>fx / parallax / fonts / glass（可选 pet-link）<br/>glass 宿主半边带 /glass-row-state"]
     MAIN --> BOOT["lib/host-boot.js<br/>BASE · 内核单例 · 组件记账"]
     BOOT --> KN["lib/kernel/*<br/>套件实例 · 会话 · 组件视图"]
     MAIN --> R["lib/routes/*.js<br/>主包余下 4 族"]
@@ -280,7 +281,7 @@ graph LR
     S --> SK["packages/&lt;pkg&gt;/lib/*<br/>宿主半边 + 自出浏览器产物"]
 ```
 
-| 维度 | 上游：单包单行 | 本分支：主包 + 组件行 + 内核化 |
+| 维度 | 上游：单包单行 | 当前形态：主包 + 组件行 + 内核化 |
 |---|---|---|
 | patch 行 | 1 行，`name` 是裸包名 | 多行，全部用**真包名**（`dsh-plugin-wallpaper-engine` + 各子包真名）；行可单独 disable |
 | 关掉一行会怎样 | 关掉整包 | 只丢该组件的宿主路由族 + 它的浏览器可见面；其余行不动 |
