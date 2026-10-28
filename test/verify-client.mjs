@@ -247,10 +247,14 @@ const fetch = (url, opts) => {
 
 // 变异测试钩子：默认读构建产物，DSH_MUT_LIB 指向变异副本时读它。
 const code = readFileSync(process.env.DSH_MUT_LIB || new URL('../lib/client.js', import.meta.url), 'utf8');
+// ADR-0016 第三刀：玻璃写入/摘除（glass.js / glass-layer.js）随玻璃包出产物 ⇒
+// 「写入面」判据读双产物拼接；CSS 门控选择器只住玻璃包产物（第四刀）。
+const glassCode = readFileSync(new URL('../packages/glass/lib/client.glass.js', import.meta.url), 'utf8');
+const writeFace = code + glassCode;
 const independentSidebarSelector = 'body[data-we-glass-page][data-we-sidebar-glass] [data-we-surface-plate="right-sidebar"]';
 const wallpaperGatedSidebarSelector = 'body[data-we-sidebar-glass][data-we-wallpaper] [data-dsh-better-sidebar]';
-assert.ok(code.includes(independentSidebarSelector), 'sidebar glass must not require an active wallpaper');
-assert.ok(!code.includes(wallpaperGatedSidebarSelector), 'legacy wallpaper-gated sidebar selector must be removed');
+assert.ok(glassCode.includes(independentSidebarSelector), 'sidebar glass must not require an active wallpaper');
+assert.ok(!glassCode.includes(wallpaperGatedSidebarSelector), 'legacy wallpaper-gated sidebar selector must be removed');
 // ── 页面玻璃的门（用户报障：玻璃只在设了壁纸后才生效）────────────────────────────
 // 口径：整页的玻璃令牌映射挂 **data-we-glass-page**（glass.js 恒挂：插件在跑就挂，
 // 与有没有壁纸无关）；**data-we-wallpaper** 只剩"页面让开、露出壁纸层"那两条
@@ -258,8 +262,8 @@ assert.ok(!code.includes(wallpaperGatedSidebarSelector), 'legacy wallpaper-gated
 // 会变透明（窗口底板透出来）。下面两条互为负对照：把映射锚回壁纸门 ⇒ 第一条红；
 // 把让开那两条挪进页面玻璃块 ⇒ 第二条红。
 // 朴素块体切片：实现在 `test/tools/assert-harness.mjs`（契约 = 两个 `indexOf`，不跳字符串/注释）。
-const blockBodyOf = (needle) => naiveBlockBody(code, needle);
-const pageGlassBlock = blockBodyOf('body[data-we-glass-page] {');
+const blockBodyOf = (needle, face) => naiveBlockBody(face || code, needle);
+const pageGlassBlock = blockBodyOf('body[data-we-glass-page] {', glassCode); // 页玻璃锚点在玻璃包产物里
 const wallpaperBlock = blockBodyOf('body[data-we-wallpaper] {');
 assert.ok(pageGlassBlock && pageGlassBlock.includes('--dsw-alias-bg-layer-1')
   && pageGlassBlock.includes('--dsw-alias-markdown-code-block'),
@@ -272,21 +276,29 @@ assert.ok(!code.includes('body[data-we-glass-page] :where([data-chat-flow])'),
 assert.ok(wallpaperBlock && wallpaperBlock.includes('--dsw-alias-bg-base: transparent')
   && !wallpaperBlock.includes('--dsw-alias-bg-layer-1'),
   'the page-let-the-wallpaper-through block stays wallpaper-only (no glass mapping inside)');
-// ── 跨插件内联令牌：让页面让开的那两条必须带 !important ──────────────────────
+// ── 跨插件内联令牌：让页面让开的四块规则（门拆分后各管一枚令牌）必须带 !important ─────────
 // 全界面插件（如 DS Bot 的 Bot 模式）用 DSH 的 ctx.theme.overrideTokens 给宿主上色，
 // 宿主把合成后的令牌以**内联样式**写在 <body> 上。普通作者声明输给内联声明 ⇒ 页面基色 /
 // 侧栏填充保持不透明，壁纸层被盖死（现场：DS Bot 模式下壁纸完全不可见）。作者
-// !important 声明按层叠规则压过内联普通声明 ⇒ 壁纸在场期间这两枚令牌归本插件。
-const letThrough = (block) => /--dsw-alias-bg-base:\s*transparent\s*!important/.test(block || '')
-  && /--dsw-specific-sidebar-fill:\s*transparent\s*!important/.test(block || '');
-assert.ok(letThrough(wallpaperBlock) && letThrough(blockBodyOf('body[data-ds-dark-theme][data-we-wallpaper] {')),
+// !important 声明按层叠规则压过内联普通声明 ⇒ 壁纸在场期间这些令牌归本插件。
+// ADR-0016 第四刀把「基色」与「侧栏填充」拆到两个门（壁纸门 / 壁纸+玻璃门，浅深各一），
+// 因此 !important 必须四块都在；只压壁纸门两块 ⇒ 玻璃门里那块仍输给内联值。
+const bgLetThrough = (block) => /--dsw-alias-bg-base:\s*transparent\s*!important/.test(block || '');
+const fillLetThrough = (block) => /--dsw-specific-sidebar-fill:\s*transparent\s*!important/.test(block || '');
+const darkWallpaperBlock = blockBodyOf('body[data-ds-dark-theme][data-we-wallpaper] {');
+const lightFillBlock = blockBodyOf('body[data-we-wallpaper][data-we-glass-page] {');
+const darkFillBlock = blockBodyOf('body[data-ds-dark-theme][data-we-wallpaper][data-we-glass-page] {');
+assert.ok(bgLetThrough(wallpaperBlock) && bgLetThrough(darkWallpaperBlock),
   'both wallpaper let-through blocks must beat inline token overrides (DS Bot Bot mode writes theme tokens inline on <body>)');
-assert.ok(!letThrough(wallpaperBlock.replaceAll('!important', '')),
+assert.ok(fillLetThrough(lightFillBlock) && fillLetThrough(darkFillBlock),
+  'both glass-gated sidebar-fill blocks must beat inline token overrides too');
+assert.ok(!bgLetThrough(wallpaperBlock.replaceAll('!important', ''))
+  && !fillLetThrough(lightFillBlock.replaceAll('!important', '')),
   'negative control: the inline-override assertion must fail when !important is stripped');
-assert.ok(/setAttribute\("data-we-glass-page", "on"\)/.test(code)
-  && /removeAttribute\("data-we-glass-page"\)/.test(code),
-  'the page-glass anchor must be mounted by glass.js and removed by clearEffects (paired)');
-assert.ok(code.includes('body[data-we-sidebar-glass] :where([data-we-surface-runtime="content"])'),
+assert.ok(/setAttribute\("data-we-glass-page", "on"\)/.test(writeFace)
+  && /removeAttribute\("data-we-glass-page"\)/.test(writeFace),
+  'the page-glass anchor must be mounted by glass.js and removed on dispose (paired; both halves in the glass bundle)');
+assert.ok(glassCode.includes('body[data-we-sidebar-glass] :where([data-we-surface-runtime="content"])'),
   'sidebar content surfaces must follow both the sidebar switch and runtime ownership',
 );
 assert.ok(code.includes('body[data-we-wallpaper] {') && code.includes('body[data-we-wallpaper]:not([data-ds-dark-theme])'),
@@ -321,7 +333,7 @@ console.log('sidebar glass selectors are wallpaper-independent: true · page gla
   // #255⑤ 后半：23 处「值+单位」预格式化后缀已改裸单位（否则那些行仍只读）；
   // 唯一保留的预格式化是吉祥物大小（显示倍率刻度 ≠ 存储刻度，保持只读）。
   const readSrc = (rel) => readFileSync(new URL('../' + rel, import.meta.url), 'utf8');
-  const bareUnitFiles = ['src/glass-panel.js', 'src/panel-tabs-effects.js', 'src/panel-tabs-appearance.js'];
+  const bareUnitFiles = ['packages/glass/src/glass-panel.js', 'src/panel-tabs-effects.js', 'src/panel-tabs-appearance.js'];
   const leftovers = bareUnitFiles.filter((rel) => /\+ "(?:px|%)"/.test(readSrc(rel)));
   assert.ok(leftovers.length === 0, '滑杆后缀应已全部改裸单位（仍预格式化的文件：' + leftovers.join(', ') + '）');
   assert.ok(/Math\.round\(sel\.ropeScale \* 100\) \+ "%"/.test(readSrc('src/panel-tabs.js')),
@@ -432,6 +444,10 @@ const SUBPACKAGE_CLIENT_ARTIFACTS = [
   // client.media-bridge.js）。它的 factory 会往面板节注册表登记 library 节（order 40）⇒ 与真实
   // loader 同形，求值在 apply() **之前**，否则：788 那条「library tab has 自定义壁纸」会红。
   ['../packages/media-bridge/lib/client.media-bridge.js', 'dsh-plugin-wallpaper-engine-media-bridge'],
+  // ADR-0016 第二刀：「主题预设」+「玻璃 UI」节渲染器随玻璃子包出产物。它的 factory 会调
+  // 显式键集里的 registerPanelSection 把玻璃节登记进注册表；挂载台不求值它 ⇒ 外观页签的
+  // 玻璃节就是 null（占位桩按 id 取不到渲染器），下面所有玻璃面板断言全会红。
+  ['../packages/glass/lib/client.glass.js', 'dsh-plugin-wallpaper-engine-glass'],
 ];
 const subRequireMock = (spec) => {
   if (spec === 'dsh-plugin-wallpaper-engine') return exportsObj;
@@ -1705,7 +1721,7 @@ setTimeout(async () => {
     assert.equal((JSON.stringify(tree).match(/"aria-label":"侧栏玻璃颜色 /g) || []).length, 6, '侧栏玻璃颜色预设应有 6 个色板');
     assert.ok(JSON.stringify(tree).includes('自定义侧栏玻璃颜色'), 'sidebar glass color custom input present:');
     // ── §11 A2-F2：侧栏档那个**单**色板固定写浅色那一半 ────────────────────────────
-    //    侧栏的玻璃色变量只消费浅色半（src/glass.js / src/effects.js 的 sidebar 分支都取
+    //    侧栏的玻璃色变量只消费浅色半（glass.js（现 packages/glass）/ effects.js 的 sidebar 分支都取
     //    `glassColorOf(sel,"light")` —— 侧栏没有 `data-ds-dark-theme` 孪生，有意不分深浅）。
     //    所以侧栏面板①只画一行、②显示与写入都是**浅色半**，不是"当前配色那一侧"：否则深色
     //    主题下用户点一下改的是他在这块面板上看不到的那个值（面板还不许自己采样主题）。
@@ -1736,7 +1752,7 @@ setTimeout(async () => {
     // 结构半边：旧实现是按主题选一侧（`singleGlassOnDark = sidebarSurface && panelThemeIsDark()`）。
     // 挂载台里 `document.body` 没有能力齐全的 hasAttribute ⇒ 只靠上面的行为断言抓不到"条件选侧"
     // 那一种回退，所以再钉一条源码判据 + 一条证明该判据真能抓到的负对照。
-    const glassPanelSrc = readFileSync(new URL('../src/glass-panel.js', import.meta.url), 'utf8');
+    const glassPanelSrc = readFileSync(new URL('../packages/glass/src/glass-panel.js', import.meta.url), 'utf8');
     // 只判**代码**：注释里正好写着"panelThemeIsDark 已随之删除"这句（第一版被自己的注释判红）。
     // 剥注释走共享的**字符串感知**实现（`test/tools/js-text.mjs`）—— 手写"块注释一条正则 +
     // 行注释一条正则"不认字符串与行注释，注释里出现那两个字符就会静默吃掉中间的真实代码，
@@ -5404,8 +5420,9 @@ setTimeout(async () => {
 // ④ 复位按记忆且不抢用户新选择。
 {
   const clientSrc = readFileSync(new URL('../src/client.js', import.meta.url), 'utf8');
-  const glassSrc = readFileSync(new URL('../src/glass.js', import.meta.url), 'utf8');
-  const effectsSrc = readFileSync(new URL('../src/effects.js', import.meta.url), 'utf8');
+  const glassSrc = readFileSync(new URL('../packages/glass/src/glass.js', import.meta.url), 'utf8');
+  // ADR-0016 第三刀：effects 的玻璃段随玻璃层出户 ⇒ 门控判据读 glass-layer 源码。
+  const glassLayerSrc = readFileSync(new URL('../packages/glass/src/glass-layer.js', import.meta.url), 'utf8');
   const mediaSrc = readFileSync(new URL('../src/media-prep.js', import.meta.url), 'utf8');
   // ① 单腿：只观察对方的公开标记。轮询（GET /api/skin-center/v2/active）在对方的显式动作
   //    契约（dsh-skins#49：试穿/应用/重复应用都写 html[data-dsh-skin]）落地后不该再回来。
@@ -5457,17 +5474,17 @@ setTimeout(async () => {
   assert.ok(!/setAttribute\(\s*["']data-dsh-skin["']/.test(clientSrc)
     && !/delete\s+document\.body\.dataset\.dshSkinCenter/.test(clientSrc),
     '互操作只读：不许写对方的 data-dsh-skin / data-dsh-skin-center');
-  // ③ 退场在三处门控点都生效：glass 的整族摘除、effects 的两处（思考玻璃 / 侧栏跟随）。
+  // ③ 退场在三处门控点都生效：glass 的整族摘除、玻璃层的两处（思考玻璃 / 侧栏跟随）。
   assert.ok(glassSrc.includes('data-we-sidebar-fullclear') && glassSrc.includes('skinYieldActive()'),
     '退场：glass 整族门控要有摘除路径');
   const yieldIdx = glassSrc.indexOf('skinYieldActive()');
   const pageGateIdx = glassSrc.indexOf('setAttribute("data-we-glass-page"');
   assert.ok(yieldIdx >= 0 && pageGateIdx > yieldIdx, '退场必须先于本函数挂任何玻璃面');
-  assert.ok(/selection\.thinkingGlass && !selection\.thinkingNative && !skinYield/.test(effectsSrc),
+  assert.ok(/selection\.thinkingGlass && !selection\.thinkingNative && !skinYield/.test(glassLayerSrc),
     '退场：思考玻璃门控点要带让路守卫');
-  assert.ok(/selection\.thinkingNative && !skinYield/.test(effectsSrc),
+  assert.ok(/selection\.thinkingNative && !skinYield/.test(glassLayerSrc),
     '退场：原生挡门控点要带让路守卫（三挡的第二半，2026-10-06）');
-  assert.ok(/selection\.sidebarGlass && selection\.sidebarFollowGlobal && !skinYield/.test(effectsSrc),
+  assert.ok(/selection\.sidebarGlass && selection\.sidebarFollowGlobal && !skinYield/.test(glassLayerSrc),
     '退场：侧栏跟随门控点要带让路守卫');
   // ③b 复位滞回：对方 refresh 会先摘标记再补回，瞬时摘不许直接复位（现场踩过 0.7s 抢回壁纸）。
   assert.ok(/function scheduleSkinYieldExit\(/.test(clientSrc)
@@ -5501,7 +5518,7 @@ setTimeout(async () => {
   assert.ok(!/setSetting\("skinYieldRestoreId", ""\);/.test(noClear),
     'negative control: 复位漏清落盘记忆即判红');
   // 负对照（喂**同一个**判据）：三处退化都必须判出；轮询腿被加回来也必须判出。
-  const stripped = effectsSrc.replace(/&& !skinYield/g, '');
+  const stripped = glassLayerSrc.replace(/&& !skinYield/g, '');
   assert.ok(!/selection\.thinkingGlass && !skinYield/.test(stripped)
     && !/selection\.sidebarGlass && selection\.sidebarFollowGlobal && !skinYield/.test(stripped),
     'negative control: 摘掉让路守卫即判红');

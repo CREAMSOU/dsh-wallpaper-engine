@@ -993,17 +993,16 @@ function main() {
     check('G11 negative control: a synthetic hard-coded white hairline is flagged', synthetic.length === 1);
   }
 
-  // ── S2d: #236 左栏整列在「左栏玻璃 + 标题栏玻璃同开」时抬到 z-index:1 ──────────
+  // ── S2d 退役：#236 的「整列抬到 z-index:1」不再适用 ─────────────────────────
+  // #293 已把左栏模糊移到根级装饰叶（宿主列不新增定位/层叠，第三方模态不再被困），
+  // 原来的层叠上下文问题从设计上消解；#236 的修法若搬回来反而会重建该上下文 ⇒ 判据反过来钉「不得出现」。
   {
-    const liftPredicate = (text) => {
-      const rule = /html\[data-windows-titlebar\][^{]*data-we-left-sidebar[^{]*data-we-titlebar-glass[^{]*:has\(> \[data-slot="sidebar"\]\)\s*\{[^}]*z-index:\s*1;/.test(text);
-      return rule;
-    };
-    check('S2d 标题栏玻璃 + 左栏玻璃同开时整列抬到 z-index:1（#236：否则左上角按钮被模糊层盖住）',
-      liftPredicate(CSS));
-    // 负对照：少一个门控条件就不许命中（避免"无条件抬层"被误判为修好）。
-    check('S2d negative control: 少一个开关门控的选择器不算修好',
-      liftPredicate(CSS) && liftPredicate(CSS.replace('body[data-we-left-sidebar][data-we-glass-page][data-we-titlebar-glass]', 'body[data-we-glass-page]')) === false);
+    const oldLift = (text) => /html\[data-windows-titlebar\][^{]*data-we-left-sidebar[^{]*data-we-titlebar-glass[^{]*:has\(> \[data-slot="sidebar"\]\)\s*\{[^}]*z-index:\s*1;/.test(text);
+    check('S2d 退役：#236 的整列抬层不得再出现（#293 已把左栏模糊移到根级装饰叶）',
+      !oldLift(CSS),
+      'still-lifted=' + oldLift(CSS));
+    check('S2d negative control: 旧抬层写法仍会被同一判据判红（判据没有失牙）',
+      oldLift('html[data-windows-titlebar] body[data-we-left-sidebar][data-we-glass-page][data-we-titlebar-glass] :has(> [data-slot="sidebar"]) { z-index: 1; }') === true);
   }
 
   // ── RT1/RT2: #237 右栏玻璃不画外沿描边，宿主两处竖线显式清除 ──────────────────
@@ -1017,7 +1016,9 @@ function main() {
     check('RT1 negative control: 把 inset 三明治种回同面规则 ⇒ 同一判据判红',
       insetSandwich.length === 0
         && /inset 0 1px 0 rgba\(255,\s*255,\s*255,\s*calc\(var\(--we-sidebar-sheen\)\s*\*\s*0\.32\)\)/.test('box-shadow: inset 0 1px 0 rgba(255, 255, 255, calc(var(--we-sidebar-sheen) * 0.32));'));
-    const clearPanelOf = (text) => /body\[data-we-sidebar-glass\] \[data-sidebar-right-panel\]\[data-sidebar-right-open\]\s*\{[^}]*box-shadow:\s*none\s*!important/.test(text);
+    // #293 之后面板清挂在 runtime 标记上：选择器多一个 :where([data-we-surface-runtime="right-sidebar"])。
+    const CLEAR_PANEL_RE = /body\[data-we-sidebar-glass\] \[data-sidebar-right-panel\]\[data-sidebar-right-open\](?::where\(\[data-we-surface-runtime="right-sidebar"\]\))?\s*\{[^}]*box-shadow:\s*none\s*!important/;
+    const clearPanelOf = (text) => CLEAR_PANEL_RE.test(text);
     const clearPanel = clearPanelOf(CSS);
     const clearDivider = /body\[data-we-sidebar-glass\] \[data-dockkit-divider\]:not\(\[data-dockkit-pane\] \*\)::before\s*\{[^}]*border:\s*none\s*!important[^}]*background:\s*none\s*!important/.test(CSS);
     const clearDock = /body\[data-we-sidebar-glass\] \[data-dockkit-host="dock"\]\[data-dockkit-column="0"\][^{]*\{[^}]*border-left:\s*none\s*!important/.test(CSS);
@@ -1025,7 +1026,7 @@ function main() {
       clearPanel && clearDivider && clearDock,
       JSON.stringify({ clearPanel, clearDivider, clearDock }));
     check('RT2 negative control: 删掉面板 box-shadow 清除 ⇒ 同一判据判红',
-      clearPanel && !clearPanelOf(CSS.replace(/body\[data-we-sidebar-glass\] \[data-sidebar-right-panel\]\[data-sidebar-right-open\]\s*\{[^}]*box-shadow:\s*none\s*!important/, '')));
+      clearPanel && !clearPanelOf(CSS.replace(CLEAR_PANEL_RE, '')));
   }
 
   // ── G12: 窄视口（折叠抽屉）下侧栏的近不透明兜底（issue #272）────────────────

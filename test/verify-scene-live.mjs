@@ -135,6 +135,15 @@ async function loadExtensionRegistry() {
     get title() { return globalThis.weT('全局字体'); },
     render: fontSectionMod.renderAppearanceFontSection,
   });
+  // ADR-0016 第二刀：「主题预设」+「玻璃 UI」节随玻璃包搬走 ⇒ 同款按**真入口同形**登记。
+  // panel-tabs 的玻璃节是按 id 取渲染器的注册表占位桩，不登记它 ⇒ 占位桩查不到 ⇒ 整节消失
+  // （下面所有玻璃节判据以"缺节"的形式假红）。
+  const glassPanelMod = await import(pathToFileURL(join(root, 'packages', 'glass', 'src', 'glass-panel.js')).href);
+  reg.weRegisterPanelSection('appearance', 'glass', {
+    id: 'glass',
+    get title() { return globalThis.weT('玻璃 UI'); },
+    render: glassPanelMod.renderAppearanceGlassSection,
+  });
   // P-D S3a/S3b：「壁纸库」页签第二/三/四节（切换过场 / 自动轮播 / 自定义壁纸）都随壁纸子包
   // 搬出 ⇒ 按标准包内源文件 import 真渲染器，描述符与 packages/media-bridge/src/client.js 逐字同形
   // （title 是 accessor + order 20/30/40）。**故意乱序登记**：注册表按 (order, seq) 排序，下面
@@ -3426,7 +3435,7 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
         && !bag.QP_CTX_SETTINGS_ONLY.includes('onGlassChildParam'),
       called.slice(0, 48));
     // 预设块那道门也有牙：`glassPresets` 是高级配置的 ctx 字段（ADR-0008 D4），侧栏档指向替身 ⇒
-    // 谁把 `src/glass-panel.js` 里那道 `!sidebarSurface` 门拆掉，渲染器**解构它的第一下就炸**
+    // 谁把 packages/glass/src/glass-panel.js 里那道 `!sidebarSurface` 门拆掉，渲染器**解构它的第一下就炸**
     // （不是静默把预设块画进侧栏 —— 那是"整快照覆盖且不可撤销"的动作，不该随手可达）。
     const presetTeeth = (() => { try { return String(ctx.glassPresets.presets); } catch (e) { return String(e.message); } })();
     check('侧栏 ctx 的 `glassPresets` 也是占位器（拆掉预设块的门 ⇒ 解构即抛错）',
@@ -3506,11 +3515,14 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
   //    而且夹具渲染的项数一旦与真实面板不同就是假绿。
   globalThis.GLASS_CHILDREN = schema.GLASS_CHILDREN || [];
   globalThis.childGlassKey = schema.childGlassKey || ((id, p) => id + p.charAt(0).toUpperCase() + p.slice(1));
-  // ⚠️ 「玻璃 UI」节的渲染器已抽到 `src/glass-panel.js`（wip §10.13）：**打包后**它与
+  // panelGlassPair 的家从 glass-panel 本地副本归位 settings-schema（#159② 显示口径：缺省回空串
+  // 不猜色，与 readGlassColors 互补）—— 玻璃节渲染要用，同上面两个给**真源**。
+  globalThis.panelGlassPair = schema.panelGlassPair;
+  // ⚠️ 「玻璃 UI」节的渲染器住 packages/glass/src/glass-panel.js（ADR-0016 第二刀出户）：**打包后**它与
   //    `panel-tabs.js` 同作用域，所以后者能按名字直接调；但这里是**按文件 import** 的替身，
   //    两个模块各有自己的作用域 ⇒ 必须自己把它挂成全局（与上面那批模块级助手同一条口径）。
   globalThis.renderAppearanceGlassSection =
-    (await import(pathToFileURL(join(root, 'src', 'glass-panel.js')).href)).renderAppearanceGlassSection;
+    (await import(pathToFileURL(join(root, 'packages', 'glass', 'src', 'glass-panel.js')).href)).renderAppearanceGlassSection;
   // 节头构件（三节在侧边栏默认收敛）—— 同上一条口径，给**真实现**：
   // 折叠逻辑（`collapsible` 短路 + aria-expanded + caret）正是本节新判据要验的东西，
   // 挂个替身等于"判据测替身"（比红更糟）。
@@ -4190,7 +4202,7 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
     // 模块级 ↺ 必须**覆盖外观页签下的每个模块**（用户口径："外观下的模块也要能单独重置"）：
     // 六个外观节各有一处调用，且共用构件必须阻止冒泡（否则点 ↺ 会连带收起该节）。
     const mrSrc = readFileSync(join(root, 'src', 'module-reset.js'), 'utf8').replace(/\r\n/g, '\n');
-    const gpSrc = readFileSync(join(root, 'src', 'glass-panel.js'), 'utf8').replace(/\r\n/g, '\n');
+    const gpSrc = readFileSync(join(root, 'packages', 'glass', 'src', 'glass-panel.js'), 'utf8').replace(/\r\n/g, '\n');
     // ⚠️ 刀4 之后节的渲染器搬到了 src/panel-tabs-*.js 域模块 ⇒ 扫**页签族全文**（组装点在末尾），
     //    而不是组装点单文件（否则六处调用全在域模块里 ⇒ 假红 missing=theme,detail,…）。
     const appearanceModules = ['theme', 'detail', 'corners', 'uiColor', 'font'];

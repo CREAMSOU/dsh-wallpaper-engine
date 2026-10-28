@@ -99,7 +99,7 @@ const CSS_QUICK = `  /* ── Rope dock: chibi pull-cord + glass repo drawer �
     background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.03) 40%, rgba(255, 255, 255, 0.01));
     -webkit-backdrop-filter: blur(var(--we-floaters-blur)) saturate(1.2);
     backdrop-filter: blur(var(--we-floaters-blur)) saturate(1.2);
-    border-color: rgba(255, 255, 255, 0.22);
+    border-color: var(--dsw-alias-border-l2, rgba(128, 128, 128, 0.22));
     box-shadow: 0 18px 48px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.18);
   }
   @keyframes we-notice-in { from { opacity: 0; transform: translate(-50%, 12px); } }
@@ -115,7 +115,7 @@ const CSS_QUICK = `  /* ── Rope dock: chibi pull-cord + glass repo drawer �
      已经很高，小窗口会顶出视口）——限高 26vh、宽度跟随、居中（用户口径：38vh 在 1080p 下
      ≈410px，几乎独占半屏，压到 26vh 给正文让位）。发丝边 + 投影让它贴着玻璃面板的既有语言，
      而不是一块浮贴的截图。 */
-  .we-update-notice__art { display: block; margin: 0 auto; width: auto; max-width: 100%; max-height: 26vh; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.22); box-shadow: 0 10px 26px rgba(0, 0, 0, 0.28);
+  .we-update-notice__art { display: block; margin: 0 auto; width: auto; max-width: 100%; max-height: 26vh; border-radius: 10px; border: 1px solid var(--dsw-alias-border-l2, rgba(128, 128, 128, 0.22)); box-shadow: 0 10px 26px rgba(0, 0, 0, 0.28);
     /* 面板限高后允许配图先让位（min-height: 0 是 img 能在 flex 里缩小的前提：
        img 的固有尺寸会当 min-content，不给 0 就永远不缩）；正文区随后才滚动。 */
     flex: 0 1 auto; min-height: 0; }
@@ -166,7 +166,7 @@ const CSS_QUICK = `  /* ── Rope dock: chibi pull-cord + glass repo drawer �
 /* 打开态的**布局与可见性**无门（玻璃行停用时抽屉照常开合）；背景保留基础层
    的面板色实底。玻璃皮单独留在下面的门内规则。 */
 .we-repo-panel--open {
-    border-left: 1px solid rgba(128, 128, 128, 0.28);
+    border-left: 1px solid var(--dsw-alias-border-l2, rgba(128, 128, 128, 0.22));
     transform: translateX(0);
     opacity: 1;
     visibility: visible;

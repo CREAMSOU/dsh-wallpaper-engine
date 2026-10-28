@@ -183,18 +183,27 @@ const CSS_BASE = `
      壁纸层挂在 body 的 z-index:-1 上，页面基色必须让开才看得见；无壁纸时保持宿主原色。
      ⚠️ 侧栏填充的让位**只属于玻璃**（ADR-0016 第四刀勘误）：玻璃的侧栏配方随玻璃行走后，
      若让位仍无跟随，停玻璃行 ⇒ 侧栏失去配方又失去原生填充 = 全透明洞。改挂 data-we-glass-page
-     （玻璃行启用即挂）⇒ 玻璃开 = 现状逐字节；玻璃停 = 侧栏回宿主原生实色，壁纸只在对话区透出。 */
+     （玻璃行启用即挂）⇒ 玻璃开 = 现状逐字节；玻璃停 = 侧栏回宿主原生实色，壁纸只在对话区透出。
+     ⚠️ !important 是**跨插件契约**，不是防御性写法：DSH 的主题 API 允许插件用
+     ctx.theme.overrideTokens 给宿主上色，而宿主把合成后的令牌以**内联样式**写在
+     <body> 上（DS Bot 的 Bot 模式就是这么做的）。内联声明在普通作者声明里压过一切，
+     这两族规则若按普通声明写就整块失效 ⇒ 页面基色 / 侧栏填充保持不透明，壁纸层被盖死
+     （现场症状：DS Bot 模式下壁纸完全不可见）。作者 !important 声明按层叠规则压过
+     内联普通声明，因此壁纸在场期间页面背景令牌归本插件；壁纸退场后这些块不匹配，
+     内联值原样生效 —— 单向接管，不读不写对方任何状态。
+     ⚠️ 门拆分后**四块各管一枚令牌**（基色挂壁纸门、侧栏填充挂玻璃门，浅深各一），
+     !important 必须四块都写：只补壁纸门那两块 ⇒ 玻璃门里那两块仍输给内联值。 */
   body[data-we-wallpaper] {
-    --dsw-alias-bg-base: transparent;
+    --dsw-alias-bg-base: transparent !important;
   }
   body[data-we-wallpaper][data-we-glass-page] {
-    --dsw-specific-sidebar-fill: transparent;
+    --dsw-specific-sidebar-fill: transparent !important;
   }
   body[data-ds-dark-theme][data-we-wallpaper] {
-    --dsw-alias-bg-base: transparent;
+    --dsw-alias-bg-base: transparent !important;
   }
   body[data-ds-dark-theme][data-we-wallpaper][data-we-glass-page] {
-    --dsw-specific-sidebar-fill: transparent;
+    --dsw-specific-sidebar-fill: transparent !important;
   }
 
   /* 壁纸仅清宿主挂载点的外壳；不得按类名子串清任意插件子树。 */
@@ -259,16 +268,19 @@ const CSS_BASE = `
     --dsw-alias-label-deep-diving-shimmer: color-mix(in srgb, var(--we-ui-deep-diving, #4f8cff) 62%, #ffffff);
     --dsw-alias-state-business-primary: var(--we-ui-tab, #4f8cff);
   }
-  /* 全局 UI 配色的**深色孪生块**：本组映射其实**与主题无关**（四个值全部来自 --we-ui-*，
-     浅深两档取值逐字相同），单独写一份是**本仓约定**而非主题分叉 ——
-     verify-glass-compositing 的 G8 要求「任何 alias 接管都必须在浅 / 深两个 body 级块里
-     各出现一次」，它防的是"只改浅色、漏了深色孪生"那类漂移。缺了这一块 G8 会判红，
-     而那个红是对的牙 —— 不为自己的功能把守卫放松。 */
+  /* 全局 UI 配色的**深色孪生块**：这一族在宿主里本来是**浅/深成对**的
+     （link / label-deep-diving = 浅 #4176e6 / 深 #7aaaff，光标走 state-business-primary）。
+     #239：早先这里与浅色块**逐字相同**（都直接吃 --we-ui-* 单一标量）⇒ 用户 accent 选暗色时，
+     深色壁纸上这三处对比度掉到 ~1.1:1（链接文字 / 「深度求索中…」/ 插入光标几乎不可见）。
+     现在按主题把**同一个用户色往白里提一档**：仍是用户配色（不是硬编码回宿主蓝），但保证深色底可读。
+     浅色块保持不变（--we-ui-* 原值在浅底上即可读）。守卫 verify-glass-compositing 的 G9 钉
+     「主题成对令牌禁止浅深同值」；它必须按本组自己的门 data-we-ui-color 扫描 —— 扫
+     data-we-glass-page 会退化成空集对空集（静默假绿）。 */
   body[data-ds-dark-theme][data-we-ui-color] {
-    --dsw-alias-link: var(--we-ui-link, #4f8cff);
-    --dsw-alias-label-deep-diving: var(--we-ui-deep-diving, #4f8cff);
-    --dsw-alias-label-deep-diving-shimmer: color-mix(in srgb, var(--we-ui-deep-diving, #4f8cff) 62%, #ffffff);
-    --dsw-alias-state-business-primary: var(--we-ui-tab, #4f8cff);
+    --dsw-alias-link: color-mix(in srgb, var(--we-ui-link, #4f8cff) 45%, #ffffff);
+    --dsw-alias-label-deep-diving: color-mix(in srgb, var(--we-ui-deep-diving, #4f8cff) 45%, #ffffff);
+    --dsw-alias-label-deep-diving-shimmer: color-mix(in srgb, var(--we-ui-deep-diving, #4f8cff) 70%, #ffffff);
+    --dsw-alias-state-business-primary: color-mix(in srgb, var(--we-ui-tab, #4f8cff) 45%, #ffffff);
   }
   /* 发送键：填充 + 悬停（悬停往黑压一档，与宿主原来的 fill→hover 明暗关系同向）。
      ⚠️ 作用域用 data-composer-seat（输入**座位**，宿主自带锚点）而**不是**

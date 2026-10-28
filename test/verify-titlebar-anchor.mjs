@@ -7,12 +7,14 @@
  * 玻璃（含软件渲染回退）就**静默失效**，而两道硬门（[data-windows-titlebar] /
  * [data-we-adapter]）都还成立 ⇒「开关怎么点都没反应」。
  *
- * 本守卫在 mock DOM 上跑**真 `syncTitlebarAnchor` / `findTitlebarFrame` 源码**，钉住：
+ * ADR-0016 第三刀后探针随玻璃层搬到 packages/glass/src/glass-layer.js，CSS 在 glass-css.js。
+ * 本守卫在 mock DOM 上跑**真 syncTitlebarAnchor / findTitlebarFrame 源码**，钉住：
  *   T1 座位祖先链命中（布局事实，不受哈希漂移影响）；
  *   T2 座位缺席时的宽度兜底（≥70% 视口才算整页 grid 容器）；
  *   T3 关掉开关 ⇒ 宿主 DOM 上不留本插件属性；
  *   T4 负对照：宽度不足的 `*_frame` 不得被误认成标题栏容器；
- *   T5 静态契约：CSS 里不再出现 `div[class*="…_frame"]` 哈希锚点，且只用 [data-we-titlebar-anchor]。
+ *   T5 静态契约：玻璃 CSS 里不再出现 `div[class*="…_frame"]` 哈希锚点，只用 [data-we-titlebar-anchor]；
+ *   T5b 探针生命周期：玻璃层 sync 里接线、dispose 里摘除（而不是留在主包 effects.js）。
  */
 import { readFileSync } from 'node:fs';
 import { createCheck } from './tools/assert-harness.mjs';
@@ -82,8 +84,9 @@ function makeDocument(bodyChildren) {
   return doc;
 }
 
-const RAW = readFileSync(new URL('../src/effects.js', import.meta.url), 'utf8');
-const BODY = RAW.replace(/export\s*\{[\s\S]*?\};?/g, ' ');
+const LAYER = readFileSync(new URL('../packages/glass/src/glass-layer.js', import.meta.url), 'utf8');
+const CSS = readFileSync(new URL('../packages/glass/src/glass-css.js', import.meta.url), 'utf8');
+const BODY = LAYER.replace(/export\s*\{[\s\S]*?\};?/g, ' ');
 const load = (doc) => new Function('document', 'window',
   BODY + '\nreturn { findTitlebarFrame, syncTitlebarAnchor };')(doc, { innerWidth: 1000 });
 
@@ -133,21 +136,20 @@ const load = (doc) => new Function('document', 'window',
     !small.hasAttribute('data-we-titlebar-anchor'));
 }
 
-// T5：静态契约 —— CSS 里不再有哈希锚点，顶栏规则只认运行时锚点。
+// T5：静态契约 —— 玻璃 CSS 里不再有哈希锚点，顶栏规则只认运行时锚点。
 {
-  const sidebar = readFileSync(new URL('../src/styles-sidebar.js', import.meta.url), 'utf8');
-  const ext = readFileSync(new URL('../src/styles-ext.js', import.meta.url), 'utf8');
   const HASH = /div\[class\*="[A-Za-z0-9_]+_frame"\]/;
-  const tbSide = sidebar.split('\n').filter((l) => l.includes('[data-we-titlebar-glass]'));
+  const tbLines = CSS.split('\n').filter((l) => l.includes('[data-we-titlebar-glass]'));
   check('T5 titlebar CSS uses [data-we-titlebar-anchor] and contains no build-hash frame selector',
-    !HASH.test(sidebar) && !HASH.test(ext)
-      && tbSide.some((l) => l.includes('[data-we-titlebar-anchor]'))
-      && !tbSide.some((l) => HASH.test(l)));
+    !HASH.test(CSS)
+      && tbLines.some((l) => l.includes('[data-we-titlebar-anchor]'))
+      && !tbLines.some((l) => HASH.test(l)));
   check('T5 negative control: the old hash-anchor form is caught by the same detector',
     HASH.test('div[class*="pI_x6G_frame"]') === true);
-  check('T5b effects.js wires the probe into applyEffects and cleans up in clearEffects',
-    /syncTitlebarAnchor\(selection\.titlebarGlass === true && !skinYield\)/.test(RAW)
-      && /querySelectorAll\("\[data-we-titlebar-anchor\]"\)/.test(RAW));
+  check('T5b the probe is wired by the glass layer and cleaned up in its dispose (not left in effects.js)',
+    /syncTitlebarAnchor\(selection\.titlebarGlass === true && !skinYield\)/.test(LAYER)
+      && /disposeGlassLayer[\s\S]*?querySelectorAll\("\[data-we-titlebar-anchor\]"\)/.test(LAYER)
+      && !/findTitlebarFrame/.test(readFileSync(new URL('../src/effects.js', import.meta.url), 'utf8')));
 }
 
 if (stats.failed) {

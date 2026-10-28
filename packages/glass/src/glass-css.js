@@ -218,6 +218,9 @@ const CSS_GLASS = `
     --dsw-alias-border-l1: rgba(180, 180, 180, var(--we-border-alpha, 0.35));
     --dsw-alias-border-l2: rgba(180, 180, 180, var(--we-border-alpha, 0.35));
     --dsw-alias-border-l2-darkmode-thin: rgba(180, 180, 180, var(--we-border-alpha, 0.35));
+    /* #255④：l3/l4 此前没纳入「边框」滑杆（宿主用它们画次级/浮层描边）⇒ 滑杆只“管到一部分边框”。 */
+    --dsw-alias-border-l3: rgba(180, 180, 180, var(--we-border-alpha, 0.35));
+    --dsw-alias-border-l4: rgba(180, 180, 180, var(--we-border-alpha, 0.35));
   }
   /* DSH rc.7+ injects the theme palette (design-platform.css) as a plugin-owned
      stylesheet appended to <head> AFTER this one, so in dark mode the shell's
@@ -299,6 +302,52 @@ const CSS_GLASS = `
     --dsw-alias-border-l1: rgba(180, 180, 180, var(--we-border-alpha, 0.35));
     --dsw-alias-border-l2: rgba(180, 180, 180, var(--we-border-alpha, 0.35));
     --dsw-alias-border-l2-darkmode-thin: rgba(180, 180, 180, var(--we-border-alpha, 0.35));
+    /* #255④：l3/l4 此前没纳入「边框」滑杆（宿主用它们画次级/浮层描边）⇒ 滑杆只“管到一部分边框”。 */
+    --dsw-alias-border-l3: rgba(180, 180, 180, var(--we-border-alpha, 0.35));
+    --dsw-alias-border-l4: rgba(180, 180, 180, var(--we-border-alpha, 0.35));
+  }
+  /* ── 浮层不吃页面玻璃那张令牌映射（issue #161 的漏网形态）─────────────────────────
+     上面两处在令牌源头把面板梯度改成「底色压可读性下限 + 玻璃色」的半透明配方：对面板
+     正确（背后只有壁纸），对浮层错误 —— 浮层背后是界面自己的正文，任何 < 100% 的覆盖
+     都会让底下那行字透上来，表现成「两行字叠在一起」的重影。#161 只豁免了气泡那几条
+     填色规则、没豁免令牌映射，本组补的就是这道缺的豁免。
+     判据不能只取 role（dsh-context 只在部分浮层实例上写 role：趋势图与耗时时间轴的
+     tip 都没写）⇒ 同时认浮层的命名约定。子串匹配有意不区分大小写：宿主哈希类名是
+     camelCase（KZf9OG_brokenTip），只匹配 -tip 会漏；误伤面（multiply 这类）的后果
+     只是令牌在它上面被重声明，只有它真拿该令牌当底才有观感差异。
+     底色取 --we-panel-color（主题感知），一条规则同时覆盖深浅两主题，且与浮层文字
+     （宿主与第三方都读 --dsw-alias-label-primary）维持原生配对。不要改借宿主 Tooltip
+     那对专用令牌 —— 那是「深底 + 固定近白字」，浅色主题下浮层会变成黑底黑字。 */
+  body[data-we-glass-page] [role="tooltip"],
+  body[data-we-glass-page] [role="menu"],
+  body[data-we-glass-page] [role="listbox"],
+  body[data-we-glass-page] [class*="tip" i],
+  body[data-we-glass-page] [class*="hint" i],
+  body[data-we-glass-page] [class*="float" i],
+  body[data-we-glass-page] [class*="popover" i],
+  body[data-we-glass-page] [class*="hovercard" i],
+  body[data-we-glass-page] [class*="dropdown" i],
+  body[data-we-glass-page] [class*="popup" i] {
+    --dsw-alias-bg-layer-1: color-mix(in srgb, var(--we-panel-color, #1e1f26) 96%, transparent);
+    --dsw-alias-bg-layer-2: color-mix(in srgb, var(--we-panel-color, #1e1f26) 96%, transparent);
+  }
+  /* 第二类漏网：既没有 role、类名也不含浮层约定词的面板浮层（dsh-market 的 .opPanel、
+     @linxin666 插件管理器的更新面板）。判据取源码级属性优先（[data-update-panel]），
+     CSS Module 名只作兜底（[class*="opPanel"]：哈希前缀随构建变，语义后缀才稳）。
+     这里不给令牌、直接给不透明实底：三步探针证明选择器命中、该元素也是视觉容器，但
+     令牌赋值在这两个元素上不落地（92% / 96%、带不带 !important 都试过）。浮层本来
+     就不该玻璃化（#161 的口径），实底既满足可读性又少一层不确定性 —— 别把这两条
+     「优化」回令牌或 alpha 写法，否则它们会重新变透。
+     [data-install-registry]（插件源 fieldset）不放进本组：它属于「浮层玻璃」面的成员，
+     W5 要求整面同锚点（data-we-glass-floaters），混进来会让 verify-glass-surfaces 判红；
+     它的底色归 floaters 面那条既有规则管（见 lib/client.js 的 #156② 注释）。 */
+  body[data-we-glass-page] [data-update-panel],
+  body[data-we-glass-page] [class*="opPanel" i] {
+    background-color: #ffffff !important;
+  }
+  body[data-ds-dark-theme][data-we-glass-page] [data-update-panel],
+  body[data-ds-dark-theme][data-we-glass-page] [class*="opPanel" i] {
+    background-color: #1e1f26 !important;
   }
   /* #73 增强模式 + Win10（无 Mica）：桌面外壳只在系统材质可用时让左侧工作区
      (.dshDesktopSidebarSurface) 保持透明（壁纸透出）；material 回退 off 时它改用
@@ -644,7 +693,7 @@ const CSS_GLASS = `
     background-image: none !important;
     -webkit-backdrop-filter: blur(var(--we-inline-code-blur, 8px)) saturate(var(--we-saturate, 1.3)) brightness(var(--we-glass-brightness, 1.04));
     backdrop-filter: blur(var(--we-inline-code-blur, 8px)) saturate(var(--we-saturate, 1.3)) brightness(var(--we-glass-brightness, 1.04));
-    border-color: rgba(255, 255, 255, 0.14) !important;
+    border-color: var(--dsw-alias-border-l2, rgba(128, 128, 128, 0.14)) !important;
   }
   /* #197: the host renders the reasoning body with Markdown's compact variant,
      where the inline-code chip is display:inline. A backdrop-filter carrier that
@@ -682,7 +731,7 @@ const CSS_GLASS = `
      Scope the expanded button; keep its label, shortcut and collapsed state. */
   body[data-we-glass-page][data-we-thinking-glass] [data-slot="sidebar"] :not([class*="_collapsed"]) > button[class*="_newSession"] {
     background: var(--we-capsule-glass-fill) !important;
-    border-color: rgba(255, 255, 255, 0.14) !important;
+    border-color: var(--dsw-alias-border-l2, rgba(128, 128, 128, 0.14)) !important;
     -webkit-backdrop-filter: blur(var(--we-inline-code-blur, 8px)) saturate(var(--we-saturate, 1.3)) brightness(var(--we-glass-brightness, 1.04));
     backdrop-filter: blur(var(--we-inline-code-blur, 8px)) saturate(var(--we-saturate, 1.3)) brightness(var(--we-glass-brightness, 1.04));
   }
@@ -898,7 +947,8 @@ const CSS_GLASS = `
       rgba(255, 255, 255, var(--we-panel-sheen-c)) 100%);
     /* 模糊由根级装饰叶节点承担，不改变这一列的 fixed 包含块。 */
     /* 边框：这一列**内部**的描边（「新建会话」按钮、焦点环等）读 --dsw-alias-border-l3 ——
-       壁纸令牌映射只接管了 l1/l2，故「边框」滑杆只作用于这一列里面的描边（这一条**保留**）。
+       #255④ 起壁纸令牌映射也接管 l1–l4（见上面两块映射），这里仍就地重声明 l3：让本列内的
+       描边与「边框」滑杆同源、不依赖 body 上那块映射的级联位置（这一条**保留**）。
        ⚠️ 这一列**自己的竖分割线不画**（现场口径："左侧边栏右边框线不要显示，即使全局设置了
        边框拉到了90%"）：这一列已经是一整块玻璃，再画一条竖线就把它与会话区切成两半。
        ⚠️ 必须是**显式 none**，不能只是删掉那行声明：非 darwin 壳层自己有一条读
@@ -957,6 +1007,25 @@ const CSS_GLASS = `
       background-color: color-mix(in srgb, var(--we-surface-tint-dark, #0d1524) 92%, transparent);
     }
   }
+  /* ── issue #272：窄视口（手机远程适配层 / 折叠抽屉）下的不依赖模糊的兜底 ─────────
+     宿主在 <1100px 把侧栏折叠成抽屉、用 transform 做位移；此时装饰板的 backdrop-filter
+     要么采样不到有效矩形、要么被祖先的 transform/filter 静默废掉 ⇒ 抽屉全透明、正文直接
+     压在壁纸上。这里按「#95：文字绝不直接落在壁纸上」的同一政策给近不透明底（92%），
+     并把不会生效的模糊显式关掉 —— 与软件光栅回退那组逐字同口径。
+     ⚠️ 只影响窄视口；桌面布局（≥1100px）逐字节不变。 */
+  @media (max-width: 1100px) {
+    body[data-we-glass-page][data-we-left-sidebar] div:has(> [data-slot="sidebar"]):where([data-we-surface-runtime="left-sidebar"]) {
+      background-color: color-mix(in srgb, var(--we-surface-tint-light, #ffffff) 92%, transparent) !important;
+      background-image: none !important;
+    }
+    body[data-ds-dark-theme][data-we-glass-page][data-we-left-sidebar] div:has(> [data-slot="sidebar"]):where([data-we-surface-runtime="left-sidebar"]) {
+      background-color: color-mix(in srgb, var(--we-surface-tint-dark, #0d1524) 92%, transparent) !important;
+    }
+    body[data-we-glass-page] [data-we-surface-plate] {
+      -webkit-backdrop-filter: none !important;
+      backdrop-filter: none !important;
+    }
+  }
 
   /* ── 侧边栏四角圆角 / 直角（外观 → 侧边栏圆角）────────────────────────────────────
      左右两条侧栏各自一套：**统一档**（6 / 12 / 20 px）写 border-radius 简写，四角开关
@@ -972,7 +1041,7 @@ const CSS_GLASS = `
         visibility:hidden），裸锚会给收起态留一块板子（#107，与右栏玻璃同一条护栏）。
      ⚠️ 默认（统一档 = 跟随原生、四角都不直角）时 body 上没有任何属性 ⇒ 本块全部不生效，
         逐字节等于今天。
-     ⚠️ 宿主原生左栏与右栏面板都**不带圆角**（.pI_x6G_sidebarCol 只有底色 + 右分割线；
+     ⚠️ 宿主原生左栏与右栏面板都**不带圆角**（*_sidebarCol 只有底色 + 右分割线；
         右栏面板的圆角长在内部 pane 上）⇒「圆角」靠统一档给 px 值才看得见。 */
   body[data-we-left-sidebar-radius] div:has(> [data-slot="sidebar"]) {
     border-radius: var(--we-left-sidebar-radius) !important;
@@ -1023,9 +1092,10 @@ const CSS_GLASS = `
         在当前 DSH Desktop 里**都不存在**（app.asar 字面扫描命中 0 次），不得用作锚点。
      ⚠️ **锚点为什么不用 [data-sidebar-collapsed]**：AppFrame 只在**收起**时才渲染该属性
         ⇒ 把条件属性写进选择器会让本块在默认展开态**恒不生效**。data-rightbar-* 同理。
-     ⚠️ **锚点只用一条**：保留的 div[class*="pI_x6G_frame"] 是 CSS 模块哈希类名的**子串**
-        匹配（哈希跨版本会漂，漂了的最坏结果是"本块不生效"，失败安全、绝不误伤；运行时实测
-        n1=1 / n3=1）。两条硬门是 [data-windows-titlebar]（壳层写进 <html>，只在 Windows
+     ⚠️ **锚点只用一条**：运行时锚点 [data-we-titlebar-anchor] 由玻璃层探针写在顶栏容器上
+        （glass-layer.js 的 findTitlebarFrame：座位祖先链 → 含侧栏/对话列兜底 → ≥70% 视口的
+        单类 *_frame 兜底），不看宿主构建哈希 ⇒ 宿主换构建也不会静默失效；运行时实测
+        n1=1 / n3=1。两条硬门是 [data-windows-titlebar]（壳层写进 <html>，只在 Windows
         Electron 形态；实测 winTB=1）与 body[data-we-adapter^="desktop-"]（本插件自己挂；
         实测 ad=desktop-official）。教训两条：
         ⇒ 结论一：**绝不把"未经本引擎验证的选择器"与"已验证的"放进同一个逗号列表** —— CSS
@@ -1034,7 +1104,7 @@ const CSS_GLASS = `
           两条独立规则（一条失效只丢它自己）。
         ⇒ 结论二：**嵌套 :has()**（:has() 里再套 :has()）本壳层的 Chromium 不接受（会抛异常）；
           左栏那条能用是因为它是**单层** :has(> [data-slot="sidebar"]) —— 别把左栏的经验外推。
-        哈希漂移的兜底将来若要加，必须**另起一条规则**，不得并进逗号列表。
+        探针失效的兜底将来若要加，必须**另起一条规则**，不得并进逗号列表。
      ⚠️ **本块的结构分工**：底色 / 釉光 / accent 在下面这条 ::before；模糊在紧随其后的
         ::after —— 为什么必须分两层、绘制顺序、以及 issue #131 的 fixed 包含块，见那条规则的注释。
      ⚠️ **"不要有任何色差"是本块的第一约束**：底色的 color-mix 权重与五条 accent 映射与左侧栏
@@ -1043,7 +1113,7 @@ const CSS_GLASS = `
         左栏判据 S2）。⚠️ 任何调色改动都必须**同时**改这两块，否则色差立刻出现。
      ⚠️ **可覆盖性**：本块用 !important —— 壳层那条 :before 声明同特异度但写在别的样式表里，
         靠加载顺序取胜不可靠；伪元素只此一层，覆盖它没有副作用。 */
-  html[data-windows-titlebar] body[data-we-glass-page][data-we-titlebar-glass][data-we-adapter^="desktop-"] div[class*="pI_x6G_frame"]::before {
+  html[data-windows-titlebar] body[data-we-glass-page][data-we-titlebar-glass][data-we-adapter^="desktop-"] [data-we-titlebar-anchor]::before {
     /* 底色：压掉壳层那条 background: var(--dsw-specific-sidebar-fill)，换成与左侧栏
        **逐条同形**的配方（只有面变量 --we-titlebar-alpha 替 --we-left-sidebar-alpha）。
        ⚠️ 必须写成 background-color + background-image 两条**分开的**声明（不是
@@ -1091,7 +1161,7 @@ const CSS_GLASS = `
         pointer-events:none ⇒ 不挡壳层 ::before 的 app-region 拖拽区，也不挡壳层 z-index:30 的固定按钮。
      ⚠️ 不写 z-index（保持 auto）：这样才能在 ::before **之上**按树序绘制；写成 -1 会掉到
         frame 底色之下，甚至跑到壁纸后面。 */
-  html[data-windows-titlebar] body[data-we-glass-page][data-we-titlebar-glass][data-we-adapter^="desktop-"] div[class*="pI_x6G_frame"]::after {
+  html[data-windows-titlebar] body[data-we-glass-page][data-we-titlebar-glass][data-we-adapter^="desktop-"] [data-we-titlebar-anchor]::after {
     content: "";
     position: absolute;
     inset: 0 0 auto;
@@ -1104,7 +1174,7 @@ const CSS_GLASS = `
      ⚠️ 釉光必须**和浅色那条一样恒定**（单停靠点 sheen-a）：照抄左栏三段渐变就会重现
         那个"盒尺寸色差" —— 40px 与 1111px 两个盒子会算出不同白釉强度。
         TB4a 对深浅两条都跑。 */
-  html[data-windows-titlebar] body[data-ds-dark-theme][data-we-glass-page][data-we-titlebar-glass][data-we-adapter^="desktop-"] div[class*="pI_x6G_frame"]::before {
+  html[data-windows-titlebar] body[data-ds-dark-theme][data-we-glass-page][data-we-titlebar-glass][data-we-adapter^="desktop-"] [data-we-titlebar-anchor]::before {
     background-color: color-mix(in srgb,
       var(--we-readability-base) calc(var(--we-readability-floor) * 100%),
       color-mix(in srgb, var(--we-surface-tint-dark, #0d1524) calc(var(--we-titlebar-alpha) * 100%), transparent) calc((1 - var(--we-readability-floor)) * 100%)) !important;
@@ -1115,15 +1185,15 @@ const CSS_GLASS = `
   }
   /* 无 backdrop-filter：同一政策 —— 近不透明玻璃，顶栏文字绝不直接落在壁纸上。 */
   @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-    html[data-windows-titlebar] body[data-we-glass-page][data-we-titlebar-glass][data-we-adapter^="desktop-"] div[class*="pI_x6G_frame"]::before {
+    html[data-windows-titlebar] body[data-we-glass-page][data-we-titlebar-glass][data-we-adapter^="desktop-"] [data-we-titlebar-anchor]::before {
       background: color-mix(in srgb, var(--we-surface-tint-light, #ffffff) 92%, transparent) !important;
     }
-    html[data-windows-titlebar] body[data-ds-dark-theme][data-we-glass-page][data-we-titlebar-glass][data-we-adapter^="desktop-"] div[class*="pI_x6G_frame"]::before {
+    html[data-windows-titlebar] body[data-ds-dark-theme][data-we-glass-page][data-we-titlebar-glass][data-we-adapter^="desktop-"] [data-we-titlebar-anchor]::before {
       background: color-mix(in srgb, var(--we-surface-tint-dark, #0d1524) 92%, transparent) !important;
     }
     /* 模糊层整个不存在：本档不支持 backdrop-filter，留着 ::after 只会多一层
        什么都画不出来的绝对定位块（含 pointer-events:none 的空层）。 */
-    html[data-windows-titlebar] body[data-we-glass-page][data-we-titlebar-glass][data-we-adapter^="desktop-"] div[class*="pI_x6G_frame"]::after {
+    html[data-windows-titlebar] body[data-we-glass-page][data-we-titlebar-glass][data-we-adapter^="desktop-"] [data-we-titlebar-anchor]::after {
       content: none;
     }
   }
@@ -1211,11 +1281,9 @@ const CSS_GLASS = `
       rgba(255, 255, 255, var(--we-sidebar-sheen-a)),
       rgba(255, 255, 255, var(--we-sidebar-sheen-b)) 38%,
       rgba(255, 255, 255, var(--we-sidebar-sheen-c))) !important;
-    /* 模糊在独立叶节点，宿主 dock 内容仍按其原生层级绘制。 */
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, calc(var(--we-sidebar-sheen) * 0.32)),
-      inset 0 -1px 0 rgba(255, 255, 255, calc(var(--we-sidebar-sheen) * 0.08)),
-      inset 0 0 0 0.5px rgba(255, 255, 255, calc(var(--we-sidebar-sheen) * 0.06));
+    /* 模糊在独立叶节点，宿主 dock 内容仍按其原生层级绘制。
+       #237：外沿描边不画（左栏玻璃也不画）—— 宿主 inset 三明治由
+       body[data-we-sidebar-glass] 的 box-shadow:none 规则兜住。 */
   }
   body[data-ds-dark-theme][data-we-sidebar-glass] [data-sidebar-right-panel][data-sidebar-right-open]:where([data-we-surface-runtime="right-sidebar"]) {
     background-color: color-mix(in srgb,
@@ -1225,6 +1293,23 @@ const CSS_GLASS = `
   /* fullscreen 是宿主明确声明的前景 dock 模式；只抬面板自身，不改共享祖先或第三方节点。 */
   body[data-we-glass-page] [data-sidebar-right-panel="fullscreen"][data-sidebar-right-open]:where([data-we-surface-runtime="right-sidebar"]) {
     z-index: var(--dsh-dockkit-dock-layer, 40);
+  }
+  /* ── issue #237：右侧栏不画外沿描边（与左栏玻璃同一政策）──────────────────
+     旧「去边框」规则门控在圆角档上：圆角=跟随原生时整段不匹配。这里把门控搬到玻璃开关本身：
+     只要右栏是玻璃面，就不再留宿主原生描边 / 竖线；关掉玻璃后宿主外观逐字节恢复。
+     ⚠️ 面板那条沿用玻璃面自己的运行时锚点（:where([data-we-surface-runtime="right-sidebar"])）——
+        没被表面管理认领的面不画玻璃，也就不清描边（保持原生外观）。 */
+  body[data-we-sidebar-glass] [data-sidebar-right-panel][data-sidebar-right-open]:where([data-we-surface-runtime="right-sidebar"]) {
+    box-shadow: none !important;
+  }
+  body[data-we-sidebar-glass] [data-dockkit-divider]:not([data-dockkit-pane] *)::before {
+    border: none !important;
+    background: none !important;
+  }
+  body[data-we-sidebar-glass] [data-dockkit-host="dock"][data-dockkit-column="0"],
+  body[data-we-sidebar-glass] [data-dockkit-host="dock"][data-dockkit-column="0"] > * {
+    border-left: none !important;
+    box-shadow: none !important;
   }
   /* Closed state: the host's own container carries no background — keep ours
      off too, whatever the master-switch state (#107). */
@@ -1546,16 +1631,16 @@ const CSS_GLASS = `
      一层 [data-ds-dark-theme]，与浅色声明同特异度时后写者赢（顺序即优先级）。
      ⚠️ 锚点与主块同口径（含 html[data-windows-titlebar] 那道门）：软件渲染时壁纸层
         往往没走 GPU 合成，这条是那批形态唯一的兜底。 */
-  html[data-windows-titlebar] body[data-we-glass-fallback][data-we-glass-page][data-we-titlebar-glass][data-we-adapter^="desktop-"] div[class*="pI_x6G_frame"]::before {
+  html[data-windows-titlebar] body[data-we-glass-fallback][data-we-glass-page][data-we-titlebar-glass][data-we-adapter^="desktop-"] [data-we-titlebar-anchor]::before {
     background: color-mix(in srgb, var(--we-surface-tint-light, #ffffff) 92%, transparent) !important;
   }
   /* ⚠️ 模糊现在住在 ::after 上（见主块的两条规则）⇒ 软件光栅器下要关的是**它**，
      不是 ::before —— 关错对象就等于没关（不留不会生效的声明）。 */
-  html[data-windows-titlebar] body[data-we-glass-fallback][data-we-glass-page][data-we-titlebar-glass][data-we-adapter^="desktop-"] div[class*="pI_x6G_frame"]::after {
+  html[data-windows-titlebar] body[data-we-glass-fallback][data-we-glass-page][data-we-titlebar-glass][data-we-adapter^="desktop-"] [data-we-titlebar-anchor]::after {
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
   }
-  html[data-windows-titlebar] body[data-ds-dark-theme][data-we-glass-fallback][data-we-glass-page][data-we-titlebar-glass][data-we-adapter^="desktop-"] div[class*="pI_x6G_frame"]::before {
+  html[data-windows-titlebar] body[data-ds-dark-theme][data-we-glass-fallback][data-we-glass-page][data-we-titlebar-glass][data-we-adapter^="desktop-"] [data-we-titlebar-anchor]::before {
     background: color-mix(in srgb, var(--we-surface-tint-dark, #0d1524) 92%, transparent) !important;
   }
   body[data-we-glass-fallback][data-we-glass-page] [data-we-surface-plate] {

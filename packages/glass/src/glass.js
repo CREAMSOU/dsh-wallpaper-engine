@@ -205,11 +205,11 @@ function applyGlass(selection, s) {
 
   // 标题栏液态玻璃：壳层顶栏（AppFrame 那个 grid 容器，锚点是**运行时探针**打的
   // `data-we-titlebar-anchor` —— 宿主类名是 CSS-module 构建哈希、跨构建漂移，写死必然在
-  // 下次升级静默失效（#235）；探针见 effects.js 的 findTitlebarFrame）默认只是那条不透明的
-  // 底色（上面 styles.js 的「外壳画布底」把外壳画布清成 transparent 之后，这一层是唯一
+  // 下次升级静默失效（#235）；探针见 glass-layer.js 的 findTitlebarFrame）默认只是那条不透明的
+  // 底色（上面主包 styles-shell.js 的「外壳画布底」把外壳画布清成 transparent 之后，这一层是唯一
   // 必须保留底色的面）。
   // 打开后 CSS 把它换成**与其余面板同一张配方表**，且与左侧栏那条**逐条同形**
-  // （唯一差别是锚点；**不画**底分割线，理由见 styles.js）。
+  // （唯一差别是锚点；**不画**底分割线，理由见 glass-css.js）。
   // 变量与开关节点的落点同玻璃窗口：body 属性 + 样式表规则，切换不需要重建任何东西。
   if (selection.titlebarGlass) document.body.setAttribute("data-we-titlebar-glass", "on");
   else document.body.removeAttribute("data-we-titlebar-glass");
