@@ -166,6 +166,18 @@
         ...INTERVALS.map((minutes) =>
           React.createElement("option", { key: minutes, value: String(minutes) }, weT("{min} 分钟", { min: minutes })),
         )),
+        // 推进方式：按间隔 / 视频播完就换。常驻行直接可改（不必进「编辑」），
+        // 与列表编辑器里的同名字段（onEditTrigger）写同一个 group.trigger。
+        React.createElement("select", {
+          className: "we-picker__playlist-select",
+          value: group && group.trigger === "videoEnd" ? "videoEnd" : "interval",
+          onChange: onGroupTrigger,
+          disabled: !sel.rotationGroupId,
+          "aria-label": weT("轮播推进方式"),
+        },
+        React.createElement("option", { value: "interval" }, weT("按间隔")),
+        React.createElement("option", { value: "videoEnd" }, weT("视频播完就换")),
+        ),
         Toggle({
           checked: sel.rotationEnabled,
           onChange: onToggleRotation,
