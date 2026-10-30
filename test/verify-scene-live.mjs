@@ -135,6 +135,77 @@ async function loadExtensionRegistry() {
     get title() { return globalThis.weT('全局字体'); },
     render: fontSectionMod.renderAppearanceFontSection,
   });
+  // ADR-0016 第二刀：「主题预设」+「玻璃 UI」节随玻璃包搬走 ⇒ 同款按**真入口同形**登记。
+  // panel-tabs 的玻璃节是按 id 取渲染器的注册表占位桩，不登记它 ⇒ 占位桩查不到 ⇒ 整节消失
+  // （下面所有玻璃节判据以"缺节"的形式假红）。
+  const glassPanelMod = await import(pathToFileURL(join(root, 'packages', 'glass', 'src', 'glass-panel.js')).href);
+  reg.weRegisterPanelSection('appearance', 'glass', {
+    id: 'glass',
+    get title() { return globalThis.weT('玻璃 UI'); },
+    render: glassPanelMod.renderAppearanceGlassSection,
+  });
+  // P-D S3a/S3b：「壁纸库」页签第二/三/四节（切换过场 / 自动轮播 / 自定义壁纸）都随壁纸子包
+  // 搬出 ⇒ 按标准包内源文件 import 真渲染器，描述符与 packages/media-bridge/src/client.js 逐字同形
+  // （title 是 accessor + order 20/30/40）。**故意乱序登记**：注册表按 (order, seq) 排序，下面
+  // 的顺序快照就在验证这一点（否则"登记顺序恰好等于期望顺序"会让这条判据空转）。
+  const wallpaperCurrentSectionMod = await import(pathToFileURL(join(root, 'packages', 'media-bridge', 'src', 'wallpaper-current-section.js')).href);
+  const wallpaperRotationSectionMod = await import(pathToFileURL(join(root, 'packages', 'media-bridge', 'src', 'wallpaper-rotation-section.js')).href);
+  const wallpaperUploadsSectionMod = await import(pathToFileURL(join(root, 'packages', 'media-bridge', 'src', 'wallpaper-uploads-section.js')).href);
+  const wallpaperTransitionSectionMod = await import(pathToFileURL(join(root, 'packages', 'media-bridge', 'src', 'wallpaper-transition-section.js')).href);
+  // P-D S3c：第四节「当前壁纸」搬走后，四节全部由注册表提供；order = 10/20/30/40。
+  reg.weRegisterPanelSection('library', 'wallpaper-current', {
+    id: 'wallpaper-current',
+    get title() { return globalThis.weT('当前壁纸'); },
+    order: 10,
+    render: wallpaperCurrentSectionMod.renderWallpaperCurrentSection,
+  });
+  reg.weRegisterPanelSection('library', 'wallpaper-rotation', {
+    id: 'wallpaper-rotation',
+    get title() { return globalThis.weT('自动轮播'); },
+    order: 30,
+    render: wallpaperRotationSectionMod.renderWallpaperRotationSection,
+  });
+  reg.weRegisterPanelSection('library', 'wallpaper-uploads', {
+    id: 'wallpaper-uploads',
+    get title() { return globalThis.weT('自定义壁纸'); },
+    order: 40,
+    render: wallpaperUploadsSectionMod.renderWallpaperUploadsSection,
+  });
+  reg.weRegisterPanelSection('library', 'wallpaper-transition', {
+    id: 'wallpaper-transition',
+    get title() { return globalThis.weT('切换过场'); },
+    order: 20,
+    render: wallpaperTransitionSectionMod.renderWallpaperTransitionSection,
+  });
+  // 顺序快照（判据①）：四节齐全 + 乱序登记下仍按 order 10/20/30/40 排序（登记顺序故意打乱：
+  // 先 rotation(30)，再 uploads(40)，再 current(10)，最后 transition(20)）。
+  const libSections = reg.wePanelSectionsOf('library');
+  check('P-D S3c：壁纸库注册表四节齐全 · 乱序登记 ⇒ 按 order 10/20/30/40 排序（顺序快照）',
+    libSections.map((s) => s.id).join(',') === 'wallpaper-current,wallpaper-transition,wallpaper-rotation,wallpaper-uploads'
+    && libSections.map((s) => s.order).join(',') === '10,20,30,40',
+    'got=' + libSections.map((s) => s.id + ':' + s.order).join(', '));
+  // P-D S3d：「播放」页签的倍速/帧率上限与适配/翻转两节同样随包搬出 ⇒ 按标准包内源文件 import
+  // 真渲染器，描述符与 packages/media-bridge/src/client.js 逐字同形（title 是 accessor + order 60/70）。
+  // **故意乱序登记**（先 fit(70) 后 rate(60)）⇒ 下面的顺序快照验证「屏上顺序由 order 决定」。
+  const wallpaperPlaybackRateMod = await import(pathToFileURL(join(root, 'packages', 'media-bridge', 'src', 'playback-rate-section.js')).href);
+  const wallpaperFitSectionMod = await import(pathToFileURL(join(root, 'packages', 'media-bridge', 'src', 'wallpaper-fit-section.js')).href);
+  reg.weRegisterPanelSection('playback', 'wallpaper-fit', {
+    id: 'wallpaper-fit',
+    get title() { return globalThis.weT('适配'); },
+    order: 70,
+    render: wallpaperFitSectionMod.renderEffectsFitSection,
+  });
+  reg.weRegisterPanelSection('playback', 'wallpaper-playback-rate', {
+    id: 'wallpaper-playback-rate',
+    get title() { return globalThis.weT('倍速'); },
+    order: 60,
+    render: wallpaperPlaybackRateMod.renderEffectsPlaybackSection,
+  });
+  const playbackSections = reg.wePanelSectionsOf('playback');
+  check('P-D S3d：播放页注册表两节齐全 · 乱序登记 ⇒ 按 order 60/70 排序（顺序快照）',
+    playbackSections.map((s) => s.id).join(',') === 'wallpaper-playback-rate,wallpaper-fit'
+    && playbackSections.map((s) => s.order).join(',') === '60,70',
+    'got=' + playbackSections.map((s) => s.id + ':' + s.order).join(', '));
   return reg;
 }
 // Keep every cache/config write inside the workspace (same stance as
@@ -308,7 +379,7 @@ check('fallback page present: default-wallpaper/index.html exists',
 check('renderer page mounts the fallback page on error',
   pageJs.includes('./default-wallpaper/index.html') && /inst\.on\("error"/.test(pageJs));
 check('scene-serve serves default-wallpaper without long cache',
-  /rest === 'default-wallpaper\/index.html'/.test(readFileSync(join(root, 'lib', 'routes', 'scene-serve.js'), 'utf8')));
+  /rest === 'default-wallpaper\/index.html'/.test(readFileSync(join(root, 'packages', 'media-bridge', 'lib', 'routes', 'scene-serve.js'), 'utf8')));
 
 // 网页壁纸 shim：npm 包不单独发 web-shim.js，宿主从 bundle 的 `shimSource` 模板字面量提取
 // （lib/index.js 的 extractWebShim）。bundle 形态变了提取就静默得空串 —— 先钉住形态还在。
@@ -340,15 +411,19 @@ const host = hostMod.default || hostMod;
 const apply = host.apply || (host.inject && host.apply);
 const dispose = apply(mockCtx);
 
-// ── 组件行也要 boot（本分支的路由族归属：媒体状态族归 `media-bridge` 组件行）──
+// ── 组件行也要 boot（本分支的路由族归属：媒体状态族归 `media-bridge` 组件行；P-D 阶段1 起承载壁纸域）──
 // ⚠️ 这不是"放宽判据"，而是夹具的 boot 段要跟上本分支结构：`/media-status`、`/audio-spectrum`、
 // `/now-playing`、`/now-playing/artwork`、`/media-control` 五条路由的实现住在
 // `packages/media-bridge/lib/`（P2-2 入包、P-F 批 1c 出户，ADR-0013 D14「实现入包、主包不留注册点」，
 // 由 `verify-route-ownership` 的 M10 钉住）。上游那条判据按"门面 apply 后即可用"写（单包单行假设）。
 // 处置与第 4 轮 `/avatar` 一致：**连组件一起 boot**，判据判什么一个字没改。
+// S5d 刀3：`wallpaper` 组件行现在**拥有省电（occlusion）hub 的生命周期**（hub 随族入包，由本组件
+// 会话的 disposers 收尾）。hub 在非 X11 环境会挂 30s 重试定时器 ⇒ 夹具必须把组件行的 teardown
+// 一起收掉，否则本脚本跑完进程不退出（真宿主里由行卸载/进程退出收尾，判据一个字没改）。
+const componentDisposers = [];
 if (typeof hostMod.applyComponent === 'function') {
   for (const comp of ['media-bridge', 'mascot-avatar', 'about-notice']) {
-    try { hostMod.applyComponent(mockCtx, {}, comp); } catch (err) {
+    try { componentDisposers.push(hostMod.applyComponent(mockCtx, {}, comp)); } catch (err) {
       console.log('  · 组件行 boot 失败（' + comp + '）：' + String(err && err.message));
     }
   }
@@ -975,8 +1050,8 @@ console.log('Level C2 — custom storage scan (WE project dirs under uploads)');
 
 // ── Level D: client source contract ─────────────────────────────────────────
 console.log('Level D — client source wiring (src/client.js + 抽出的模块)');
-// 客户端源码现在是**三个文件**：逻辑（src/client.js）、注入的样式表（src/styles.js）、
-// 实时渲染管线（src/live-layer.js）。Level D 的判据里既有 JS 结构断言、也有样式规则断言、
+// 客户端源码分三块：主包逻辑（src/client.js）、7 个主包样式域模块（组装点 src/styles.js；玻璃 CSS 在
+// packages/glass/src/glass-css.js）、实时渲染管线（src/live-layer.js）。Level D 的判据里既有 JS 结构断言、也有样式规则断言、
 // 还有"跨文件的接线"断言（如"面板调用 + 被调函数里的门禁"）—— 所以三个来源都读出来，
 // **各自用在对应的判据上**（不图省事拼成一个字符串：那样一个文件的文本就能满足另一个文件的
 // 结构断言，判据会失去牙）。
@@ -1004,6 +1079,30 @@ const tabsSrc = panelText();
 const fontSectionSrc = readFileSync(join(root, 'packages', 'fonts', 'src', 'appearance-font-section.js'), 'utf8')
   .replace(/\r\n/g, '\n');
 const tabsSrcWithFontSection = tabsSrc + '\n;\n' + fontSectionSrc;
+// P-D S3a/S3b/S3c：「壁纸库」页签四节（当前壁纸 / 切换过场 / 自动轮播 / 自定义壁纸）的渲染器
+// 全部随壁纸子包搬出（packages/media-bridge/src/wallpaper-*-section.js）⇒ 同一条口径：判"该节
+// 画什么 / 解构了哪些 ctx 字段"的判据读 **页签族 + 包内四节** 的并集（运行时本来就在同一
+// 作用域；文件住处变了，判据的取文来源跟着变，强度不变）。
+const wallpaperCurrentSrc = readFileSync(join(root, 'packages', 'media-bridge', 'src', 'wallpaper-current-section.js'), 'utf8')
+  .replace(/\r\n/g, '\n');
+const wallpaperTransitionSrc = readFileSync(join(root, 'packages', 'media-bridge', 'src', 'wallpaper-transition-section.js'), 'utf8')
+  .replace(/\r\n/g, '\n');
+const wallpaperRotationSrc = readFileSync(join(root, 'packages', 'media-bridge', 'src', 'wallpaper-rotation-section.js'), 'utf8')
+  .replace(/\r\n/g, '\n');
+const wallpaperUploadsSrc = readFileSync(join(root, 'packages', 'media-bridge', 'src', 'wallpaper-uploads-section.js'), 'utf8')
+  .replace(/\r\n/g, '\n');
+const wallpaperSectionsSrc = wallpaperCurrentSrc + '\n;\n' + wallpaperTransitionSrc + '\n;\n' + wallpaperRotationSrc + '\n;\n' + wallpaperUploadsSrc;
+// 判「壁纸库页签里的节」的内容判据一律读这个并集（页签族 + 包内四节）：移动文件不该让
+// 判据看不到被搬走的节（S3a 起同一条纪律）。
+const tabsSrcAll = tabsSrc + '\n;\n' + wallpaperSectionsSrc;
+// P-D S3d：「播放」页签的倍速/帧率上限与适配/翻转两节也随壁纸子包搬出（playback-rate-section.js /
+// wallpaper-fit-section.js）⇒ 表面门 / 文本锚的取文来源同样扩成「页签族 + 包内两节」（强度不变）。
+const playbackRateSectionSrc = readFileSync(join(root, 'packages', 'media-bridge', 'src', 'playback-rate-section.js'), 'utf8')
+  .replace(/\r\n/g, '\n');
+const wallpaperFitSectionSrc = readFileSync(join(root, 'packages', 'media-bridge', 'src', 'wallpaper-fit-section.js'), 'utf8')
+  .replace(/\r\n/g, '\n');
+const playbackSectionsSrc = playbackRateSectionSrc + '\n;\n' + wallpaperFitSectionSrc;
+const effectsSrcAll = tabsSrc + '\n;\n' + playbackSectionsSrc;
 // 组装点自身：只喂给"8 个 render*Tab 声明在 src/panel-tabs.js"那条不变量（族并集会让它变弱）。
 const tabsHubSrc = readFileSync(join(root, 'src', 'panel-tabs.js'), 'utf8');
 // `fnBody` 的实现在 `test/tools/assert-harness.mjs`（`fnNameBody`，取首个 `\n}`；
@@ -1737,7 +1836,7 @@ for (const [name, ok] of clientChecks) check(name, ok);
     //     `lib/serve.js`，**消费点**在 `lib/routes/media-bytes.js`。
     const faststartLib = readFileSync(join(root, 'lib', 'faststart.js'), 'utf8');
     const vfsLib = readFileSync(join(root, 'lib', 'mp4-vfs.js'), 'utf8');
-    const mediaBytesFam = readFileSync(join(root, 'lib', 'routes', 'media-bytes.js'), 'utf8');
+    const mediaBytesFam = readFileSync(join(root, 'packages', 'media-bridge', 'lib', 'routes', 'media-bytes.js'), 'utf8');
     // 服务面与接线面的源文本就地读：本文件别处的同名常量声明在更后面（TDZ）。
     const serveLib = readFileSync(join(root, 'lib', 'serve.js'), 'utf8');
     // ⚠️ 合成宿主面：门面 + 内核段 + P0 拆出的模块。**不要**只读 lib/index.js ——
@@ -2221,13 +2320,20 @@ const faststartSrc = readFileSync(join(root, 'lib', 'faststart.js'), 'utf8');
 const extraHostHalfSources = [
   'lib/diag-trace.js', 'lib/cache-dir.js', 'lib/http-lifecycle.js', 'lib/shim-seed.js',
   'lib/startup-sweep.js', 'lib/we-assets.js', 'lib/media-origin.js',
+  // S5b 刀1：`we-assets` 路由族已出户到壁纸子包 —— 它不再被下面 `lib/routes/` 的目录枚举覆盖，
+  // 必须显式进面（否则 `/api/local-assets` 的路径围栏与指纹判据一起假红，见文件头纪律）。
+  'packages/media-bridge/lib/routes/we-assets.js',
   ...readdirSync(join(root, 'lib', 'kernel')).filter((f) => f.endsWith('.js')).map((f) => 'lib/kernel/' + f),
   ...readdirSync(join(root, 'lib', 'media')).filter((f) => f.endsWith('.js')).map((f) => 'lib/media/' + f),
 ].map((f) => { try { return readFileSync(join(root, f), 'utf8'); } catch { return ''; } });
 const hostHalfSrc = [hostSrc, mediaOriginSrc, inventorySrc, serveSrc, faststartSrc,
   ...extraHostHalfSources,
   ...readdirSync(join(root, 'lib', 'routes')).filter((f) => f.endsWith('.js'))
-    .map((f) => readFileSync(join(root, 'lib', 'routes', f), 'utf8'))].join('\n');
+    .map((f) => readFileSync(join(root, 'lib', 'routes', f), 'utf8')),
+  // S5c 刀2：九族路由族随包出户 ⇒ 包内路由目录也要进"宿主半实现面"，否则这些族里的契约
+  //（路径围栏 / 指纹 / 不变量）会随搬移被误报为丢失（同 S5b 的纪律）。
+  ...readdirSync(join(root, 'packages', 'media-bridge', 'lib', 'routes')).filter((f) => f.endsWith('.js'))
+    .map((f) => readFileSync(join(root, 'packages', 'media-bridge', 'lib', 'routes', f), 'utf8'))].join('\n');
 // 宿主设置白名单已改为**派生**（唯一真源 lib/settings-schema.js，P1-5）。因此这几条不再
 // 抠实现里的字面量，而是把值喂给宿主的规范化函数看它收不收 —— 断言的是**行为**。
 const schemaMod = await import(pathToFileURL(join(root, 'lib', 'settings-schema.js')).href);
@@ -2482,7 +2588,7 @@ const legacyBridgePath = ['packages/media-bridge/lib/legacy.js', 'lib/components
   'lib/media/legacy.js']
   .find((rel) => existsSync(join(root, rel)));
 const legacyBridgeSrc = legacyBridgePath ? readFileSync(join(root, legacyBridgePath), 'utf8') : '';
-check('回落实现住在 media-bridge 组件行 legacy.js（回落路径还在）',
+check('回落实现住在 wallpaper 组件行 legacy.js（回落路径还在）',
   Boolean(legacyBridgePath) && !existsSync(join(root, 'lib', 'media-bridge.js')),
   legacyBridgePath || '未找到 legacy 实现（组件行与 lib/media 都没有）');
 check('封面走 media-control 的 artworkData（通用，不限 Spotify）',
@@ -2617,6 +2723,32 @@ check('client 透传歌词与 albumArtist（[[秒, 文本]] 原样给渲染页�
 check('client 的 push key 带歌词版本（歌词晚到也要再推一帧）',
   src.includes('const lyrRev =') && src.includes('lyrRev].join('));
 check('音频桥按宿主 running 装卸（装了桥 = 渲染页放弃自带音频源）',  src.includes('function syncAudioBridge(frame, running)') && src.includes('syncAudioBridge(frame, d.running === true)'));
+// 无真实频谱时收起「靠频谱才有内容」的合成层（#167）：没有音频输入时，音频可视化层
+// 退化成一整块**空矩形**，而作者叠在其上的 scroll 照跑 ⇒ 屏幕上是一条匀速横爬的带子，
+// 用户只会当成渲染故障。四条缺一不可：与桥**同拍**调用（否则永不生效）、两条收层判据
+// 各自在场（合成层 / 频谱特效）、以及**可逆**（恢复采集要逐层还原，不能永久改场景）。
+{
+  const fnBody = (text, name) => {
+    const i = text.indexOf('function ' + name + '(');
+    if (i < 0) return '';
+    const j = text.indexOf('\n}', i);
+    return j < 0 ? text.slice(i) : text.slice(i, j);
+  };
+  const COMPOSELAYER = /layer\.image\.indexOf\("composelayer"\)/;
+  const SPECTRUM = /fx\.file\.indexOf\("Simple_Audio_Bars"\)/;
+  const reactiveWiring = (text) => {
+    const body = fnBody(text, 'syncAudioReactiveLayers');
+    return COMPOSELAYER.test(body) && SPECTRUM.test(body)
+      && /const wantHide = !running;/.test(body)
+      && /layer\.visible = true;/.test(body);
+  };
+  check('音频桥同拍收敛音频反应层（合成层 + 频谱特效两条判据都在）',
+    /syncAudioReactiveLayers\(frame, running\)/.test(fnBody(src, 'syncAudioBridge')) && reactiveWiring(src),
+    '#167：没频谱 → 那层只是一块空矩形 + 作者的 scroll 平移');
+  check('negative control: 放宽成「所有合成层」或去掉可逆分支都会被判出',
+    !reactiveWiring(src.replace(/layer\.image\.indexOf\("composelayer"\) < 0/g, 'false'))
+      && !reactiveWiring(src.replace('layer.visible = true;', '')));
+}
 // 媒体控制面（控制反转）：场景壁纸里 Now Playing 组件的按钮由渲染页推断成动作，
 // 打到宿主注入的控制面 → POST /media-control → 中间件真控播放器。判据按**源码形态**
 // 写成谓词（于是负对照能喂合成输入），三条缺一不可：控制面装载（五个动作齐）、
@@ -2742,11 +2874,15 @@ check('settings 白名单保留 userProps（按 token 存标量）',
     === '{"tok":{"c":"x","n":1}}');
 // i18n 之后按钮文案走 `weT("…")`（中文原文即键）—— 判据改认带包装的形态，
 // 顺序判据仍锚在"属性入口在播放/暂停按钮之前"这个**位置关系**上。
+const propsEntryOk = (text) =>
+  text.includes('(current.type === "scene" || current.type === "web") && sel.propsUrl')
+  && !text.includes('we-picker__btn--props')
+  && text.indexOf('weT("壁纸属性")') !== -1
+  && text.indexOf('weT("壁纸属性")') < text.indexOf('weT("暂停")');
 check('「壁纸属性」按钮：仅场景/网页壁纸 + 常规按钮样式（并入播放控制行、排在「暂停」之前）',
-  tabsSrc.includes('(current.type === "scene" || current.type === "web") && sel.propsUrl')
-    && !tabsSrc.includes('we-picker__btn--props')
-    && tabsSrc.indexOf('weT("壁纸属性")') !== -1
-    && tabsSrc.indexOf('weT("壁纸属性")') < tabsSrc.indexOf('weT("暂停")'));
+  propsEntryOk(tabsSrcAll), '取文 = 页签族 + 包内四节并集（S3c 起当前壁纸节住在包里）');
+// 负对照：只给页签族（不并包内节）⇒ 同一条判据必须判红（否则"搬到包里"会让这条判据静默失效）。
+check('negative control: 取文漏掉包内「当前壁纸」节 ⇒ 「壁纸属性」判据判红', !propsEntryOk(tabsSrc));
 // 「侧栏播放控制行」这一节钉两件事：全局主按钮款式不被二次覆盖、窄容器下控制行不溢出。
 // 两件都只看**当前形态**，不涉及某枚具体按钮。
 {
@@ -2875,9 +3011,9 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
       && tabsSrcWithFontSection.includes('open && switchRow(weT("字体自定义"')
       && !gated(tabsSrcWithFontSection, '输入光标'));
   check('播放页的准备与诊断行（出图来源 / 实时帧 / 自定义画面 / 帧率上限 / 源信息 / 转码进度）只在设置页档渲染',
-    ['出图来源', '实时帧', '自定义画面', '帧率上限'].every((label) => gated(tabsSrc, label))
-      && tabsSrc.includes('!sidebarSurface && sel.type === "video" && sel.mediaInfo')
-      && tabsSrc.includes('!sidebarSurface && sel.type === "video" && sel.transcodeState === "working"'));
+    ['出图来源', '实时帧', '自定义画面', '帧率上限'].every((label) => gated(effectsSrcAll, label))
+      && effectsSrcAll.includes('!sidebarSurface && sel.type === "video" && sel.mediaInfo')
+      && effectsSrcAll.includes('!sidebarSurface && sel.type === "video" && sel.transcodeState === "working"'));
   // 负对照只测**判据本身的牙**（喂合成文本），不断产品状态 —— 产品的"两档都画"由上面那条
   // 正面判据负责；把两者混在一条里，会让负对照因产品的红而红，掩盖"判据是否恒真"这个问题。
   check('negative control: 任一方向的 surface 门加回「全局字体」都会被判出（判据不是恒真）',
@@ -3299,7 +3435,7 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
         && !bag.QP_CTX_SETTINGS_ONLY.includes('onGlassChildParam'),
       called.slice(0, 48));
     // 预设块那道门也有牙：`glassPresets` 是高级配置的 ctx 字段（ADR-0008 D4），侧栏档指向替身 ⇒
-    // 谁把 `src/glass-panel.js` 里那道 `!sidebarSurface` 门拆掉，渲染器**解构它的第一下就炸**
+    // 谁把 packages/glass/packages/glass/src/glass-panel.js 里那道 `!sidebarSurface` 门拆掉，渲染器**解构它的第一下就炸**
     // （不是静默把预设块画进侧栏 —— 那是"整快照覆盖且不可撤销"的动作，不该随手可达）。
     const presetTeeth = (() => { try { return String(ctx.glassPresets.presets); } catch (e) { return String(e.message); } })();
     check('侧栏 ctx 的 `glassPresets` 也是占位器（拆掉预设块的门 ⇒ 解构即抛错）',
@@ -3379,11 +3515,14 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
   //    而且夹具渲染的项数一旦与真实面板不同就是假绿。
   globalThis.GLASS_CHILDREN = schema.GLASS_CHILDREN || [];
   globalThis.childGlassKey = schema.childGlassKey || ((id, p) => id + p.charAt(0).toUpperCase() + p.slice(1));
-  // ⚠️ 「玻璃 UI」节的渲染器已抽到 `src/glass-panel.js`（wip §10.13）：**打包后**它与
+  // panelGlassPair 的家从 glass-panel 本地副本归位 settings-schema（#159② 显示口径：缺省回空串
+  // 不猜色，与 readGlassColors 互补）—— 玻璃节渲染要用，同上面两个给**真源**。
+  globalThis.panelGlassPair = schema.panelGlassPair;
+  // ⚠️ 「玻璃 UI」节的渲染器住 packages/glass/packages/glass/src/glass-panel.js（ADR-0016 第二刀出户）：**打包后**它与
   //    `panel-tabs.js` 同作用域，所以后者能按名字直接调；但这里是**按文件 import** 的替身，
   //    两个模块各有自己的作用域 ⇒ 必须自己把它挂成全局（与上面那批模块级助手同一条口径）。
   globalThis.renderAppearanceGlassSection =
-    (await import(pathToFileURL(join(root, 'src', 'glass-panel.js')).href)).renderAppearanceGlassSection;
+    (await import(pathToFileURL(join(root, 'packages', 'glass', 'src', 'glass-panel.js')).href)).renderAppearanceGlassSection;
   // 节头构件（三节在侧边栏默认收敛）—— 同上一条口径，给**真实现**：
   // 折叠逻辑（`collapsible` 短路 + aria-expanded + caret）正是本节新判据要验的东西，
   // 挂个替身等于"判据测替身"（比红更糟）。
@@ -3477,7 +3616,7 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
     // 子 UI 登记表：renderAppearanceGlassSection 按它逐项渲染。替身必须给**与 schema 同源**
     // 的那份（不能手抄），否则夹具渲染的项数与真实面板不同，等于假绿。
     'GLASS_CHILDREN', 'childGlassKey',
-    'onToggleSceneLive', 'onLiveBootDelay', 'onSceneLiveFps',
+    'onToggleSceneLive', 'onLiveBootDelay', 'onSceneLiveFps', 'onSceneAutoQuality',
     'onPlaybackRate', 'onObjectFit', 'onFlip', 'onOpenPicker', 'setPickerOpener',
     // 侧栏壁纸档的「壁纸属性」：开关读数 / 开关动作 / 面板渲染器**都是模块级的**
     //（client.js 里的函数声明），本台把它们当自由变量带传进来 —— 与内联后的真实形态一致。
@@ -3485,7 +3624,7 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
   const selBase = Object.assign({}, schema.DEFAULTS, {
     loaded: true, loading: false, id: 'w1', url: '/x', playing: true, videoPlaying: true,
     videoVolume: 0.5, videoAudioEnabled: false, videoError: '', type: 'video',
-    contentRatingFilter: 'all', hiddenIds: [], rotationGroups: [], rotationGroupId: '',
+    contentRatingFilter: 'all', hiddenIds: [], rotationGroups: [{ id: 'g1', name: 'G', interval: 10, order: 'sequence', wallpaperIds: ['w1', 'w2'] }], rotationGroupId: 'g1',
     rotationEnabled: false, qpSearch: '', qpType: 'all', url2: '',
     inventory: { wallpapers: [], error: null, installDir: '/we', uploadDir: '/up', weAssetsDir: null, sceneMediaBase: '', total: 0, portableCount: 0, playlists: [] },
     accent: '#4f8cff', glassColor: '#ffffff', glassAlpha: 0, blur: 0, border: 0,
@@ -3530,7 +3669,7 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
       // 运行期：`fontSet.open` 若被读到就是布尔而不是 undefined 属性错）。
       fontSetCtx: () => ({ open: false, fontSets: [], activeId: '', loading: false, error: '' }),
       officialColorOf: () => '#ffffff',
-      onToggleSceneLive: noop, onLiveBootDelay: noop, onSceneLiveFps: noop,
+      onToggleSceneLive: noop, onLiveBootDelay: noop, onSceneLiveFps: noop, onSceneAutoQuality: noop,
       onPlaybackRate: noop, onObjectFit: noop, onFlip: noop, onOpenPicker: noop, setPickerOpener: noop,
       userPropsPanelOpen: () => SEL.userPropsPanelOpen === true,
       openUserPropsPanel: () => { OPEN_CALLS.push(1); SEL.userPropsPanelOpen = true; },
@@ -3720,11 +3859,16 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
   // 这一节的），于是判据会把整个词表都报成"漏解构"。这类"切错了还照旧报"正是判据要防的形状。
   const tabsSrcNow = panelText()
     .replace(/\r\n/g, '\n')
-    + '\n;\n' + fontSectionSrc;
+    + '\n;\n' + fontSectionSrc
+    + '\n;\n' + wallpaperSectionsSrc
+    + '\n;\n' + playbackSectionsSrc;
   // 这些名字在产物里是**内联同一作用域**的常量 / 纯组件 / 纯函数；单独 import 时按内联规则
   // 补 globalThis 替身（`weT` 由 tools/weT-shim.mjs 装、React 等由上面那块装）。
   Object.assign(globalThis, {
     DEFAULTS: schemaMod.DEFAULTS,
+    // P-D S3b：窄键 `rotationIntervalDefault` 是主 bundle 作用域的常量（= DEFAULTS.rotationInterval），
+    // 轮播节的「间隔」下拉在没选分组时用它当默认值 ⇒ 单独 import 时按内联规则补同值替身。
+    rotationIntervalDefault: schemaMod.DEFAULTS.rotationInterval,
     ADAPTER_TARGET_VALUES: schemaMod.ADAPTER_TARGET_VALUES,
     Toggle: noop, VinylRecord: noop,
     SWITCH_DIRS: ['left', 'right'], SWITCH_DIR_LABELS: { left: '左', right: '右' },
@@ -3734,7 +3878,20 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
     adapterCaps: () => ({}), adapterDetectedLabel: () => '', adapterMismatchWarning: () => '',
     liveDiagVerbose: () => false, weAudioVolume: () => 0, vinylSpinVisible: () => false,
     liveFailReasonOf: () => '', groupWallpapers: () => [], switchFrames: () => [],
-    switchTransitionOf: () => ({ id: 'fade', dir: 'left', speed: 'normal', ms: 400 }),
+    // P-D S3b：过场节搬进包内后，这个自由标识符由本替身提供 —— 替身必须与真实现同形：
+    // `directional` 只在方向型过场（真集合 SWITCH_DIRECTIONAL = push/wipe/bars）才为 true。
+    // 恒 true 会让默认 `cut` 下的标签快照凭空多出「方向」＝ 钉住一个真实界面不会出现的状态；
+    // 下方 on* 覆盖用例改用 wipe 让方向段真的出现（另有同形断言钉替身与真集合不脱钩）。
+    switchTransitionOf: (selLike) => {
+      const id = (selLike && selLike.switchTransition) || schemaMod.DEFAULTS.switchTransition;
+      return {
+        id,
+        dir: 'left',
+        speed: 'normal',
+        ms: 400,
+        directional: ['push', 'wipe', 'bars'].includes(id),
+      };
+    },
     renderConfirmRow: noop,
     changeUploadDir: async () => {}, changeWeAssetsDir: async () => {},
     uploadWallpaperFile: () => {}, removeUploadWallpaper: () => {},
@@ -4045,11 +4202,11 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
     // 模块级 ↺ 必须**覆盖外观页签下的每个模块**（用户口径："外观下的模块也要能单独重置"）：
     // 六个外观节各有一处调用，且共用构件必须阻止冒泡（否则点 ↺ 会连带收起该节）。
     const mrSrc = readFileSync(join(root, 'src', 'module-reset.js'), 'utf8').replace(/\r\n/g, '\n');
-    const gpSrc = readFileSync(join(root, 'src', 'glass-panel.js'), 'utf8').replace(/\r\n/g, '\n');
+    const gpSrc = readFileSync(join(root, 'packages', 'glass', 'src', 'glass-panel.js'), 'utf8').replace(/\r\n/g, '\n');
     // ⚠️ 刀4 之后节的渲染器搬到了 src/panel-tabs-*.js 域模块 ⇒ 扫**页签族全文**（组装点在末尾），
     //    而不是组装点单文件（否则六处调用全在域模块里 ⇒ 假红 missing=theme,detail,…）。
     const appearanceModules = ['theme', 'detail', 'corners', 'uiColor', 'font'];
-    const panelAllSrc = panelText() + '\n;\n' + fontSectionSrc;
+    const panelAllSrc = panelText() + '\n;\n' + fontSectionSrc + '\n;\n' + wallpaperSectionsSrc + '\n;\n' + playbackSectionsSrc;
     const missingModules = appearanceModules.filter((m) => !panelAllSrc.includes('moduleResetButton("' + m + '"'));
     check('#192 外观六模块各挂 ↺ + 玻璃 UI 也挂 + 共用构件阻止冒泡',
       missingModules.length === 0
@@ -6041,7 +6198,7 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
           querySelector: (sel) => query(body, sel)[0] || null,
         };
         globalThis.MutationObserver = MO;
-        // 有意喂一个 SUT 不认的字段：`src/avatar-layer.js:268/275/276` 只按名读 enabled / size / radius，
+        // 有意喂一个 SUT 不认的字段：`syncAvatarLayer` 只按名读 enabled / size / radius，
         // 而 ③ 断言节点仍只有一枚 `.we-avatar__glyph` 子节点 ⇒ 证明设置里多出来一个名字字段也不会
         // 凭空长出名字节点（未知字段负对照，保留）。
         globalThis.selection = { avatarEnabled: true, avatarSize: 40, avatarRadius: 100, avatarUserName: '' };
@@ -6113,7 +6270,7 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
   const st = Object.assign({}, schemaMod.DEFAULTS, {
     loaded: true, loading: false, id: 'w1', url: '/x', type: 'video', playing: true,
     videoPlaying: true, videoVolume: 0.5, videoAudioEnabled: false, videoError: '',
-    contentRatingFilter: 'all', hiddenIds: [], rotationGroups: [], rotationGroupId: '',
+    contentRatingFilter: 'all', hiddenIds: [], rotationGroups: [{ id: 'g1', name: 'G', interval: 10, order: 'sequence', wallpaperIds: ['w1', 'w2'] }], rotationGroupId: 'g1',
     rotationEnabled: false, flip: false, objectFit: 'cover', playbackRate: 1,
     sceneLive: true, sceneLiveFailures: {}, themeFollow: false, themeFollowLine: '',
     adapterTarget: 'auto', pauseOnHidden: false, pauseOnBlur: false, pauseOnBattery: false,
@@ -6131,9 +6288,11 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
       label: '',
       mk: () => st,
       want: ['当前壁纸', '切换过场', '自动轮播', '自定义壁纸'],
-      // ⚠️ 实测：456 行的渲染器在「最小替身」下只吐出 3 个控件标签 —— 说明 `editing` / `groups` /
-      // `uploadedList` / `propsPanelOpen` 这些门关着时，四节里绝大部分内容**根本没被渲染**。
-      // 钉住现状不是认可它：门的另一侧一旦开始渲染，这条就会变红、逼人回来看（下一步就是开门）。
+      // ⚠️ 实测：渲染器在「最小替身」下只吐出 3 个控件标签（过场动画 / 时长 / 自动轮转）——
+      // 说明 `editing` / `groups` / `uploadedList` / `propsPanelOpen` 这些门关着时，四节里绝大部分
+      // 内容**根本没被渲染**。钉住现状不是认可它：门的另一侧一旦开始渲染，这条就会变红、逼人
+      // 回来看（下一步就是开门）。默认过场 `cut` **不是**方向型 ⇒ 没有「方向」行（真实现同此）；
+      // 方向段由下方 on* 覆盖用例用 wipe 单独开出来，不要靠恒 true 的替身把它塞进这条快照。
       wantLabels: ['过场动画', '时长', '自动轮转'],
       // 门的**另一侧**：这几条门关着时，编辑器块 / 上传列表 / 错误与提示都不该出现 ——
       // 与后面两条"开门"用例成对，钉住"门"本身（只钉开门侧的话，"把门拆掉、永远画编辑器"也会绿）。
@@ -6369,6 +6528,275 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
     sectionSeq({ props: { className: 'we-picker__ctl' }, children: ['当前壁纸'] }).length === 0
     && sectionSeq({ props: { className: 'we-picker__section-label' }, children: ['当前壁纸'] }).length === 1);
 
+  // ── P-D S3b：搬出去的两节，其 ctx 回调必须在**真渲染**里逐个到达（on* 覆盖率判据）────
+  // 为什么需要它：节渲染器搬进包内文件后，"控件画出来没有"由类名锚/标签锚守着，但**回调是否
+  // 真的接到 ctx 上**没有判据 —— 渲染器里把一个 onX 接错/漏接，类名锚照旧绿。做法：真渲染一次
+  // 「三节全开门」的壁纸页签，深度优先把树上所有 on<X> 函数 prop 都调一遍，数哪些 ctx 回调真被
+  // 触达；再拿"把两个会渲染回调按钮的替身掐掉"的对照证明它看得见缺失。只扫 on* prop（React 的
+  // 事件口），不扫业务回调 prop（如 renderUserPropsPanel 由节直接调用，不是事件）。
+  {
+    const S3B_CALLBACKS = ['onSwitchTransition', 'onSwitchTransitionDir', 'onSwitchTransitionSpeed',
+      'onArmDeleteGroup', 'onDeleteGroup', 'onDisarmConfirm', 'onEditInterval', 'onEditName',
+      'onEditOrder', 'onGroupChange', 'onGroupInterval', 'onOpenPickerDraft', 'onToggleRotation'];
+    const firedOf = (stubs) => {
+      const fired = [];
+      const sel = Object.assign({}, st, {
+        rotationGroupId: 'g1', rotationEnabled: true,
+        // 方向型过场才画「方向」段（真实现 SWITCH_DIRECTIONAL = push/wipe/bars）⇒ 这里显式选 wipe，
+        // 否则 onSwitchTransitionDir 在树上没有落点，覆盖率判据会误报"漏接"。
+        switchTransition: 'wipe',
+        inventory: Object.assign({}, st.inventory, {
+          playlists: [{ id: 'p1', name: 'P 列表', portableCount: 1 }],
+        }),
+      });
+      const ctxBase = Object.assign({}, CASES[0].ctx(sel), {
+        groups: [{ id: 'g1', name: 'A 组', wallpaperIds: ['w1'], interval: 10, order: 'sequence' }],
+        group: { id: 'g1', name: 'A 组', wallpaperIds: ['w1'], interval: 10, order: 'sequence' },
+        armedConfirm: 'group:g1',
+        uploadedList: [{ id: 'u1', title: '上传的壁纸' }],
+        playableCount: 2,
+      });
+      // #255②：轮播编辑器展开时「自动轮转」行**按设计不渲染** ⇒ 覆盖率要在两个门态下各渲染一次
+      // （编辑态覆盖编辑器回调，收起态覆盖自动轮转行回调），取并集。
+      const variants = [
+        { editing: { name: 'A 组', interval: 10, order: 'sequence', wallpaperIds: ['w1'] } },
+        { editing: null, armedConfirm: '' },
+      ];
+      const prevConfirm = globalThis.renderConfirmRow;
+      const prevToggle = globalThis.Toggle;
+      globalThis.renderConfirmRow = stubs.renderConfirmRow;
+      globalThis.Toggle = stubs.Toggle;
+      try {
+        const events = [{ target: { value: 'g1' } }, { target: { value: 'p1' } },
+          { target: { value: 'random' } }, { target: { checked: true } }];
+        for (const variant of variants) {
+          const ctx = Object.assign({}, ctxBase, variant);
+          for (const name of S3B_CALLBACKS) ctx[name] = () => { fired.push(name); };
+          const tree = panelMod.renderWallpaperTab(ctx);
+          const walk = (node) => {
+            if (Array.isArray(node)) { node.forEach(walk); return; }
+            if (!node || typeof node !== 'object') return;
+            for (const [key, value] of Object.entries(node.props || {})) {
+              if (!/^on[A-Z]/.test(key) || typeof value !== 'function') continue;
+              // 下游替身可能先炸（例如控件 prop 形状不对）；本判据只数"回调被触达"。
+              for (const ev of events) { try { value(ev); } catch { /* 见上 */ } }
+            }
+            if (Array.isArray(node.children)) node.children.forEach(walk);
+          };
+          walk(tree);
+        }
+      } finally {
+        globalThis.renderConfirmRow = prevConfirm;
+        globalThis.Toggle = prevToggle;
+      }
+      return S3B_CALLBACKS.filter((name) => fired.includes(name));
+    };
+    const liveStubs = {
+      renderConfirmRow: (armed, token, question, onConfirm, onDisarm) => REACT.createElement('div', null,
+        REACT.createElement('button', { onClick: onConfirm }, '确认'),
+        REACT.createElement('button', { onClick: onDisarm }, '取消')),
+      Toggle: (props) => REACT.createElement('button', { onClick: props.onChange }, props.label || '开关'),
+    };
+    const got = firedOf(liveStubs);
+    check('P-D S3b：搬出两节的 13 个 ctx 回调在真渲染里逐个触达（on* 覆盖率）',
+      got.length === S3B_CALLBACKS.length,
+      '触达 ' + got.length + '/' + S3B_CALLBACKS.length + '；缺=['
+      + S3B_CALLBACKS.filter((name) => !got.includes(name)).join(', ') + ']');
+    // 负对照：把两个"会渲染回调按钮"的替身掐成 noop ⇒ 这三枚必须触达不到；其余 10 枚走的是
+    // 真 <select>/<button> 节点（替身影响不到）⇒ 缺失集合必须**恰好**是这三枚。
+    const dead = firedOf({ renderConfirmRow: () => null, Toggle: () => null });
+    const missing = S3B_CALLBACKS.filter((name) => !dead.includes(name));
+    check('negative control：掐掉确认行/开关替身 ⇒ 恰好看得见 onDeleteGroup/onDisarmConfirm/onToggleRotation 缺失',
+      missing.length === 3 && ['onDeleteGroup', 'onDisarmConfirm', 'onToggleRotation'].every((name) => missing.includes(name)),
+      'missing=[' + missing.join(', ') + ']');
+    // 替身同形（防"判据钉住替身而不是钉住实现"）：上面的 switchTransitionOf 替身把方向集合写成
+    // 字面量，必须与真实现的 `SWITCH_DIRECTIONAL` 一致；两处一旦脱钩，本判据与标签快照都会
+    // 开始描述一个真实界面不会出现的状态。
+    const realDirectional = (/const SWITCH_DIRECTIONAL = \[([^\]]*)\]/.exec(clientText()) || [null, ''])[1]
+      .split(',').map((s) => s.trim().replace(/^["']|["']$/g, '')).filter(Boolean).sort();
+    const stubDirectional = ['push', 'wipe', 'bars'];
+    check('P-D S3b：switchTransitionOf 替身的方向集合与 src/client.js 的 SWITCH_DIRECTIONAL 同源',
+      realDirectional.join(',') === stubDirectional.slice().sort().join(','),
+      '真=[' + realDirectional.join(',') + '] 替身=[' + stubDirectional.join(',') + ']');
+  }
+
+  // ── P-D S3c：搬出去的「当前壁纸」节：可见状态快照 + 属性面板入口纪律 ─────────────
+  // 搬走的是**消费者**：包内源码里"那几行还在"只是必要条件，真正要钉的是"按 sel 的真值
+  // 画对的那一行 / 画对的那个 playing"。做法：真渲染整页签（四节都经注册表），按节点类名 +
+  // 文本取快照；每条再加负对照（合成输入喂回同一条判据必须判红）。
+  {
+    const renderCurrent = (sel, ctxOver) => panelMod.renderWallpaperTab(
+      Object.assign({}, CASES[0].ctx(sel), ctxOver));
+    const walkNodes = (root, visit) => {
+      if (Array.isArray(root)) { root.forEach((x) => walkNodes(x, visit)); return; }
+      if (!root || typeof root !== 'object') return;
+      visit(root);
+      if (Array.isArray(root.children)) root.children.forEach((x) => walkNodes(x, visit));
+    };
+    const nodesOfClass = (root, cls) => {
+      const out = [];
+      walkNodes(root, (n) => { if (n.props && n.props.className === cls) out.push(n); });
+      return out;
+    };
+    const errorLinesOf = (tree) => nodesOfClass(tree, 'we-picker__current-error')
+      .flatMap((n) => (n.children || []).filter((c) => typeof c === 'string'));
+    const withLiveFail = (reason, fn) => {
+      const prev = globalThis.liveFailReasonOf;
+      globalThis.liveFailReasonOf = () => reason;
+      try { return fn(); } finally { globalThis.liveFailReasonOf = prev; }
+    };
+
+    // ① 失败原因三行：videoError / blockedNote / liveFailReasonOf 三个来源**各自**成行，
+    //    互不吞并；空值时一行都不画（条件是分支，不是常驻行）。
+    const selVideo = Object.assign({}, st, { videoError: '解码失败' });
+    const selBlocked = Object.assign({}, st, { blockedNote: '分级拦截' });
+    const gotVideo = withLiveFail('', () => errorLinesOf(renderCurrent(selVideo)));
+    const gotBlocked = withLiveFail('', () => errorLinesOf(renderCurrent(selBlocked)));
+    const gotLive = withLiveFail('no-frame', () => errorLinesOf(renderCurrent(st)));
+    const gotNone = withLiveFail('', () => errorLinesOf(renderCurrent(st)));
+    const threeReasonOk = (video, blocked, live, none) =>
+      video.length === 1 && video[0] === '解码失败'
+      && blocked.length === 1 && blocked[0] === '分级拦截'
+      && live.length === 1 && live[0].includes('实时渲染失败') && live[0].includes('no-frame')
+      && none.length === 0;
+    check('P-D S3c：「当前壁纸」节三条失败原因各自成行（videoError / blockedNote / liveFailReasonOf），空值全不画',
+      threeReasonOk(gotVideo, gotBlocked, gotLive, gotNone),
+      'video=' + JSON.stringify(gotVideo) + ' blocked=' + JSON.stringify(gotBlocked)
+      + ' live=' + JSON.stringify(gotLive) + ' none=' + JSON.stringify(gotNone));
+    // 负对照：喂"三行同时出现 / 恒空也画一行"的合成快照，同一条判据必须判红。
+    check('negative control：失败原因合成快照被判红（漏行 / 恒画行都看得见）',
+      !threeReasonOk([], gotBlocked, gotLive, gotNone)
+      && !threeReasonOk(gotVideo, gotBlocked, ['实时渲染失败（x）'], gotNone)
+      && !threeReasonOk(gotVideo, gotBlocked, gotLive, ['恒画的一行']));
+
+    // ② VinylRecord 的播放态：`playing = playbackLive && Boolean(sel.url) && vinylSpinVisible()`。
+    //    四组输入钉住三个与操作数（任一项不成立 ⇒ 不转）；第三组就是 vinylSpinVisible 的
+    //    **反比**语义（开关说"不转"⇒ playing 必须 false，不许被别的真值短路）。
+    const vinylPlayingStates = (entries) => {
+      const prevVinyl = globalThis.VinylRecord;
+      const out = [];
+      globalThis.VinylRecord = (props) => { out.push(props && props.playing); return null; };
+      try {
+        for (const e of entries) {
+          const prevSpin = globalThis.vinylSpinVisible;
+          globalThis.vinylSpinVisible = () => e.spin;
+          try { renderCurrent(e.sel, e.ctxOver); } finally { globalThis.vinylSpinVisible = prevSpin; }
+        }
+      } finally { globalThis.VinylRecord = prevVinyl; }
+      return out;
+    };
+    const vinylPlayingOk = (states) => states.length === 4
+      && states[0] === true && states[1] === false && states[2] === false && states[3] === false;
+    const vStates = vinylPlayingStates([
+      { sel: st, ctxOver: { playbackLive: true }, spin: true },
+      { sel: st, ctxOver: { playbackLive: true }, spin: false },
+      { sel: st, ctxOver: { playbackLive: false }, spin: true },
+      { sel: Object.assign({}, st, { url: '' }), ctxOver: { playbackLive: true }, spin: true },
+    ]);
+    check('P-D S3c：VinylRecord.playing 三与一（playbackLive · sel.url · vinylSpinVisible 反比）四组快照',
+      vinylPlayingOk(vStates), 'playing=' + JSON.stringify(vStates));
+    // 负对照：四组里任一门被拆掉，对应的那格会翻成 true ⇒ 同一条判据判红。
+    check('negative control：拆掉任一与操作数（或让 vinylSpinVisible 失效）⇒ 播放态快照判红',
+      !vinylPlayingOk([true, true, false, false])
+      && !vinylPlayingOk([true, false, true, false])
+      && !vinylPlayingOk([true, false, false, true]));
+
+    // ③ 属性面板入口：只认 `ctx.renderUserPropsPanel()`（渲染器自己不画面板，也不许在包内定义它）。
+    //    ⚠️ 实测语义：节**无条件调用**它（不是 `propsPanelOpen && …`）—— 可见性由面板渲染器自己
+    //    决定（关着时返回 null）。所以判据钉「树里画不画 = ctx 那个函数的返回值」，不把门写进节里
+    //    （否则就是判据替实现另立一套契约）。
+    const propsStubNode = () => REACT.createElement('div', { className: 'we-picker__props-stub' });
+    const propsTree = renderCurrent(st, {
+      propsPanelOpen: false,
+      renderUserPropsPanel: propsStubNode,
+    });
+    const propsOffTree = renderCurrent(st, {
+      propsPanelOpen: true,
+      renderUserPropsPanel: () => null,
+    });
+    const propsPanelViaCtxOnly = (text) => text.includes('renderUserPropsPanel()')
+      && !/function\s+renderUserPropsPanel\s*\(/.test(text)
+      && !/const\s+renderUserPropsPanel\s*=/.test(text);
+    check('P-D S3c：属性面板画不画由 ctx.renderUserPropsPanel() 的返回值决定（节原样调用、不另立可见性契约）',
+      nodesOfClass(propsTree, 'we-picker__props-stub').length === 1
+      && nodesOfClass(propsOffTree, 'we-picker__props-stub').length === 0,
+      'returns-node=' + nodesOfClass(propsTree, 'we-picker__props-stub').length
+      + ' returns-null=' + nodesOfClass(propsOffTree, 'we-picker__props-stub').length);
+    check('P-D S3c：包内四节对 renderUserPropsPanel **只调用不定义**（跨包通道只有 ctx 显式键）',
+      propsPanelViaCtxOnly(wallpaperSectionsSrc), '包内出现定义即假');
+    check('negative control：包内自带定义 ⇒ 同一条判据判红',
+      !propsPanelViaCtxOnly('function renderUserPropsPanel() {\n    return null;\n  }'));
+  }
+
+  // ── P-D S3d：播放配置两节（倍速/帧率上限 · 适配/翻转）搬进包内 ─────────────────
+  {
+    // ① 组装点只经注册表续接（静态取文：组装点正文）；负对照把直调加回去必须红。
+    const effectsBodyAt = tabsSrcNow.indexOf('function renderEffectsTab(ctx) {');
+    if (effectsBodyAt < 0) throw new Error('找不到 renderEffectsTab（判据不得空转）');
+    const effectsTabBody = tabsSrcNow.slice(effectsBodyAt, tabsSrcNow.indexOf('\n  }\n', effectsBodyAt));
+    const assembledViaRegistry = (body) => body.includes('wePanelSectionsOf("playback")')
+      && !body.includes('renderEffectsPlaybackSection(') && !body.includes('renderEffectsFitSection(');
+    check('P-D S3d：播放页组装点只经注册表续接（不再直调倍速/适配两节）',
+      assembledViaRegistry(effectsTabBody), 'body=' + effectsTabBody.length + ' 字符');
+    check('negative control：把任一直调加回组装点 ⇒ 同一条判据判红',
+      !assembledViaRegistry(effectsTabBody + '\n        renderEffectsFitSection(ctx),'));
+
+    // ② 侧栏档只少「准备与诊断」三行（帧率上限档位 / 源信息 / 转码进度），倍速 / 适配 / 翻转照旧。
+    //    判据钉**行为面**（树里画了什么），对重构不敏感、对回归敏感。
+    const videoSel = Object.assign({}, st, {
+      type: 'video',
+      mediaInfo: { width: 1920, height: 1080, fps: 60, codec: 'avc1' },
+      transcodeState: 'working',
+      transcodeProgress: { percent: 42, phase: 'download', eta: 3 },
+    });
+    const fxTab = (surface, progress) => panelMod.renderEffectsTab({
+      sel: progress === undefined ? videoSel : Object.assign({}, videoSel, { transcodeProgress: progress }),
+      surface,
+      setPickerOpener: noop, onOpenPicker: noop, onPickWallpaper: noop,
+      onFpsCap: noop, onPlaybackRate: noop, onObjectFit: noop, onFlip: noop,
+    });
+    const fxSettings = fxTab('settings');
+    const fxSidebar = fxTab('sidebar');
+    const textAll = (t) => treeStrings(t).join('\n');
+    const twoSurfacesGap = (settingsT, sidebarT) =>
+      labelSeq(settingsT).includes('帧率上限') && !labelSeq(sidebarT).includes('帧率上限')
+      && classKinds(settingsT).some((c) => c.split(/\s+/).includes('we-picker__prog'))
+      && !classKinds(sidebarT).some((c) => c.split(/\s+/).includes('we-picker__prog'))
+      && textAll(settingsT).includes('源 ') && !textAll(sidebarT).includes('源 ')
+      && ['倍速', '适配', '水平翻转'].every((l) => labelSeq(settingsT).includes(l) && labelSeq(sidebarT).includes(l));
+    check('P-D S3d：侧栏档只少「准备与诊断」三行（帧率上限 / 源信息 / 转码进度），倍速 / 适配 / 翻转照旧',
+      twoSurfacesGap(fxSettings, fxSidebar),
+      'settings=' + labelSeq(fxSettings).join('/') + ' sidebar=' + labelSeq(fxSidebar).join('/'));
+    check('negative control：把两档对调喂进同一条判据 ⇒ 判红（不是恒真）',
+      !twoSurfacesGap(fxSidebar, fxSettings));
+
+    // ③ 转码进度 percent 夹取：aria-valuenow ∈ [0,100]、条宽 ∈ [2%,100%] —— 越界值必须被夹住。
+    const nodesWithClass = (root, cls, acc = []) => {
+      if (Array.isArray(root)) { root.forEach((x) => nodesWithClass(x, cls, acc)); return acc; }
+      if (!root || typeof root !== 'object') return acc;
+      const cn = root.props && root.props.className;
+      if (typeof cn === 'string' && cn.split(/\s+/).includes(cls)) acc.push(root);
+      if (Array.isArray(root.children)) root.children.forEach((x) => nodesWithClass(x, cls, acc));
+      return acc;
+    };
+    const clampOne = (percent) => {
+      const t = fxTab('settings', { percent, phase: 'download', eta: 3 });
+      const bar = nodesWithClass(t, 'we-picker__prog-bar')[0];
+      const track = nodesWithClass(t, 'we-picker__prog-track')[0];
+      return {
+        width: bar && bar.props && bar.props.style && bar.props.style.width,
+        now: track && track.props && track.props['aria-valuenow'],
+      };
+    };
+    const clampJudge = (g, percent) => g.width === Math.max(2, Math.min(100, percent)) + '%'
+      && g.now === Math.max(0, Math.min(100, percent));
+    check('P-D S3d：转码进度 percent 夹取（150 → 100% / -8 → 2% / 42.7 原样）',
+      clampJudge(clampOne(150), 150) && clampJudge(clampOne(-8), -8) && clampJudge(clampOne(42.7), 42.7),
+      '150=' + JSON.stringify(clampOne(150)) + ' -8=' + JSON.stringify(clampOne(-8)));
+    check('negative control：未夹取的形态（150% / 150）会被同一条判据判红',
+      !clampJudge({ width: '150%', now: 150 }, 150));
+  }
+
   // ── appearance / effects：同一套挂载台（ctx 由**渲染器自己的解构行**驱动）────────
   // 这两页签的节顺序此前也没有判据（`verify-fontset` 只判"某串在场"，`renderEffectsTab`
   // 甚至只有一个节标签）。补上之后，它们才具备"按节拆成子渲染器"的安全网（P4-19 余项）。
@@ -6529,12 +6957,12 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
       // 实测：13 个标签 —— 比网页档多的两个（`出图来源` / `自定义画面`）正是**场景专属**那两行
       // （网页壁纸没有"出图来源"这一说）。标签锚是**精确序列**判定 ⇒ 两个方向都钉住了。
       wantLabels: ['壁纸模糊', '亮度', '对比度', '饱和度', '水平', '垂直', '缩放', '壁纸透明度', '暗化', '场景实时渲染',
-        '启动最长等待时间', '实时渲染帧率', '出图来源', '自定义画面', '适配', '水平翻转'] },
+        '启动最长等待时间', '实时渲染帧率', '自动画质', '出图来源', '自定义画面', '适配', '水平翻转'] },
     { fn: 'renderEffectsTab', label: '（画面 · 网页壁纸：实时渲染组出现）', surface: 'settings',
       selOver: { type: 'web', webLive: true, webLiveSrc: '/x' },
       want: ['画面'],
       wantLabels: ['壁纸模糊', '亮度', '对比度', '饱和度', '水平', '垂直', '缩放', '壁纸透明度', '暗化', '网页实时渲染',
-        '启动最长等待时间', '实时渲染帧率', '适配', '水平翻转'] },
+        '启动最长等待时间', '实时渲染帧率', '自动画质', '适配', '水平翻转'] },
     // 目标③ 余项 1：「实时帧」那一段（门 = gpuFrameUi.wid === sel.id && pinned —— 这一张壁纸的槽里真有帧）。
     // 它有几行随 w/h/error/recapturing/busy 显隐的分支，全在模块级替身里，故用 globals。
     { fn: 'renderEffectsTab', label: '（画面 · 场景壁纸 + 本壁纸已固定实时帧）', surface: 'settings',
@@ -6543,7 +6971,7 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
       want: ['画面'],
       // 实测 14 个：门打开后多出 `实时帧`（正好夹在 `出图来源` 与 `自定义画面` 之间）。
       wantLabels: ['壁纸模糊', '亮度', '对比度', '饱和度', '水平', '垂直', '缩放', '壁纸透明度', '暗化', '场景实时渲染',
-        '启动最长等待时间', '实时渲染帧率', '出图来源', '实时帧', '自定义画面', '适配', '水平翻转'] },
+        '启动最长等待时间', '实时渲染帧率', '自动画质', '出图来源', '实时帧', '自定义画面', '适配', '水平翻转'] },
     // 目标③ 余项 2：转码进度行的 done 态（另一态由「进行中」覆盖）。
     { fn: 'renderEffectsTab', label: '（画面 · 转码进度 done）', surface: 'settings',
       selOver: { type: 'video', transcodeState: 'working', transcodeProgress: { phase: 'done', percent: 100 } },
@@ -7182,15 +7610,16 @@ check('client posts assets dir to host route',
 // ⚠️ 读**宿主半**：`weAssetsAvailable()` 的产出点已随清单构建族搬进 `lib/inventory.js`（§★ W-B B1）。
 check('host inventory reports weAssets availability',
   /weAssetsAvailable: weAssetsAvailable\(\)/.test(hostHalfSrc));
-// ⚠️ 下面这组读**宿主半**：`/api/local-assets` 与 `/we-assets-dir` 已搬进
-//    `lib/routes/we-assets.js`（§★ 重构 W-B B1）。本文件头 `hostHalfSrc` 的约定 ——
+// ⚠️ 下面这组读**宿主半**：`/api/local-assets` 与 `/we-assets-dir` 已出户到
+//    `packages/media-bridge/lib/routes/we-assets.js`（S5b 刀1；§★ 重构 W-B B1 时先搬进
+//    `lib/routes/`）。本文件头 `hostHalfSrc` 的约定 ——
 //    断言"宿主仍实现某契约"必须覆盖族目录，否则"已搬走"会被误报成"契约丢了"。
-const weAssetsFamSrc = readFileSync(join(root, 'lib', 'routes', 'we-assets.js'), 'utf8');
+const weAssetsFamSrc = readFileSync(join(root, 'packages', 'media-bridge', 'lib', 'routes', 'we-assets.js'), 'utf8');
 /** 被搬走的路由体的指纹（只在这两处路由的响应里出现过）。 */
 const movedOut = (t) => /未知素材源/.test(t);
 check('host fences local-assets file paths',
   movedOut(hostHalfSrc) && /target\.startsWith\(root \+ sep\)/.test(hostHalfSrc));
-check('we-assets 族已搬进 lib/routes/we-assets.js（门面里零残留）',
+check('we-assets 族已搬进 packages/media-bridge/lib/routes/we-assets.js（门面里零残留）',
   !movedOut(hostSrc) && movedOut(weAssetsFamSrc)
     && /path: '\/api\/local-assets'/.test(weAssetsFamSrc)
     && /path: `\$\{BASE\}\/we-assets-dir`/.test(weAssetsFamSrc));
@@ -7198,6 +7627,7 @@ check('negative control: 门面里重新出现被搬走的路由体会被同一�
   movedOut(hostSrc + '\n  jsonOut(404, { error: `未知素材源：${id}` });'));
 
 // ── teardown ────────────────────────────────────────────────────────────────
+for (const d of componentDisposers) { try { if (typeof d === 'function') d(); } catch { /* 收尾失败不影响判定 */ } }
 try { if (dispose) dispose(); } catch { /* ignore */ }
 delete process.env.DSH_WE_STEAM_ROOT;
 delete process.env.DSH_WE_UPLOAD_DIR;

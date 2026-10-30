@@ -462,14 +462,13 @@ async function runQr(route, pathname, method, headers) {
   const clientSrc2 = panelText();
   check('渲染器用 apiUrl 拼路由路径（不是内联图）',
     /src: apiUrl\(ABOUT_QR_QQ_PATH\)/.test(clientSrc2) && /src: apiUrl\(ABOUT_QR_DOUYIN_PATH\)/.test(clientSrc2));
-  // ⚠️ 不能泛判 `data:image/png;base64,iVBOR` —— 吉祥物立绘就是这种（那两张该留）。要判的是
-  // **这两张码的字节**在不在 bundle 里：拿每张图 base64 的头 64 字符做指纹（内联过就必然命中）。
+  // 立绘已外置为 `/rope-art` 路由（不再内联），所以这里只判二维码字节不在 bundle。
+  // 要判的是 **这两张码的字节**在不在 bundle 里：拿每张图 base64 的头 64 字符做指纹（内联过就必然命中）。
   const bundle = read('lib/client.js');
   const fingerprints = ['qq-group.png', 'douyin-group.png']
     .map((f) => readFileSync(join(ABOUT_DIR, f)).toString('base64').slice(0, 64));
-  check('客户端产物里不再有这两张二维码的字节（bundle 体积那条腿；吉祥物立绘不受影响）',
-    fingerprints.every((fp) => !bundle.includes(fp))
-      && bundle.includes('data:image/png;base64,iVBOR'), // 吉祥物仍在（证明这条不是把 base64 一网打尽）
+  check('客户端产物里不再有这两张二维码的字节（bundle 体积那条腿）',
+    fingerprints.every((fp) => !bundle.includes(fp)),
     '指纹数=' + fingerprints.length + ' bundle=' + bundle.length + 'B');
 }
 

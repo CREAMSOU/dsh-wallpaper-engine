@@ -388,6 +388,25 @@ const requireMock = (spec) => {
   throw new Error('unexpected require: ' + spec);
 };
 const exportsObj = factory(requireMock);
+// P-D S3c：「壁纸库」页签四节已全部搬进 packages/media-bridge 的浏览器半边 ⇒ 抽屉里的
+// 「选择壁纸」/壁纸属性/播放控制等节点只在该产物登记 library 节之后才出现。与真实
+// loader 同形，在 apply() **之前**求值该产物（它的 factory 用主 bundle 的显式键集登记四节）。
+{
+  const wallpaperArtifact = readFileSync(
+    new URL('../packages/media-bridge/lib/client.media-bridge.js', import.meta.url), 'utf8');
+  const subHandoffs = [];
+  const savedLoader = sandbox.window.__ModuleLoader__;
+  sandbox.window.__ModuleLoader__ = { load: (h) => { subHandoffs.push(h); } };
+  new vm.Script(wallpaperArtifact, { filename: 'client.media-bridge.js' }).runInContext(sandbox);
+  sandbox.window.__ModuleLoader__ = savedLoader;
+  if (subHandoffs.length !== 1) {
+    throw new Error('wallpaper 浏览器半边必须恰好注册一份 bundle（实际 ' + subHandoffs.length + ' 份）');
+  }
+  const wallpaperExports = subHandoffs[0].factory((spec) => (
+    spec === 'dsh-plugin-wallpaper-engine' ? exportsObj : requireMock(spec)
+  ));
+  if (typeof wallpaperExports.apply !== 'function') throw new Error('wallpaper 浏览器半边必须导出 apply');
+}
 
 const pickerRenders = [];
 const slots = {
@@ -680,6 +699,31 @@ await sleep(80); // 等 loadPersisted → loadInventory → revalidateSelection 
     '模型 ' + modelB.playableList.length + ' / 渲染 ' + renderedCardCount(tree));
   check('负对照：把模型的搜索词换成空串（变异输入）后，同一条判据判为不一致',
     !crossLayerAgrees(tree, modelFromUi(tree, { search: '' })));
+}
+
+// #255③：库视图第一张「关闭」卡在有壁纸时是**暂停/继续**（保留当前画面），不是清空壁纸。
+{
+  const pickerSrc = readFileSync(new URL('../src/picker-modal.js', import.meta.url), 'utf8');
+  const clientSrc = readFileSync(new URL('../src/client.js', import.meta.url), 'utf8');
+  const closeCardShape = (t) => {
+    const m = /function renderPickerCloseCard\(ctx\) \{[\s\S]*?\n {2}\}/.exec(t);
+    if (!m) return null;
+    const body = m[0];
+    return {
+      toggle: body.includes('onTogglePlay'),
+      labels: body.includes('⏸ 暂停') && body.includes('▶ 播放'),
+      fallback: body.includes('closePicker'),
+    };
+  };
+  const shape = closeCardShape(pickerSrc);
+  check('#255③ 关闭卡有壁纸时走 pause/resume（onTogglePlay + 两种文案），无壁纸才回退 closePicker',
+    Boolean(shape && shape.toggle && shape.labels && shape.fallback), JSON.stringify(shape));
+  const oldBody = pickerSrc.replace(/function renderPickerCloseCard\(ctx\) \{[\s\S]*?\n {2}\}/,
+    'function renderPickerCloseCard(ctx) {\n    const { sel, onClear } = ctx;\n    return React.createElement("div", { onClick: onClear, title: weT("关闭壁纸") });\n  }');
+  check('#255③ negative control: 旧「直接 onClear」实现会被同一判据判红',
+    closeCardShape(oldBody) !== null && !closeCardShape(oldBody).toggle);
+  check('#255③ picker ctx forwards onTogglePlay（否则回落分支会把暂停静默变成清空）',
+    /onClear, onTogglePlay, onRatingFilterChange/.test(clientSrc));
 }
 
 console.log('');

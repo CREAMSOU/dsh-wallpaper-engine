@@ -23,8 +23,8 @@ import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createInventoryBuilder } from '../lib/inventory.js';
 import { createImagePreviewKit } from '../lib/media/image-preview.js';
-import { registerMediaBytesRoutes } from '../lib/routes/media-bytes.js';
-import { registerInventoryRoutes } from '../lib/routes/inventory.js';
+import { registerMediaBytesRoutes } from '../packages/media-bridge/lib/routes/media-bytes.js';
+import { registerInventoryRoutes } from '../packages/media-bridge/lib/routes/inventory.js';
 import { createServeKit } from '../lib/serve.js';
 import { createUploadDirKit } from '../lib/upload-dir.js';
 import { createUploadStoreKit } from '../lib/upload-store.js';
@@ -41,7 +41,7 @@ const schemaSrc = read('lib/settings-schema.js');
 const clientSrc = read('src/client.js');
 const avatarSrc = read('src/avatar-layer.js');
 const extAvatarSrc = read('src/ext-avatar.js');
-const tabsSrc = read('src/panel-tabs-wallpaper.js');
+const tabsSrc = read('packages/media-bridge/src/wallpaper-rotation-section.js');
 const videoSrc = read('src/video-layer.js');
 
 // ── ① avatarAiRepeatRows 四处齐 + 面板滑块 + 装饰层现读 ──────────────────────
@@ -405,7 +405,7 @@ const videoSrc = read('src/video-layer.js');
       broken.cached && broken.evicted && !broken.stableInventory && !broken.regenerated
       && broken.detail.includes('after=404'), broken.detail);
 
-    const bytes = read('lib/routes/media-bytes.js');
+    const bytes = read('packages/media-bridge/lib/routes/media-bytes.js');
     const noFallback = await loadMutant('no-fallback', replaceOnce(bytes, 'serveFile(thumb || abs,', 'serveFile(thumb,'));
     const brokenFallback = await judgePreview(createInventoryBuilder, noFallback.registerMediaBytesRoutes);
     check('负对照：删除原图 fallback，缺 ffmpeg 的同一 HTTP 判据必须红',
@@ -418,6 +418,23 @@ const videoSrc = read('src/video-layer.js');
   } finally {
     rmSync(iso, { recursive: true, force: true });
   }
+}
+
+// #255②：「自动轮转」行只在**选中列表且不在编辑**时渲染；旧实现常驻，没列表时只显示一句
+// 永远点不动的「请先选择或新建一个轮播列表」。
+{
+  const rotationSrc = read('packages/media-bridge/src/wallpaper-rotation-section.js');
+  // 注释里的旧文案不算代码（本文件在 #255② 的说明里引用了旧提示原文）——用共享的
+  // 字符串感知剥注释实现（verify-module-layout 禁止朴素块注释正则）。
+  const rotationCode = stripComments(rotationSrc);
+  const gatedCtl = (t) => t.includes('(sel.rotationGroupId && !editing) &&') && !t.includes('请先选择或新建一个轮播列表');
+  check('#255② 「自动轮转」行按 sel.rotationGroupId && !editing 门控，旧提示分支已删',
+    gatedCtl(rotationCode));
+  const oldStyle = rotationCode
+    .replace('(sel.rotationGroupId && !editing) && React.createElement("div", { className: "we-picker__ctl" },',
+      'React.createElement("div", { className: "we-picker__ctl" },')
+    .replace('ctlText(weT("自动轮转"),\n      playableCount < 2', 'ctlText(weT("自动轮转"),\n      !sel.rotationGroupId ? weT("请先选择或新建一个轮播列表") : playableCount < 2');
+  check('#255② negative control: 恢复旧常驻行会被同一 detector 判红', !gatedCtl(oldStyle));
 }
 
 if (stats.failed) {

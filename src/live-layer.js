@@ -64,6 +64,10 @@
  *   · **失败记忆带管线身份**：`sceneLiveFailures` 只在**同一条管线**内有效 —— bundle 变了、
  *     或媒体源从无到有，`migrateStaleLiveFailures` 就作废它一次（面板那行失败文案的唯一
  *     来源就是它；旧断言会让修好的版本看起来"完全没作用"）。反向不清（见那里）。
+ *   · **层所有权 = 本文件独占（P-D S4）**：`LAYER_ID` / `SCRIM_ID` 两层是进程内单例，只有本文件
+ *     建/领养/退役（`obtainLayerNode` / `syncScrimElement` / `retireFadingLayer`），`src/client.js`
+ *     的 fiber cleanup 摘净。`packages/media-bridge` 浏览器半边**不得**建层/退层/持 `#layer` 引用；
+ *     判据 = `test/verify-layer-ownership.mjs`（P1–P4，负对照含"两包各建层 / 退役后残留 iframe"）。
  *   · 本文件必须保持浏览器安全（无 import / require / Node API），且**不得有顶层可执行语句**
  *     读 client.js 的 const（会被内联到 bundle 顶部，撞 TDZ）。
  */
@@ -176,6 +180,11 @@ function liveRenderUrl(selLike) {
     // 控制经渲染页的 postMessage 通道下发，shim 由宿主注入 HTML 响应。
     + (isWeb ? "&webSandbox=strict" : "")
     + "&fit=" + fit + "&sceneFps=" + fps + "&muted=" + muted
+    // 自动画质（webwallgl 的 autoQuality）：渲染页的关闭开关是 `autoq=0`。默认不传 = 引擎按
+    // 帧率自行降后处理/粒子/AA；**关掉本设置**（sceneAutoQuality=false）才显式关掉，保住发光 /
+    // 音频可视化 / 光晕 —— 弱 GPU 上帧率压不住上限时它会一路降到 postProcessing=off，
+    // 视觉上就是"动态效果全没了"，而用户往往要的是效果，不是那几帧。
+    + (selLike.sceneAutoQuality === false ? "&autoq=0" : "")
     // WE 官方素材（local-assets）：host 报告素材目录可用时才打开渲染页的
     // 本地素材通路（探测 /api/local-assets，按名取官方像素）；否则渲染页
     // 静默走程序化复刻，连探测请求都不发。

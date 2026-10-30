@@ -1,5 +1,5 @@
 /**
- * 「外观」页签的节渲染器（原 src/panel-tabs.js）：主题 / 细节 /
+ * 「外观」页签的节渲染器（从 src/panel-tabs.js 按域拆出）：主题 / 细节 /
  * 侧边栏圆角 / 全局 UI 配色，含 sidebarCornerGroup 一族。本节渲染器从 src/panel-tabs.js 按域搬出，函数体逐字未改。
  * ⚠️ P-C 之后第六节「全局字体」**不在本文件**：它住在 packages/fonts/src/appearance-font-section.js，
  *    由子包把渲染器登记进面板节注册表（src/extension-registry.js），节顺序见 src/panel-tabs.js。
@@ -33,7 +33,7 @@
 
   function renderAppearanceDetailSection(ctx) {
     const { onBorder, onResetModule, sel, detailOpen, onToggleDetailSection } = ctx;
-    // 简化 / 高级分档见 ADR-0008 **D4**（实现口径在 `src/glass-panel.js`，按 `ctx.surface` 判定）：
+    // 简化 / 高级分档见 ADR-0008 **D4**（实现口径在 packages/glass/packages/glass/src/glass-panel.js，按 `ctx.surface` 判定）：
     // 全局四件套、预设方案与各面总开关属简化配置（侧栏档也画）；本节的「独立配置」层及其子项
     // 属高级配置 ⇒ 只在设置页画。它与 quick-panel 的 setting-only 占位器互为负对照。
     // ⚠️ 折叠门（**二次修订**）：**两档都支持隐藏**；差别只在默认值
@@ -43,11 +43,11 @@
     // ── 细节：只剩**非釉层**的「边框」（边框 / 分割线对比度）—— 不属于玻璃配方 ──
     React.createElement("div", { className: "we-picker__section" },
       sectionHead(weT("细节"), open, onToggleDetailSection, moduleResetButton("detail", onResetModule)),
-      open && SliderRow(weT("边框"), 0, 90, 5, Math.round(sel.border * 100), onBorder, Math.round(sel.border * 100) + "%", "border-emphasis", {
+      open && SliderRow(weT("边框"), 0, 90, 5, Math.round(sel.border * 100), onBorder, "%", "border-emphasis", {
         tooltip: weT("提高边框 / 分割线的对比度（浅色与深色主题通用）"),
       }),
       // ── 「左侧栏液态玻璃」及其子项在「玻璃 UI」节（门槛 `leftSidebarGlass`，见
-      //    `src/glass-panel.js`）：总开关两档都画，其下「独立配置」层属高级配置、只在设置页画。──
+      //    packages/glass/packages/glass/src/glass-panel.js）：总开关两档都画，其下「独立配置」层属高级配置、只在设置页画。──
     ),
     );
   }
@@ -73,9 +73,7 @@
               key: v,
               className: "we-picker__btn we-picker__rate" + (sel[radiusKey] === v ? " we-picker__rate--active" : ""),
               type: "button",
-              onClick: () => onSidebarCornerRadius(side, v),
-              "aria-pressed": sel[radiusKey] === v ? "true" : "false",
-              "aria-label": weT("{side}统一圆角 {value}", { side: sideLabel, value: radiusLabels[v] }),
+              onClick: () => onSidebarCornerRadius(side, v), "aria-pressed": sel[radiusKey] === v ? "true" : "false", "aria-label": weT("{side}统一圆角 {value}", { side: sideLabel, value: radiusLabels[v] }),
             }, radiusLabels[v]),
           ),
         ),
@@ -88,9 +86,7 @@
               key: c,
               className: "we-picker__btn we-picker__rate" + (isSquare(c) ? " we-picker__rate--active" : ""),
               type: "button",
-              onClick: () => onSidebarCornerSquare(side, c, !isSquare(c)),
-              "aria-pressed": isSquare(c) ? "true" : "false",
-              "aria-label": weT("{side}{corner}：{state}", { side: sideLabel, corner: cornerLabel, state: weT(isSquare(c) ? "直角" : "圆角") }),
+              onClick: () => onSidebarCornerSquare(side, c, !isSquare(c)), "aria-pressed": isSquare(c) ? "true" : "false", "aria-label": weT("{side}{corner}：{state}", { side: sideLabel, corner: cornerLabel, state: weT(isSquare(c) ? "直角" : "圆角") }),
             }, weT("{corner}角 {state}", { corner: cornerLabel, state: weT(isSquare(c) ? "直角" : "圆角") })),
           ),
         ),
@@ -145,8 +141,7 @@
       className: "we-picker__swatch we-picker__swatch--auto" + (sel[key] === "" ? " we-picker__swatch--active" : ""),
       type: "button",
       title: weT("跟随「全局配色」"),
-      onClick: () => onUiColorElement(key, ""),
-      "aria-label": weT("跟随全局配色"),
+      onClick: () => onUiColorElement(key, ""), "aria-label": weT("跟随全局配色"),
     }, weT("跟随"));
     return React.createElement(React.Fragment, null,
     React.createElement("div", { className: "we-picker__section" },
@@ -192,8 +187,7 @@
             className: "we-picker__swatch we-picker__swatch--auto" + (sel.caretColor === "" ? " we-picker__swatch--active" : ""),
             type: "button",
             title: weT("跟随 dsh 原生光标颜色"),
-            onClick: () => onCaretColor(""),
-            "aria-label": weT("光标颜色 自动"),
+            onClick: () => onCaretColor(""), "aria-label": weT("光标颜色 自动"),
           }, weT("自动")),
           colorValue: sel.caretColor || "#4f8cff",
         }),
@@ -203,7 +197,7 @@
   }
 
   // ── 「玻璃 UI」节：所有玻璃配置（含「左侧栏液态玻璃」及其子项）同处一节。渲染器在
-  //    `src/glass-panel.js` 的 renderAppearanceGlassSection（门槛一个都没放松）—— 它与其余页签
+  //    packages/glass/packages/glass/src/glass-panel.js 的 renderAppearanceGlassSection（门槛一个都没放松）—— 它与其余页签
   //    只共享模块级纯助手 ⇒ 不需要 ctx 样板，这里按名字调用即可。
 
 

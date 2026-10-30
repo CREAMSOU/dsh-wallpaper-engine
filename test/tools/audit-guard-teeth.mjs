@@ -170,10 +170,10 @@ const CAN_FAIL_RES = [
   [/\bassert\.\w+\(/, 'assert.*'],
 ];
 function cannotFail(src) {
-  // ⚠️ 必须走**字符串/正则感知**的共享剥离器（`test/tools/js-text.mjs:45-103`）——判据 F（`:177`）存在的
+  // ⚠️ 必须走**字符串/正则感知**的共享剥离器（`test/tools/js-text.mjs`）——判据 F（`:177`）存在的
   //    理由就是朴素正则不认字符串与正则字面量：`// 面 = \`test/**\`` 后面再跟一段文档注释，朴素剥法会从
   //    那个 `/*` 一路吃到文档注释的 `*/`，把夹在中间的 `process.exit(...)` 一起删掉，于是"有会红出口"的
-  //    守卫被判成恒绿（实测假阳性：`test/verify-i18n.mjs:1`，而该文件 `:433` 就是 `process.exit(failed ? 1 : 0)`）。
+  //    守卫被判成恒绿（实测假阳性：`test/verify-i18n.mjs`，而该文件 `:433` 就是 `process.exit(failed ? 1 : 0)`）。
   const code = stripComments(src);
   for (const [re] of CAN_FAIL_RES) if (re.test(code)) return null;
   return '既无 process.exit(1|2) / exitCode，也无 throw / assert';

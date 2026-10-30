@@ -13,7 +13,7 @@
  *   - 位置外推：快照里的 `positionMs` 是「上报时刻」的值，读的时候按
  *     `positionMs + (now - refMs) * rate` 外推（暂停/停止不外推）
  *
- * 协议约定（media-bridge docs/PROTOCOL.md）：**有 `ok` 是响应、有 `event` 是事件**，
+ * 协议约定（media-bridge 上游包的 docs/PROTOCOL.md）：**有 `ok` 是响应、有 `event` 是事件**，
  * 事件会插在任意两条响应之间 —— 所以绝不能用「下一行就是我的响应」这种读法。
  */
 import { spawn } from 'node:child_process';

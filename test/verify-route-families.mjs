@@ -37,8 +37,8 @@ import { buildIndex } from './tools/host-route-index.mjs';
 
 /** 触发线：同一族达到这么多条 ⇒ 必须裁决（见文件头）。 */
 const FAMILY_TRIGGER = 3;
-/** 覆盖面地板：路由条数少于它说明枚举退化了（而不是"族很干净"）。 */
-const ROUTE_FLOOR = 30;
+/** 覆盖面地板：路由条数少于它说明枚举退化了（实测 47 条）。 */
+const ROUTE_FLOOR = 40;
 /** 归族：与 `analyze-host-apply.mjs` 的 ② 组逐字相同的规则。 */
 const familyOf = (path) => (path === '(动态路径)' ? '(动态)' : (path.split('/').filter(Boolean)[0] || '/'));
 
@@ -82,7 +82,7 @@ try {
   check('路由枚举可用（buildIndex() 未抛）', false, String((err && err.message) || err));
 }
 // 覆盖面地板必须在分支**外面**：枚举静默退化成空表时（`buildIndex()` 不抛错 ——
-// 见 test/tools/host-route-index.mjs:173 `if (!existsSync(dir)) return [];`），
+// 见 test/tools/host-route-index.mjs `if (!existsSync(dir)) return [];`），
 // 下面整块会被跳过，届时只有这条能红；否则"没有大族，通过"会盖掉"枚举没了"。
 check('覆盖面：路由枚举非空（buildIndex() 返回了路由表，而非静默空表）', routes.length > 0,
   `实测 ${routes.length} 条`);
@@ -114,7 +114,7 @@ console.log('');
 if (failed) {
   console.log(`ROUTE-FAMILY TRIGGER FIRED — ${failed} 条不合格`);
   console.log('这不是代码缺陷，是**触发线被越过**：请做一次裁决 ——');
-  console.log('  ① 拆族（推荐）：见 lib/routes/ 现有 8 个族模块的形态 + 账本 §3.5 的固定动作；');
+  console.log('  ① 拆族（推荐）：见 lib/routes/ 现有 4 个族模块的形态 + 账本 §3.5 的固定动作；');
   console.log('  ② 或改账本 §7-6 的线，并**同改本文件**的 FAMILY_TRIGGER（判据与文档必须同时动）。');
   console.log('不做裁决而想让它变绿是不接受的：本判据没有忽略通道。');
   process.exit(1);

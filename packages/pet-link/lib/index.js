@@ -14,7 +14,7 @@ export function apply(ctx, config) {
 }
 
 export function applyImpl(ctx, config = {}, c) {
-  const { webServer } = ctx;
+  const webServer = c.tolerantWebServer(ctx.webServer);
   const { base, http } = c;
   const disposers = [];
   let active = true;

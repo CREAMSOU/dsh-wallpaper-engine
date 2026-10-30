@@ -6,19 +6,19 @@
  *   · `verify-package-publish` 判"装到用户机器上会不会坏 / 多带东西"（按 `files` 语义复刻的集合）；
  *   · `verify-deployment` 判 `releaseManifest` / `releaseSetMatches` 的**纯函数**行为，`--pack` 时才
  *     真打一次包、且只核名字与顺序（不在默认链里跑）；
- *   · 本条判**真正要发出去的那八个 tarball 的字节**：主包清单声明的七个子包是不是"精确版本、
+ *   · 本条判**真正要发出去的那整套 tarball 的字节**：主包清单声明的全部子包是不是"精确版本、
  *     与发布集里的 tarball 一一对应"，以及每个子包 tarball 里是不是真有它自己 `exports['./client']`
  *     指向的浏览器半边。
  *
- * 为什么它值得一条硬档：用户在 DSH 里执行 `pnpm add dsh-plugin-wallpaper-engine` 时，主包的七条
+ * 为什么它值得一条硬档：用户在 DSH 里执行 `pnpm add dsh-plugin-wallpaper-engine` 时，主包的八条
  * 精确依赖只要有一条在 registry 上找不到，安装就在**用户机器上**以
  * `ERR_PNPM_FETCH_404 … This error happened while installing the dependencies of
  * dsh-plugin-wallpaper-engine@<v>` 失败并整体回滚 —— 这是"只拿到母包、其他包都找不到"的唯一形态，
- * 而主包与七个子包的对应关系此前只写在 README/CONTRIBUTING 的散文里。
+ * 而主包与全部子包的对应关系此前只写在 README/CONTRIBUTING 的散文里。
  *
  * 判据全部作用在同一个 `collect(release)` 上（负对照喂变异过的 release 模型，同一条判据重跑）：
  *   ① 发布集 = 主包 + 仓库里每个子包各一个 tarball，名字与版本与源码清单逐字相等；
- *   ② 主包 tarball 里 `dependencies` 的七个子包值 = 子包真实版本，且**不带范围前缀**；
+ *   ② 主包 tarball 里 `dependencies` 的全部子包值 = 子包真实版本，且**不带范围前缀**；
  *   ③ 主包 tarball 不带开发面目录（`packages/` `src/` `test/` `scripts/` `docs/`）；
  *   ④ 每个子包 tarball 都有 `lib/index.js`、`cordis.patch.yml`，声明 `dsh.client` 的还必须有
  *      `exports['./client']` 指向的那个文件。
@@ -144,7 +144,7 @@ const release = packRelease();
 check('tarball 数量 = 主包 + 子包', release.packages.length === expected.length,
   release.packages.length + ' 个，目录 ' + release.dir);
 check('releaseSetMatches 通过', releaseSetMatches(release.packages, { main: mainManifest, subs }) === true);
-check('publishOrder 先把七个子包、最后主包',
+check('publishOrder 先把全部子包、最后主包',
   release.packages.at(-1).name === mainManifest.name
   && release.packages.slice(0, -1).every((pkg) => pkg.name.startsWith(mainManifest.name + '-')));
 

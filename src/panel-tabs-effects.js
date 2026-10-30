@@ -1,15 +1,16 @@
 /**
- * 「播放」页签的节渲染器（原 src/panel-tabs.js）：滑块 / 实时帧 / 出图来源 /
- * 转码进度 / 播放与出图 / 画面取景。renderEffectsTab 仍在组装点，只留空态与节外壳。
+ * 「播放」页签的节渲染器（从 src/panel-tabs.js 按域拆出）：滑块 / 实时帧 / 出图来源。
+ * 转码进度 / 播放与出图 / 画面取景：倍速/帧率上限与适配/翻转两节 P-D S3d 起住在
+ * packages/media-bridge 的浏览器半边（注册表续接）；renderEffectsTab 仍在组装点，只留空态与节外壳。
  * 本节渲染器从 src/panel-tabs.js 按域搬出，函数体逐字未改；内联顺序见 scripts/build-client.mjs（排在组装点之前）。
  */
   function renderEffectsSlidersSection(ctx) {
     const { onBackgroundBrightness, onBackgroundContrast, onBackgroundSaturate, onLayerPositionX, onLayerPositionY, onLayerReset, onLayerScale, onScrim, onWallpaperBlur, onWallpaperOpacity, sel } = ctx;
     return React.createElement(React.Fragment, null,
-      SliderRow(weT("壁纸模糊"), 0, 60, 1, sel.wallpaperBlur, onWallpaperBlur, sel.wallpaperBlur + "px"),
-      SliderRow(weT("亮度"), 40, 160, 5, sel.backgroundBrightness, onBackgroundBrightness, sel.backgroundBrightness + "%"),
-      SliderRow(weT("对比度"), 40, 200, 5, sel.backgroundContrast, onBackgroundContrast, sel.backgroundContrast + "%"),
-      SliderRow(weT("饱和度"), 0, 200, 5, sel.backgroundSaturate, onBackgroundSaturate, sel.backgroundSaturate + "%"),
+      SliderRow(weT("壁纸模糊"), 0, 60, 1, sel.wallpaperBlur, onWallpaperBlur, "px"),
+      SliderRow(weT("亮度"), 40, 160, 5, sel.backgroundBrightness, onBackgroundBrightness, "%"),
+      SliderRow(weT("对比度"), 40, 200, 5, sel.backgroundContrast, onBackgroundContrast, "%"),
+      SliderRow(weT("饱和度"), 0, 200, 5, sel.backgroundSaturate, onBackgroundSaturate, "%"),
       // 壁纸层取景（位置 / 缩放）：WE 壁纸属性面板那三项（对齐方式 = 自由 时的 水平 / 垂直 /
       // 缩放，即 alignmentx / alignmenty / alignmentz）是 WE 引擎内置属性，存在 WE 自己的
       // config.json 里、本插件读不到；场景层的适配也只有 cover / contain / center / fill
@@ -35,15 +36,15 @@
       // 深色纯黑，IDEA 背景图式）。与暗化互补 —— 一个减淡壁纸本身，一个压暗
       // 整体画面；上限 90% 避免调到「壁纸完全不可见但暗化还在」的诡异状态
       // （想关壁纸直接关掉即可）。
-      SliderRow(weT("壁纸透明度"), 0, 90, 5, sel.wallpaperOpacity, onWallpaperOpacity, sel.wallpaperOpacity + "%", "wallpaper-opacity", {
+      SliderRow(weT("壁纸透明度"), 0, 90, 5, sel.wallpaperOpacity, onWallpaperOpacity, "%", "wallpaper-opacity", {
         tooltip: weT("壁纸向原生底色淡出（浅色纯白 / 深色纯黑）；透明生效时壁纸层会垫这层原生底色，以保证玻璃模糊不被透明背景破坏。场景壁纸的垫底实时帧会在实时画面出场后退场，不会在淡出时透出来"),
       }),
-      SliderRow(weT("暗化"), 0, 90, 5, Math.round(sel.scrim * 100), onScrim, Math.round(sel.scrim * 100) + "%"),
+      SliderRow(weT("暗化"), 0, 90, 5, Math.round(sel.scrim * 100), onScrim, "%"),
     );
   }
 
   function renderEffectsLiveSection(ctx) {
-    const { onLiveBootDelay, onSceneLiveFps, onToggleSceneLive, sel } = ctx;
+    const { onLiveBootDelay, onSceneAutoQuality, onSceneLiveFps, onToggleSceneLive, sel } = ctx;
     return React.createElement(React.Fragment, null,
       // ── 场景实时渲染（WebWallGL）：scene.pkg 壁纸的实时 WebGL 形态，默认
       // 开启。失败（首帧超时/运行失联）按壁纸记忆并自动降级回内嵌 MP4 →
@@ -87,6 +88,17 @@
           ),
         ),
       ),
+      // ── 自动画质（webwallgl autoQuality）：帧率压不住上限时引擎会逐级降后处理 /
+      //    粒子 / AA，弱 GPU 上一路降到 postProcessing=off —— 发光、音频可视化、光晕全没，
+      //    用户感知就是"动态效果没了"。这一行给它一个出口：关掉即保效果（`autoq=0`）。
+      //    只在实时渲染真的会跑（有 live 源、总开关开着）时出现，否则它不起作用。
+      (sel.type === "scene" || sel.type === "web") && sel.sceneLive !== false
+        && (sel.sceneLiveSrc || sel.webLiveSrc)
+        && switchRow(weT("自动画质"), sel.sceneAutoQuality !== false, onSceneAutoQuality, {
+        key: "scene-auto-quality",
+        hint: weT("帧率不足时自动降画质"),
+        tooltip: weT("帧率达不到上限的 85% 时，引擎会逐级降低后处理（发光 / 音频可视化 / 光晕）与粒子、关掉抗锯齿来保帧率 —— 弱 GPU 或高分辨率下可能一路降到「后处理全关」，看起来就像动态效果消失了。关掉本开关则保留全部效果、接受可能掉帧；默认开启"),
+      }),
     );
   }
 
@@ -105,8 +117,7 @@
           weT("场景壁纸「这张画面从哪来」。两档：**实时画面**（有抓帧就用它，没有则留空）与**自定义画面**（手动导入的截图）。点一次切换一次，选择记忆在当前壁纸上。实时渲染生效时本行不显示（那时画面来自实时渲染，切这里不会生效）")),
         React.createElement("button", {
           className: "we-picker__btn", type: "button",
-          onClick: onRefreshFrame,
-          "aria-label": weT("切换出图来源"),
+          onClick: onRefreshFrame, "aria-label": weT("切换出图来源"),
         }, weT("切换")),
         React.createElement("span", { className: "we-picker__hint we-picker__value" },
           // 按**档位值**查表，不能当下标：值域有洞（0 与 4），下标会越界成 undefined.label
@@ -139,13 +150,11 @@
         React.createElement("button", {
           className: "we-picker__btn", type: "button",
           onClick: onRecaptureGpuFrame,
-          disabled: gpuFrameUi.recapturing,
-          "aria-label": weT("重新截取当前壁纸实时帧"),
+          disabled: gpuFrameUi.recapturing, "aria-label": weT("重新截取当前壁纸实时帧"),
         }, gpuFrameUi.recapturing ? weT("抓帧中…") : weT("重新截")),
         gpuPinnedHere && React.createElement("button", {
           className: "we-picker__btn", type: "button",
-          onClick: onClearGpuFrame,
-          "aria-label": weT("清除 GPU 实时帧缓存"),
+          onClick: onClearGpuFrame, "aria-label": weT("清除 GPU 实时帧缓存"),
         }, gpuFrameUi.busy ? weT("清除中…") : weT("清除 GPU 帧")),
         gpuPinnedHere && gpuFrameUi.w > 0
           && React.createElement("span", { className: "we-picker__hint we-picker__value" },
@@ -179,123 +188,4 @@
     );
   }
 
-  // ── 转码进度行 ──
-  function renderTranscodeProgress(sel) {
-    return React.createElement("div", { className: "we-picker__row we-picker__prog", key: "transcode-prog" },
-      React.createElement("div", {
-        className: "we-picker__prog-track",
-        role: "progressbar",
-        "aria-label": weT("转码进度"),
-        "aria-valuemin": 0,
-        "aria-valuemax": 100,
-        "aria-valuenow": Math.max(0, Math.min(100, sel.transcodeProgress.percent || 0)),
-      },
-        React.createElement("div", {
-          className: "we-picker__prog-bar",
-          style: { width: Math.max(2, Math.min(100, sel.transcodeProgress.percent || 0)) + "%" },
-        }),
-      ),
-      React.createElement("span", { className: "we-picker__hint" },
-        sel.transcodeProgress.phase === "download"
-          ? weT("下载 ffmpeg {percent}%", { percent: sel.transcodeProgress.percent || 0 })
-          : sel.transcodeProgress.phase === "transcode" && sel.transcodeProgress.finalizing ? weT("收尾中…")
-          : sel.transcodeProgress.phase === "transcode"
-            ? weT("转码中 {percent}%{eta}", {
-              percent: sel.transcodeProgress.percent || 0,
-              eta: sel.transcodeProgress.eta ? weT(" · 约剩 {sec} 秒", { sec: sel.transcodeProgress.eta }) : "",
-            })
-          : sel.transcodeProgress.phase === "done" ? weT("即将完成…")
-          : weT("准备中…"),
-      ),
-    );
-  }
-
-  function renderEffectsPlaybackSection(ctx) {
-    const { onFpsCap, onPlaybackRate, sel, surface } = ctx;
-    const sidebarSurface = surface === "sidebar";
-    return React.createElement(React.Fragment, null,
-      // Playback speed — native playbackRate, instant, no media reload. Video
-      // wallpapers only (web/iframe and scene wallpapers have no playbackRate).
-      sel.type === "video"
-        && React.createElement("div", { className: "we-picker__ctl", key: "rate" },
-        ctlText(weT("倍速")),
-        React.createElement("div", { className: "we-picker__seg" },
-          [0.5, 0.75, 1, 1.25, 1.5, 2].map((rate) =>
-            React.createElement("button", {
-              key: rate,
-              className: "we-picker__btn we-picker__rate" + (sel.playbackRate === rate ? " we-picker__rate--active" : ""),
-              type: "button",
-              onClick: () => onPlaybackRate(rate),
-            }, String(rate).replace(/\.?0+$/, "") + "x"),
-          ),
-        ),
-      ),
-      // 解码帧率上限（抽帧转码）：host 一次性把源视频重编码为上限帧率（时间线
-      // 1.0x 正常速度，解码占用随帧率线性下降），与倍速解耦。首次转码需等待，
-      // 播放中原片、转好自动切换；无 ffmpeg 自动回退原片。
-      // 侧栏档不出现在这里（准备与诊断，见函数头）。──
-      !sidebarSurface && sel.type === "video"
-        && React.createElement("div", { className: "we-picker__ctl", key: "fps" },
-        ctlText(weT("帧率上限"), weT("抽帧转码 · 降低解码占用")),
-        React.createElement("div", { className: "we-picker__seg" },
-          FPS_CAP_VALUES.map((cap) =>
-            React.createElement("button", {
-              key: cap,
-              className: "we-picker__btn we-picker__rate" + (sel.fpsCap === cap ? " we-picker__rate--active" : ""),
-              type: "button",
-              onClick: () => onFpsCap(cap),
-            }, cap === 0 ? weT("无限制") : cap + "fps"),
-          ),
-        ),
-      ),
-      // Source metadata + transcode status (host moov probe / transcode lifecycle).
-      // 源信息与转码进度同样是准备/诊断行 —— 侧栏档不画（见函数头）。
-      !sidebarSurface && sel.type === "video" && sel.mediaInfo && React.createElement("span", { className: "we-picker__hint", key: "media-info" },
-        weT("源 {width}×{height}{fps}{codec}{state}", {
-          width: sel.mediaInfo.width,
-          height: sel.mediaInfo.height,
-          fps: sel.mediaInfo.fps ? " · " + sel.mediaInfo.fps + "fps" : "",
-          codec: sel.mediaInfo.codec ? " · " + weT(codecLabel(sel.mediaInfo.codec)) : "",
-          state: sel.transcodeState === "working" ? weT(" · 抽帧准备中…")
-            : sel.transcodeState === "ready" ? weT(" · 已切换至 {fps}fps 抽帧版（正常速度，解码占用约减半）", { fps: sel.fpsCap })
-            : sel.transcodeState === "cached" ? weT(" · 抽帧版已就绪（下次切换到这张时生效）")
-            : sel.transcodeState === "native" ? weT(" · 源帧率未知，未抽帧")
-            : sel.transcodeState === "fallback" ? weT(" · 转码不可用，已回退原片")
-            : sel.transcodeState === "skipped" ? weT(" · 源帧率 ≤ 上限，无需抽帧")
-            : "",
-        }),
-      ),
-      // Download / transcode progress bar (polled from /transcode-progress).
-      !sidebarSurface && sel.type === "video" && sel.transcodeState === "working" && sel.transcodeProgress
-        && renderTranscodeProgress(sel),
-    );
-  }
-
-  function renderEffectsFitSection(ctx) {
-    const { onFlip, onObjectFit, sel } = ctx;
-    return React.createElement(React.Fragment, null,
-      // Fit mode — applies to the CURRENT wallpaper whatever its type (WE
-      // video/scene image and custom uploads alike; web/iframe wallpapers
-      // have no object-fit). 覆盖=cover 填充=contain 居中=center 拉伸=fill
-      React.createElement("div", { className: "we-picker__ctl", key: "fit" },
-        ctlText(weT("适配")),
-        React.createElement("div", { className: "we-picker__seg" },
-          ["cover", "contain", "center", "fill"].map((mode) => {
-            const label = { cover: weT("覆盖"), contain: weT("填充"), center: weT("居中"), fill: weT("拉伸") }[mode];
-            return React.createElement("button", {
-              key: mode,
-              className: "we-picker__btn we-picker__rate" + (sel.objectFit === mode ? " we-picker__rate--active" : ""),
-              type: "button",
-              title: mode,
-              onClick: () => onObjectFit(mode),
-            }, label);
-          }),
-        ),
-      ),
-      // Horizontal mirror — scaleX(-1), compositor-only; works for video,
-      // web (iframe) and (later) uploaded image wallpapers alike.
-      switchRow(weT("水平翻转"), sel.flip, onFlip, { key: "flip" }),
-    );
-  }
-
-export { renderEffectsSlidersSection, renderEffectsLiveSection, renderEffectsSourceSection, renderEffectsPlaybackSection, renderEffectsFitSection };
+export { renderEffectsSlidersSection, renderEffectsLiveSection, renderEffectsSourceSection };

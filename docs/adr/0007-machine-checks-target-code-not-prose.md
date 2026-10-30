@@ -3,8 +3,8 @@
 - **Date**: 2026-10-01
 - **Status**: Accepted
 - **Deciders**: YV3507
-- **Depends on**: [ADR-0006](./0006-comment-discipline-as-written-convention.md)（本文把它的边界落成可执行的判定程序）
-- **Amends**: [ADR-0006](./0006-comment-discipline-as-written-convention.md) 的 `Implementation` 行（文档类守卫的物理下线**已执行**）
+- **Depends on**: [ADR-0017](./0017-code-is-truth-docs-reference-source.md)（代码即真相；本文把 ADR-0006 的边界落成可执行的判定程序）
+- **Amends**: [ADR-0006](./0006-comment-discipline-as-written-convention.md) 的 `Implementation` 行（文档类守卫的物理下线**已执行**；ADR-0006 已由 ADR-0017 取代，本文的四问继续有效）
 
 > 本文只回答一个问题：**一条机器判据该不该存在**。它给判定程序与两份清单，不给"哪些文件要守"的静态名册 ——
 > 名册会随代码演进腐化，程序不会。

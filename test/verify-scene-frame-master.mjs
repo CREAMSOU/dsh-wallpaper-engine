@@ -222,13 +222,24 @@ const hostMod = await import(pathToFileURL(join(root, 'lib', 'index.js')).href);
 const host = hostMod.default || hostMod;
 const apply = host.apply || (host.inject && host.apply);
 apply(mockCtx);
+// S5c 刀2：`/scene-frame` 与 `/scene-frame-cache` 归 `wallpaper` 组件行（实现入包、主包不留注册点，
+// 由 verify-route-ownership 的 M10 钉住）⇒ 夹具必须连组件一起 boot，判据判什么没变。
+// 同 verify-scene / verify-scene-live 的既有做法。
+if (typeof hostMod.applyComponent === 'function') {
+  for (const comp of ['media-bridge']) {
+    try { hostMod.applyComponent(mockCtx, {}, comp); } catch (err) {
+      console.log('  · 组件行 boot 失败（' + comp + '）：' + String(err && err.message));
+    }
+  }
+}
 const sceneRoute = routes.find((r) => r.path === '/wallpaper-engine/scene-frame');
 const gpuRoute = routes.find((r) => r.path === '/wallpaper-engine/scene-frame-cache');
 check('scene-frame / scene-frame-cache 路由已注册', Boolean(sceneRoute && gpuRoute));
 // 结构锚：单主帧 + 面积守卫只实现一次，锚在路由源码上，防"实现漂回分桶"——
 // 漂了行为判据会红，这条让红得更早、更可读。
 {
-  const routeSrc = readFileSync(join(root, 'lib', 'routes', 'scene-frame.js'), 'utf8');
+  // S5c 刀2：族文件随包出户 ⇒ 结构锚改读包内路径。
+  const routeSrc = readFileSync(join(root, 'packages', 'media-bridge', 'lib', 'routes', 'scene-frame.js'), 'utf8');
   const indexSrc = readFileSync(join(root, 'lib', 'index.js'), 'utf8');
   check('路由源码带着面积守卫不变量（frame-smaller + 容差常量）',
     routeSrc.includes("'frame-smaller'") && routeSrc.includes('GPU_FRAME_AREA_TOL'));

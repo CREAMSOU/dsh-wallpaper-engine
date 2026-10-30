@@ -1,5 +1,5 @@
 /**
- * 「吉祥物」页签的节渲染器与其模块级常量 / 拖拽状态（原 src/panel-tabs.js）。
+ * 「吉祥物」页签的节渲染器与其模块级常量 / 拖拽状态（从 src/panel-tabs.js 按域拆出）。
  * MASCOT_* 常量与 mascotDrag / mascotDragMoved / mascotRingLogical 都随本节搬到这里；
  * renderMascotTab 仍在组装点（src/panel-tabs.js）；本节渲染器从 src/panel-tabs.js 按域搬出，函数体逐字未改。
  */

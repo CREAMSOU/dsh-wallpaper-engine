@@ -22,6 +22,7 @@
     "fpsCap": 0,
     "sceneLive": true,
     "sceneLiveFps": 30,
+    "sceneAutoQuality": true,
     "liveBootDelay": 3,
     "audioSource": "auto",
     "adapterTarget": "auto",
@@ -139,15 +140,15 @@
       "values": {
         "themeColors": {
           "secondary": {
-            "light": "#fafafa",
+            "light": "#33456b",
             "dark": "#fafafa"
           },
           "tertiary": {
-            "light": "#75e6f5",
+            "light": "#405273",
             "dark": "#75e6f5"
           },
           "caption": {
-            "light": "#2de8eb",
+            "light": "#526789",
             "dark": "#2de8eb"
           }
         },

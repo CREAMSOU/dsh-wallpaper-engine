@@ -191,7 +191,7 @@ async function enforcePullRequest({ github, context, core, number, hasWrite, dry
         + 'and only then create a PR with a separate `Fixes #123` or `Refs #123` line for every issue. Draft PRs follow the same rule. '
         + 'Approval obtained after this PR was created cannot qualify it: open a new PR after approval. '
         + 'Only the repository owner and collaborators with write permission are exempt.\n\n'
-        + `[Contribution policy](https://github.com/${repoContext.owner}/${repoContext.repo}/blob/${context.payload.repository.default_branch}/docs/TRIAGE.md)`;
+        + `[Contribution policy](https://github.com/${repoContext.owner}/${repoContext.repo}/blob/${context.payload.repository.default_branch}/CONTRIBUTING.md#issue-triage--labels)`;
       if (previous) await github.rest.issues.updateComment({ ...repoContext, comment_id: previous.id, body });
       else await github.rest.issues.createComment({ ...repoContext, issue_number: number, body });
       await github.rest.pulls.update({ ...repoContext, pull_number: number, state: 'closed' });

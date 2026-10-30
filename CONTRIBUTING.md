@@ -4,7 +4,7 @@ Thanks for helping improve `dsh-wallpaper-engine`. Please keep each pull request
 
 感谢你参与改进 `dsh-wallpaper-engine`。请让每个 Pull Request 聚焦一个明确问题，并在说明中写清适用平台和验证结果。
 
-> Issue triage and claim approval / 问题分诊、认领申请与审批：见 [`docs/TRIAGE.md`](docs/TRIAGE.md)。
+> Issue triage and claim approval / 问题分诊、认领申请与审批：见下文「Approval before opening a PR」与「Issue triage & labels」两节。
 
 ## Approval before opening a PR / 先批准认领，再开 PR
 
@@ -27,6 +27,29 @@ Thanks for helping improve `dsh-wallpaper-engine`. Please keep each pull request
 - 可信 `pull_request_target` 门禁须对已确认不合规的 PR 自动解释并关闭，包括 draft 和 reopened，并在 PR 的 head SHA 写入固定名 `issue-claim-policy` Check Run `failure`；合规或实时权限豁免时该检查通过。API 故障导致无法可靠取得权限或历史数据时仅判失败，不自动误关；完整历史确认没有事前批准的，仍是违规，不是 API 故障。可信工作流不能带写权限检出或执行 PR head 代码。
 - issue 开闭、受理相关标签或分配变化时，重验所有关联开放 PR；机器人 `/approve` / `/unassign` 必须在当前运行中主动刷新，不能依赖机器人产生的事件再触发工作流。
 - 上述是必须落实的自动化契约，不代表修改文档就已部署。审批及 PR 门禁工作流必须先合入默认分支 `main`；维护者须保留现有 Required checks 并追加 `issue-claim-policy`，不在此流程中替换或迁移代码 CI 检查名。合并要求为**现有代码 CI + `issue-claim-policy`**。GitHub 无法预先禁用 PR 创建页，因此采用创建后自动关闭与必过检查阻断合并。
+
+## Issue triage & labels / Issue 分诊与标签
+
+The claim gate above is the executable contract; this section keeps the triage/label bookkeeping. Enforcement lives in `.github/workflows/issue-claim*.yml` — changing this prose does not deploy the gate.
+
+| Label | Meaning | Who sets it |
+|---|---|---|
+| `status:needs-triage` | New issue, not looked at yet — the initial state (template adds it) | template |
+| `status:accepted` | Maintainer confirmed it is worth doing; **claims start here** | maintainer |
+| `status:declined` | Won't do / out of scope (with a one-line reason) | maintainer |
+| `area:client` | Browser half (`src/**`, rendering / panels / glass) | anyone |
+| `area:host` | Host half (`lib/**`: routes, scan, media pipeline, config) | anyone |
+| `area:glass-ui` | Liquid glass / appearance / fonts / mascot | anyone |
+| `area:webwallgl` | Scene / web wallpaper renderer and media bridge | anyone |
+| `area:ci-docs` | CI, guards, docs, release chain | anyone |
+
+GitHub defaults (`bug` / `enhancement` / `documentation` / `good first issue` / `help wanted` / `question` / `duplicate` / `invalid` / `wontfix` / `accessibility`) keep their usual meaning. `good first issue` is only added to **accepted** issues with a confirmed small scope — it is a promise to new contributors.
+
+**Maintainer triage (weekly or on demand)**：读 `status:needs-triage` → 可复现/有价值的加 `status:accepted`、移除 `needs-triage`/`declined`、打 `area:*`（范围小再加 `good first issue`）；不做的标 `status:declined` 并写明原因后关闭 → 审阅 `/assign` 申请并按上文批准/指派 → 已受理但长期无人认领且影响面大的，挂维护者计划或 milestone。
+
+**认领时限与回收**：认领后 **14 天**无进展且无留言说明，维护者可在该 issue 留言 @ 认领人后改派或释放。`/assign` 只是申请、不会立刻分配；本人 `/unassign` 取消申请或释放认领；维护者 `/unassign @login` 取消指定人，无参 `/unassign` 释放当前全部 assignee。
+
+**自动门禁的部署边界**：可信 `pull_request_target` 工作流必须先合入默认分支 `main` 才生效；Ruleset 保留 `ci/result` 并追加 `issue-claim-policy`，合并要求统一为「现有代码 CI + `issue-claim-policy`」。GitHub 不能预先禁用 PR 创建页，因此执行方式是**创建后自动解释并关闭 + 必过检查阻断合并**。完整时间判据、违规关闭语义与 API 故障处理见上文 Approval 节。
 
 ## Choose the target branch / 选择目标分支
 
@@ -96,9 +119,9 @@ All changes target `main`. The plugin is **one natively cross-platform tree** (W
 
 ### 2. Install the complete source set / 安装完整源码套件
 
-Requires Node.js >=22.12.0, DSH 0.2 (including 0.2.0-rc.1/rc.2), and pnpm. Enter the checkout directory and completely close the target application. Use the target host's actual DSH data directory, not an assumed `~/.dsh`.
+Requires Node.js and a DSH kernel within the ranges declared in `package.json`'s `engines` (the 0.2 line qualifies), plus pnpm. Enter the checkout directory and completely close the target application. Use the target host's actual DSH data directory, not an assumed `~/.dsh`.
 
-要求 Node.js >=22.12.0、DSH 0.2 内核（包括 0.2.0-rc.1/rc.2）和 pnpm。进入插件目录，先完全退出目标宿主，并确认该宿主实际使用的 DSH 数据目录。
+要求 Node.js 与 DSH 内核都落在 `package.json` 的 `engines` 声明内（0.2 线可装），另需 pnpm。进入插件目录，先完全退出目标宿主，并确认该宿主实际使用的 DSH 数据目录。
 
 ```sh
 node scripts/install-source.mjs --profile desktop --dsh-home "<目标 DSH 数据目录>" --app-closed
@@ -108,9 +131,9 @@ Use `web` for the web profile. Add `--dry-run` to inspect the target without cha
 
 网页宿主使用 `--profile web`。先加 `--dry-run` 可只核对目标。桌面 profile 必须使用桌面宿主安装的 carrier CLI；独立 npm CLI 不允许管理 `desktop`。网页版找不到 `dsh` 命令时，可传入 `--dsh-cli "<DSH CLI 的 lib/bin.js 路径>"`。
 
-The installer runs `npm ci`, builds the clients, and registers all eight packages as persistent `link:` dependencies. Only the main bundle remains selected; it owns the complete patch, so selecting the child bundles as well duplicates their rows. Other bundle selections and row-level settings remain unchanged.
+The installer runs `npm ci`, builds the clients, and registers all nine packages as persistent `link:` dependencies. Only the main bundle remains selected; it owns the complete patch, so selecting the child bundles as well duplicates their rows. Other bundle selections and row-level settings remain unchanged.
 
-脚本安装仓库依赖、构建客户端，通过 DSH 将主包和 7 个子包登记为持久 `link:` 依赖。只保留主包 bundle 选择，避免子包 patch 重复插入行；其他 bundle 选择和现有行级开关不变。不要只链接主包，也不要把临时 junction 工具当成正式安装流程。
+脚本安装仓库依赖、构建客户端，通过 DSH 将主包和 8 个子包登记为持久 `link:` 依赖。只保留主包 bundle 选择，避免子包 patch 重复插入行；其他 bundle 选择和现有行级开关不变。不要只链接主包，也不要把临时 junction 工具当成正式安装流程。
 
 For an update, close the host, update the entire checkout, and rerun the same command. Keep the source directory in place while installed.
 
@@ -122,17 +145,17 @@ For an update, close the host, update the entire checkout, and rerun the same co
 npm run pack:release
 ```
 
-This builds clients and creates eight tarballs plus `release-set.json` under a unique `.test-cache/release/set-*` directory. The staged main manifest lists each of the seven child packages at its exact real version, with no pet or Electron dependency. Publish children first and the main package last, following `publishOrder`. This command never publishes anything. A raw root `npm pack` uses the development manifest, not the complete release set. Do not publish a test version without explicit approval.
+This builds clients and creates nine tarballs plus `release-set.json` under a unique `.test-cache/release/set-*` directory. The staged main manifest lists each of the eight child packages at its exact real version, with no pet or Electron dependency. Publish children first and the main package last, following `publishOrder`. This command never publishes anything. A raw root `npm pack` uses the development manifest, not the complete release set. Do not publish a test version without explicit approval.
 
-该命令构建客户端，在独立的 `.test-cache/release/set-*` 目录生成八个 tarball 和 `release-set.json`。发布形态主包将七个子包的真实精确版本列为运行依赖，不包含 pet 或 Electron。正式发布按 `publishOrder` 先子包、后主包。此命令不执行发布；源码根目录直接 `npm pack` 仍是开发清单，不能当成完整发布集。灰测阶段未经明确批准，不要发布 npm。
+该命令构建客户端，在独立的 `.test-cache/release/set-*` 目录生成九个 tarball 和 `release-set.json`。发布形态主包将八个子包的真实精确版本列为运行依赖，不包含 pet 或 Electron。正式发布按 `publishOrder` 先子包、后主包。此命令不执行发布；源码根目录直接 `npm pack` 仍是开发清单，不能当成完整发布集。灰测阶段未经明确批准，不要发布 npm。
 
-The full procedure — npm channel, GitHub Release assets, post-publish self-checks, mirror sync and rollback — is in [`docs/RELEASING.md`](docs/RELEASING.md). Two rules are not negotiable: every child package must be on the registry at the same version before the main package is usable (`pnpm add` resolves the seven exact versions from the registry, so a main-only release fails with `ERR_PNPM_FETCH_404`), and a GitHub Release must carry all eight tarballs plus `release-set.json` — a main-only Release is an uninstallable package. For the offline release set use `npm run install:release -- --set <dir> --profile <name> --dsh-home <dir> --app-closed`, which pins the seven children to the sibling tarballs through profile `overrides`; never hand the desktop installer a single main tarball.
+The full procedure — npm channel, GitHub Release assets, post-publish self-checks, mirror sync and rollback — is in [`docs/RELEASING.md`](docs/RELEASING.md). Two rules are not negotiable: every child package must be on the registry at the same version before the main package is usable (`pnpm add` resolves the eight exact versions from the registry, so a main-only release fails with `ERR_PNPM_FETCH_404`), and a GitHub Release must carry all nine tarballs plus `release-set.json` — a main-only Release is an uninstallable package. For the offline release set use `npm run install:release -- --set <dir> --profile <name> --dsh-home <dir> --app-closed`, which pins the eight children to the sibling tarballs through profile `overrides`; never hand the desktop installer a single main tarball.
 
-完整发布流程（npm 通道、GitHub Release 资产、发布后自证、镜像同步与回滚）见 [`docs/RELEASING.md`](docs/RELEASING.md)。两条规则不可让：主包可用的前提是七个子包已在同一版本上公开（主包把七个**精确版本**声明为运行依赖，只发主包会让用户的 `pnpm add` 以 `ERR_PNPM_FETCH_404` 失败）；GitHub Release 必须挂**八个 tarball + `release-set.json`**，只挂主包的 Release 是一个装不上的包。离线安装发布集用 `npm run install:release -- --set <目录> --profile <name> --dsh-home <目录> --app-closed`（它把七个子包钉到同目录 tarball 的 `overrides` 写进 profile），不要把单个主包 tarball 交给桌面安装器。
+完整发布流程（npm 通道、GitHub Release 资产、发布后自证、镜像同步与回滚）见 [`docs/RELEASING.md`](docs/RELEASING.md)。两条规则不可让：主包可用的前提是八个子包已在同一版本上公开（主包把八个**精确版本**声明为运行依赖，只发主包会让用户的 `pnpm add` 以 `ERR_PNPM_FETCH_404` 失败）；GitHub Release 必须挂**九个 tarball + `release-set.json`**，只挂主包的 Release 是一个装不上的包。离线安装发布集用 `npm run install:release -- --set <目录> --profile <name> --dsh-home <目录> --app-closed`（它把八个子包钉到同目录 tarball 的 `overrides` 写进 profile），不要把单个主包 tarball 交给桌面安装器。
 
-On Windows, use a current patched Node.js release for packaging. A minimal directory-copy test with a Chinese path exits unexpectedly on Node.js 24.14.0; the same test and the release-set build succeed on 24.21.0. Ensure npm uses the same Node.js runtime.
+On Windows, use a current patched Node.js release for packaging, and ensure npm uses the same Node.js runtime. Take the supported Node range from `package.json`'s `engines`, and CI's Node version from `setup-node` in the workflows — do not pin a version here.
 
-Windows 打包建议使用已更新补丁版本的 Node.js。本机对照中，24.14.0 复制中文路径目录时直接退出；同一样本及发布集构建在 24.21.0 通过。请同时确认 npm 使用同一套 Node.js 运行时。
+Windows 打包请使用已更新补丁版本的 Node.js，并确认 npm 使用同一套 Node.js 运行时；支持范围以 `package.json` 的 `engines` 为准，CI 的 Node 版本以工作流里的 `setup-node` 为准，不要照抄本文件的版本号。
 
 ### 3. Restart / 重启确认
 
@@ -170,7 +193,7 @@ npm run verify:all  # = build + verify（硬档）+ verify:docs（软档）+ smo
 > **两档各含哪些守卫、分档判据是什么，只在 [`docs/DEV-GUIDE.md`](docs/DEV-GUIDE.md) §4.2 定义一处**
 > —— 这里刻意不列清单（此前抄过一份，删掉两条守卫后就过时了，正说明为什么不该抄）。
 
-`.github/workflows/verify.yml` 三个阶段：`changes` 作业用 `node scripts/ci-routing.mjs check` 分类——PR 事件取 merge-base 完整 PR 差异（`--base-mode merge-base`），push 事件取 `before → after` 原样差异（`--base-mode exact`：force-push 后 before 不一定是 after 的祖先，merge-base 会漏算 before 独有的代码删除），workflow_dispatch 无事件边界 ⇒ `github.sha → github.sha` 空差异 ⇒ 分类器保守完整验证；差异取不全 ⇒ fail-closed 全量，绝不误判文档。纯文档路径由 `docs` 作业对**同一差异、同一模式档**再跑一次 `node scripts/ci-routing.mjs docs`（文档引用 / 冲突标记 / 素材类型检查；差异里混入代码或未知路径 ⇒ 退出码 3 明确拒绝，不以假成功放行；其 checkout 显式指向 head 提交，保证被审计的树就是被分类的树）。完整路径保留 Windows / Ubuntu 两个平台、静态门禁、构建、运行守卫、媒体桥与冒烟。固定 `ci/result` 汇总在 `if: always()` 下核验所选作业确实成功：取消、失败、缺结果或意外跳过不能放行。此名称仅描述当前分支的代码 CI 汇总，不表示远程 Required checks 已迁移；维护者须保留当前代码 CI 的必过检查并追加 `issue-claim-policy`，任何 CI 检查名称迁移另行确认。
+`.github/workflows/verify.yml` 三个阶段：`changes` 作业先用 `node scripts/ci-routing.mjs check` 分类——PR 事件取 merge-base 完整 PR 差异（`--base-mode merge-base`），push 事件取 `before → after` 原样差异（`--base-mode exact`：force-push 后 before 不一定是 after 的祖先，merge-base 会漏算 before 独有的代码删除），workflow_dispatch 无事件边界 ⇒ `github.sha → github.sha` 空差异 ⇒ 分类器保守完整验证；差异取不全 ⇒ fail-closed 全量，绝不误判文档。纯文档路径由 `docs` 作业对**同一差异、同一模式档**再跑一次 `node scripts/ci-routing.mjs docs`（文档引用 / 冲突标记 / 素材类型检查；差异里混入代码或未知路径 ⇒ 退出码 3 明确拒绝，不以假成功放行；其 checkout 显式指向 head 提交，保证被审计的树就是被分类的树）。**判定脚本（分类器 / docs 审计 / 汇总器）一律从 base 分支取，不执行 PR 树里的同名文件**（信任边界：判据不能由被审计的 PR 提供）。完整路径保留 Windows / Ubuntu 两个平台、静态门禁、构建、运行守卫、媒体桥与冒烟；仓库内务（`verify:docs`）已移到 `.github/workflows/housekeeping.yml` 每周定时 + 手动，不在 PR 必过链里。固定 `ci/result` 汇总在 `if: always()` 下核验所选作业确实成功：取消、失败、缺结果或意外跳过不能放行；Ruleset 的 Required checks 当前为 `ci/result` + `issue-claim-policy`（见本文「Issue triage & labels」节）。
 
 完整路径还检查产物不入库（`git ls-files -- lib/client.js docs/images` 必须为空），并扫描被跟踪文件的尾随空白与冲突标记。产物同步仍由 `test/verify-client-sync.mjs` 真跑构建逐字节检查。
 

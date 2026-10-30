@@ -215,7 +215,7 @@ for (const c of RESULT_CASES) {
 
 // ── ⑦ collectDiff 的差异边界（合成 git，零 spawn）────────────────────────────────
 // force-push 场景：PR 需要的是 merge-base 完整差异；push 的 before/after 是**精确范围**。
-// 反例拓扑（captain 2026-10-18 裁定，与 E2E force 幕同图）：
+// 反例拓扑（captain 裁定，与 E2E force 幕同图）：
 //   共同祖先 A **没有** app/index.js；before 分支独有提交**新增** app/index.js；
 //   after 从 A 只改文档、仍没有 app/index.js。merge-base(before, after)=A：
 //   A→after 只见文档 ⇒ merge-base 通道判 docs 是**真实的误判**（把 before→after 的

@@ -61,7 +61,7 @@ const relOf = (s) => String(s).replace(/\\/g, '/').replace(/^\.\//, '');
 
 /**
  * **产物面**（分母来自发现层，不是写死清单）：`clientPackages` = 主包 + 每个声明了浏览器半边
- * （`dsh.client` / `exports['./client']`）的 standalone 子包各一份。BUNDLE-SPLIT §7.2「每包一产物」。
+ * （`dsh.client` / `exports['./client']`）的 standalone 子包各一份。ADR-0014 S10.2「每包一产物」。
  * 写死清单的失败模式：新增一份产物后它**静默脱离**本映射 —— 守卫隔着的产物换了一茬，
  * 映射还指着老的那份，于是"改了哪个源文件该跑哪条守卫"给出错误答案。
  */
@@ -121,7 +121,7 @@ function packageDirs(root = ROOT) {
  * 磁盘上的模块面（`src/**` + `lib/**` + **`packages/<pkg>/{src,lib}/**`**，含 `lib/client.js`
  * —— 它是"隔着产物"的那一档）。
  *
- * ⚠️ P-A（BUNDLE-SPLIT §7.1 / §10.1 #8）之前这里只走主包两棵树：子包迁出后，`packages/<pkg>/src|lib/**`
+ * ⚠️ P-A（ADR-0014 S10.2 / §10.1 #8）之前这里只走主包两棵树：子包迁出后，`packages/<pkg>/src|lib/**`
  * 里的产品代码会**整片脱离**这张映射 —— 症状不是报错，而是这些文件既不进"零覆盖"表、也不会在
  * "改了 X 该跑哪几条"里出现（静默失去覆盖，正是本工具存在的理由）。
  */
@@ -238,7 +238,7 @@ function targetsOf(srcText, modules, helpers = familyHelpers(), anchors = NO_ANC
   //    它自己的例外表反而被掩盖）。左边界排除 `[\w$.\-/]`，右边界排除 `[\w$\-]`。
   // ⚠️ **产物面整集合单列**：守卫常经 `'client.js'` 常量或 URL 拼它，不走路径字面量；
   //    而它又是"隔着产物做模块断言"那一档的落点 ⇒ 单列判并在 `targets` 里带上它。
-  //    产物**不止一份**（BUNDLE-SPLIT §7.2「每包一产物」）⇒ 这里跳过的是**产物集合**，
+  //    产物**不止一份**（ADR-0014 S10.2「每包一产物」）⇒ 这里跳过的是**产物集合**，
   //    集合本身由发现层给出（写死一份的失败模式：新产物静默脱离本映射）。
   for (const m of modules) {
     if (artifacts.has(m)) continue;

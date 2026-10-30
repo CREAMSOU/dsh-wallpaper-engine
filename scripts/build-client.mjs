@@ -30,7 +30,7 @@
  * Usage:  node scripts/build-client.mjs
  */
 
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -67,7 +67,7 @@ const INLINE_MODULES = [
     markers: ['function weClampTo(', 'function weNow(', 'function weBody('],
   },
   {
-    // 词表域模块（7 个）必须排在组装点 `src/i18n-copy.js` **之前**：构建期内联进同一工厂作用域，
+    // 词表域模块（8 个）必须排在组装点 `src/i18n-copy.js` **之前**：构建期内联进同一工厂作用域，
     // 组装点顶层读它们是 TDZ 的正面用法。域划分 = 文案归属的界面域（表体一行未改、顺序未动）；
     // 顺序即键插入序，守卫 test/verify-i18n.mjs 按 INLINE_MODULES 顺序逐条比对。
     file: 'src/i18n-copy-core.js',
@@ -122,23 +122,21 @@ const INLINE_MODULES = [
   },
   {
     file: 'src/styles-base.js',
-    why: '样式域 base（原 styles.js 61–592）：画布兜底 · 玻璃总锚点与表面令牌 · markdown 底 · 对比度 · 全局 UI 配色 · 可读性下限常量（与消费它的 CSS 同处一文件）',
-    markers: ['const CSS_BASE = `', 'const READABILITY_FLOOR = ', 'const READABILITY_FLOOR_DARK = ', '/* ── 画布兜底色'],
+    why: '样式域 base（原 styles.js 61–592；ADR-0016 第四刀玻璃段出户后）：画布兜底 · 全局 UI 配色 · 面板色与弹层行配对',
+    markers: ['const CSS_BASE = `', '/* ── 画布兜底色', '--we-popup-row-bg'],
   },
   {
     file: 'src/styles-shell.js',
-    why: '样式域 shell（原 styles.js 593–1134）：iOS liquid glass · 思考触发条 · 输入座位 · composer card · 轨迹霜 · 吸顶条 · 原生左栏底 · 外壳画布底',
-    markers: ['const CSS_SHELL = `', '/* ── iOS liquid glass'],
+    why: '样式域 shell（ADR-0016 第四刀玻璃段出户后）：原生左栏模式底 · 外壳画布底（壁纸让位两段）',
+    markers: ['const CSS_SHELL = `', '/* ── 原生左栏在 extended/advanced 窗口模式下的不透明底', '/* ── 外壳画布底'],
   },
-  {
-    file: 'src/styles-sidebar.js',
-    why: '样式域 sidebar（原 styles.js 1135–1622）：左侧栏液态玻璃 · 四角圆角 · 标题栏玻璃与模糊层 · better-sidebar glass · 官方右侧栏 · 内容面',
-    markers: ['const CSS_SIDEBAR = `', '/* ── 左侧栏液态玻璃'],
-  },
+  // ── ADR-0016 第四刀：styles-sidebar.js **整文件**随玻璃包走（该域全部是
+  //    玻璃接管：左栏 / 四角圆角 / 标题栏 / better-sidebar / 官方右栏 / 内容面）——
+  //    内容住 packages/glass/src/glass-css.js 的 CSS_GLASS，主包组装式不再有 CSS_SIDEBAR 段。
   {
     file: 'src/styles-chrome.js',
-    why: '样式域 chrome（原 styles.js 1623–1915）：统一控件 token · 原生设置整窗玻璃 · 插件源浮层 · corner-shape 兼容(#74)',
-    markers: ['const CSS_CHROME = `', '/* ── 统一控件 token'],
+    why: '样式域 chrome（ADR-0016 第四刀玻璃段出户后）：统一控件 token · corner-shape 兼容(#74)',
+    markers: ['const CSS_CHROME = `', '/* ── 统一控件 token', '/* ── DSH harness corner-shape 兼容'],
   },
   {
     file: 'src/styles-settings.js',
@@ -157,13 +155,13 @@ const INLINE_MODULES = [
   },
   {
     file: 'src/styles-ext.js',
-    why: '样式域 ext（原 styles.js 3358–3742）：软件渲染回退(#95) · 「关于」页签 · 扩展槽位与三号模块 · 侧栏全透明(#137)',
-    markers: ['const CSS_EXT = `', '/* ── 软件渲染回退'],
+    why: '样式域 ext（ADR-0016 第四刀玻璃段出户后）：「关于」页签 · 扩展槽位与三号模块',
+    markers: ['const CSS_EXT = `', '/* ── 「关于」页签：静态页'],
   },
   {
     file: 'src/styles.js',
-    why: '样式族**组装点**（8 个域模块按本清单顺序相加 ⇒ 与原单模板逐字节相同；可读性下限由 styles-base.js 声明并导出）',
-    markers: ['const CSS = CSS_BASE + CSS_SHELL + CSS_SIDEBAR + CSS_CHROME + CSS_SETTINGS + CSS_PANEL + CSS_QUICK + CSS_EXT;',
+    why: '样式族**组装点**（域模块按本清单顺序相加；ADR-0016 第四刀起玻璃段住 packages/glass/src/glass-css.js 的 CSS_GLASS，由玻璃包自注入）',
+    markers: ['const CSS = CSS_BASE + CSS_SHELL + CSS_CHROME + CSS_SETTINGS + CSS_PANEL + CSS_QUICK + CSS_EXT;',
       'export { CSS };'],
   },
   {
@@ -255,30 +253,30 @@ const INLINE_MODULES = [
   // 本数组里 `preset-store → section-head` 的相邻关系不变（各模块都按名字引用，顺序不承载语义）。
   {
     // 面板各节的统一节头构件（二次修订：**两档都支持隐藏**）。
-    // ⚠️ 必须排在 `src/glass-panel.js` 与 `src/panel-tabs.js` **之前**：那两个模块都按名字
-    //    直接调它（内联后同作用域）。虽然函数声明有提升、顺序其实不致命，但排在调用方前面
-    //    才读得出依赖方向 —— 与 `we-base.js` 排最前是同一条理由。
+    // ⚠️ 必须排在 `src/panel-tabs.js` **之前**：它按名字直接调它（内联后同作用域）。
+    //    虽然函数声明有提升、顺序其实不致命，但排在调用方前面才读得出依赖方向 —— 与
+    //    `we-base.js` 排最前是同一条理由。（ADR-0016 第二刀起 glass-panel 那份经主 bundle
+    //    的 HOST_BRIDGE 键 `sectionHead` 取同一实现，不再本表内联。）
     file: 'src/section-head.js',
-    why: '节头构件（可折叠）：panel-tabs 与 glass-panel 共用的那一份，抽出来是为了让挂载台能 import 真实现',
+    why: '节头构件（可折叠）：panel-tabs 用；packages/glass 经桥接键 sectionHead 取同一份，抽出来是为了让挂载台能 import 真实现',
     markers: ['function sectionHead(label, open, onToggle, action) {',
       'className: "we-picker__section-head we-picker__section-head--toggle"'],
   },
   {
     // 模块级重置按钮（issue #192 的 ↺）：与 section-head 同一条理由抽出来 ——
-    // panel-tabs（外观各节 + 扩展模块头）与 glass-panel（玻璃 UI）共用同一枚构件，
-    // 抽成独立文件才能让挂载台 import 到真实现。
+    // panel-tabs（外观各节 + 扩展模块头）在主 bundle 用；packages/glass（玻璃 UI）经桥接键
+    // moduleResetButtonNode 取同一实现（ADR-0016 第二刀起不再本表内联）。
     file: 'src/module-reset.js',
-    why: '模块级重置按钮（↺）：panel-tabs 与 glass-panel 共用；模块名查 RESET_MODULES 取键集',
+    why: '模块级重置按钮（↺）：panel-tabs 用；packages/glass 经桥接键 moduleResetButtonNode 取同一份；模块名查 RESET_MODULES 取键集',
     markers: ['function moduleResetButtonNode(moduleName, onResetModule, labels) {',
       'className: "we-mod-reset"'],
   },
-  {
-    // 「玻璃 UI」节的渲染器（wip §10.13）：与其余页签只共享**模块级纯助手**，
-    // 所以抽出去不需要 ctx 传参样板。
-    file: 'src/glass-panel.js',
-    why: '「玻璃 UI」节渲染器（注册表驱动：GLASS_CHILDREN + childGlassKey；只读 ctx、动作经 on* 处理器）',
-    markers: ['function renderAppearanceGlassSection(ctx) {', 'const CHILD_CN = {'],
-  },
+  // ── ADR-0016 第二刀：「主题预设」+「玻璃 UI」节渲染器（现 packages/glass/src/glass-panel.js）
+  //    **已迁出主 bundle**，住 packages/glass，由该包自己的 client.build.json 出产物
+  //    lib/client.glass.js；主包只留 panel-tabs 里那枚按 id 取渲染器的**注册表占位桩**
+  //    （屏上位置不变：主题 → 细节 → 玻璃 UI → 侧栏圆角 → 全局 UI 配色 → 全局字体）。
+  //    迁出的等价性证据与 fx/parallax 同款：逐字节相同（`git diff --no-index` 可复核），
+  //    差量只有 outline 的 host 绑定与空 apply/inject。
   // ── P-A 起：点击拖尾与 3D 两份「画布层 + 描述符」**已迁出主 bundle**，各自住自己的包
   //    （packages/fx、packages/parallax），由各包自己的 `client.build.json` 配方各出一份产物；主包只留
   //    `src/extension-registry.js` 这张收件箱（谁登记了什么只能问它）。
@@ -331,33 +329,24 @@ const INLINE_MODULES = [
       'function weRegisterLayerHooks(', 'function weDiscoveredGroupsOf('],
   },
   {
-    // ── 刀4：panel-tabs 按域拆出的 5 个兄弟模块（必须在组装点 src/panel-tabs.js **之前**：
-    //    组装点里的 render*Tab 按名字直接调它们的 render*Section / renderMascotFormCards 等，
-    //    内联后同作用域；函数声明本身有提升，但排在调用方前面才读得出依赖方向）。
-    file: 'src/panel-tabs-wallpaper.js',
-    why: '「壁纸库」页签的四个节渲染器（原 src/panel-tabs.js 的 38–508 行原样搬移）',
-    markers: ['function renderWallpaperCurrentSection(ctx) {',
-      '    const { current, isLiveScene, onClear, onOpenPicker, onRefresh, onToggleAudio, onTogglePlay, onTogglePropsPanel, playbackLive, propsPanelOpen, renderUserPropsPanel, sel, setPickerOpener } = ctx;'],
-  },
-  {
     file: 'src/panel-tabs-appearance.js',
-    why: '「外观」页签的节渲染器与字体一族（原 src/panel-tabs.js 的 520–1125 行原样搬移）',
+    why: '「外观」页签的节渲染器与字体一族（从 src/panel-tabs.js 按域拆出）',
     markers: ['function renderAppearanceThemeSection(ctx) {', '    const { onResetModule, onToggleThemeFollow, sel } = ctx;'],
   },
   {
     file: 'src/panel-tabs-mascot.js',
-    why: '「吉祥物」页签的节渲染器与其模块级常量/拖拽状态（原 src/panel-tabs.js 的 1184–1574 行原样搬移）',
+    why: '「吉祥物」页签的节渲染器与其模块级常量/拖拽状态（从 src/panel-tabs.js 按域拆出）',
     markers: ['function renderMascotFormCards(sel, previewArt, previewW, previewH,', '  const MASCOT_BOX_PX = 64;'],
   },
   {
     file: 'src/panel-tabs-effects.js',
-    why: '「播放」页签的六个节渲染器（原 src/panel-tabs.js 的 1618–1913 行原样搬移）',
+    why: '「播放」页签的三个节渲染器：滑块 / 实时帧 / 出图来源（从 src/panel-tabs.js 按域拆出；倍速·帧率上限与适配·翻转两节住在 packages/media-bridge 的浏览器半边，ADR-0013/ADR-0014）',
     markers: ['function renderEffectsSlidersSection(ctx) {',
       '    const { onBackgroundBrightness, onBackgroundContrast, onBackgroundSaturate, onLayerPositionX, onLayerPositionY, onLayerReset, onLayerScale, onScrim, onWallpaperBlur, onWallpaperOpacity, sel } = ctx;'],
   },
   {
     file: 'src/panel-tabs-advanced.js',
-    why: '「系统」页签的六个节渲染器（原 src/panel-tabs.js 的 1943–2211 行原样搬移）',
+    why: '「系统」页签的六个节渲染器（从 src/panel-tabs.js 按域拆出）',
     markers: ['function renderAdvancedBrowsingSection(ctx) {', '    const { onLayoutChange, sel } = ctx;'],
   },
   {
@@ -461,31 +450,16 @@ const INLINE_MODULES = [
     markers: ['var OCCLUSION_POLL_MS = ', 'function startOcclusionPolling(', 'function stopOcclusionPolling(',
       'function occlusionTick(', 'function deliverOcclusionSnapshot('],
   },
-  {
-    // 玻璃后端的唯一落点（wip §10.13）：从 `effects.js` 抽出的那一段 ——
-    // 输入输出封闭（只要 `selection` + `body.style`），所以抽出来之后
-    // ⑪/⑫/⑬ 三组守卫读的"写了什么"有了单一归属，R3b 的形状改动也只落在这里。
-    file: 'src/glass.js',
-    why: '玻璃后端：取值解析 / 各面釉层变量 / 门控属性（无条件写，值槽位与开关正交）',
-    markers: ['const toRgbTriple = (hex) => {', 'function applyGlass(selection, s) {',
-      'const glassValue = (surface, param, profileValue, globalValue) =>'],
-  },
-  {
-    file: 'src/glass-surfaces.js',
-    why: '统一表面策略、安全载体、动态几何与可撤销生命周期',
-    markers: ['function weResolveSurface(', 'function syncGlassSurfaces(', 'function disposeGlassSurfaces('],
-  },
-  {
-    // 运行时表面管理先决定哪些额外目标可安全使用本地载体。
-    file: 'src/glass-extra.js',
-    why: '「额外补雾化的选择器」（#200）：把用户点名的选择器编译成 ::before 载体规则，写进本通道自己的 <style>',
-    markers: ['const EXTRA_GLASS_TAG_ID = ', 'function weExtraGlassCss(',
-      'function syncExtraGlassCss(', 'function disposeExtraGlassCss('],
-  },
+  // ── ADR-0016 第三刀：玻璃**运行时**（现 packages/glass/src/glass.js / glass-surfaces.js /
+  //    glass-extra.js + effects.js 的玻璃段 + detectSoftwareRender）**已迁出主 bundle**，
+  //    住 packages/glass/src/，由该包的 client.build.json 出产物，经 registerLayerHooks('glass')
+  //    挂进主包的 emit 节拍（sync = 原玻璃段写入、dispose = 原清理清单，逐字搬迁）；
+  //    weClampSurfaceColor / glassColorOf 两个纯函数**家留主包**（effects.js，染色地板判据
+  //    从主包产物抽取复算），子包经 HOST_BRIDGE 键集取同一份。
   {
     file: 'src/effects.js',
-    why: '效果应用层（设置 → DOM；契约见文件头，见 P1-7 后半）—— 玻璃那一段已抽到 src/glass.js',
-    markers: ['let lastScrimCss = "";', 'function applyEffects(', 'applyGlass(selection, s);',
+    why: '效果应用层（设置 → DOM；契约见文件头）—— 玻璃段已出户（ADR-0016 第三刀），本文件只剩非玻璃效果',
+    markers: ['let lastScrimCss = "";', 'function applyEffects(',
       'function clearEffects()', 'function resolveWallpaperFadeBg()'],
   },
   {
@@ -509,7 +483,7 @@ const INLINE_MODULES = [
 ];
 
 /**
- * **子包各自的浏览器半边产物**（BUNDLE-SPLIT §7.1 / ADR-0013 D9「多包后每包一产物」）。
+ * **子包各自的浏览器半边产物**（ADR-0014（子包契约） §7.1 / ADR-0013 D9「多包后每包一产物」）。
  *
  * 为什么不把 packages/* 追加进 INLINE_MODULES：INLINE_MODULES 的语义是「内联进**主** bundle 的
  * prelude」，而 test/verify-module-layout.mjs（规则③）、test/tools/src-scope.mjs、
@@ -518,9 +492,9 @@ const INLINE_MODULES = [
  * 不同的产物落点。
  *
  * 产物名 lib/client.<pkg>.js（而不是 client.js）：主产物已经是 lib/client.js，同名会在
- * 「按名字扫描产物」的守卫里撞面（包级约定 exports['./client'] 见 test/verify-package-publish.mjs:267）。
+ * 「按名字扫描产物」的守卫里撞面（包级约定 exports['./client'] 见 test/verify-package-publish.mjs）。
  *
- * **配方数据驱动 N（BUNDLE-SPLIT §7.2）**：子包清单不再写死在本文件里，而是「每个有浏览器半边的
+ * **配方数据驱动 N（ADR-0014（子包契约） §7.2）**：子包清单不再写死在本文件里，而是「每个有浏览器半边的
  * standalone 包一份 `packages/<pkg>/client.build.json`」：
  *   { "entry": "src/client.js",         // 该包浏览器半边入口（相对包目录；缺省 src/client.js）
  *     "artifact": "lib/client.fx.js",   // 产物落点（相对包目录，必须逐字 == exports['./client']）
@@ -811,82 +785,86 @@ function readInlinedPrelude(modules, baseDir, bodySrc, label = '') {
 }
 
 /**
- * 立绘（rope art）载荷的**构建期注入**。
+ * 立绘（rope art）载荷的**外置**与构建期对账（2026-10-30 启动性能）。
  *
- * ## 为什么字节不写在 src/client.js 里
- * 10 张立绘原本是 10 条单行 base64 常量内联在 `src/client.js`（2,369,676 字符 data URI /
- * 1,777,009 字节 PNG）—— 全仓最大的一处内聚污染：正文被 2.3MB 字面量切成两半，diff 任何一次
- * 编辑都要拖着这几百万字符走，而**运行时根本不解析这些字节**（它们是纯 data URI，原样交给
- * `<img src>`，见 `ROPE_FORMS` / `ropeArtOf`）。
- * 现在字节住 `assets/rope/<name>.png`（源资产归档在 `assets/mascot/`），源码只留
- * `const ROPE_IMG_<NAME> = "data:image/png;base64,__ROPE_ART_<NAME>__";`，由这里拼回产物。
+ * ## 为什么不再内联
+ * 10 张立绘以前在构建期以 base64 注入主产物：2,369,676 字符 = 4.2MB bundle 的 56%，
+ * 而渲染主线程实测下载 178ms、`v8.compile` 25ms（DevTools trace 2026-10-30）。立绘不是
+ * 启动必需数据 —— 桌面只画**当前形态**一张，其余只在吉祥物面板里出现。现在字节仍住
+ * `assets/rope/<name>.png`（随 npm 包发布），由宿主只读路由
+ * `/wallpaper-engine/rope-art/<name>.png` 按需直出，客户端只拿 URL（`ROPE_IMG_*`）。
  *
- * ## 等价性
- * 注入是**逐字符替换**：占位符回填后必须与拆分前的 `lib/client.js` **逐字节相同**
- * （sha256 不变 —— 这一刀的等价性证据就是"产物字节零差异"，比任何单测都硬）。
- * 替换不改行数 ⇒ 正文行号映射（`codeStart`）不受影响。
+ * ## 本函数只剩对账（任一不成立都 exit 1）
+ * 1. 声明形态必须逐字是 `const ROPE_IMG_<NAME> = BASE + "/rope-art/<name>.png";`；
+ * 2. `const ROPE_IMG_` 声明数 == 命中的形态数（有人改回内联 base64 / 改错形态 → 红）；
+ * 3. 声明名与文件名一致（`ROPE_IMG_WHALE` ↔ `whale.png`；改名必须两边一起改）；
+ * 4. 每个声明都有对应文件，且文件是 PNG（magic 校验；路由按 .png 出 content-type）；
+ * 5. `assets/rope/*.png` 里的每一张都被某个声明用到（改名只改一边会留下孤儿文件 → 红）；
+ * 6. 正文里不得残留旧的 `__ROPE_ART_` 占位符（防止半迁移状态把图挂掉）。
  *
- * ## 断言（任一不成立都 exit 1，绝不让占位符漏进产物）
- * 1. 声明名与占位符名一致（`ROPE_IMG_WHALE` ↔ `__ROPE_ART_WHALE__` —— 对不上就是笔误）；
- * 2. 每个占位符在正文里**恰好命中一次**（写重/写漏都当场红）；
- * 3. `const ROPE_IMG_` 声明数 == 实际注入数（有人把某行改成内联 base64 或改了名 → 红）；
- * 4. 载荷必须是 PNG（magic 校验；换成别的格式会让 data URI 的 mime 说谎）；
- * 5. 替换后正文里**不再残留** `__ROPE_ART_`（占位符进产物 = 图挂掉，宁可构建失败）。
+ * 图片字节本身不改：外置是"搬位置"，不是重编码。
  */
-function injectRopeArt(text) {
-  // 声明写在函数体内：本脚本的调用点在文件上半部，模块级 `const` 会在调用时踩 TDZ
-  // （实测 `ReferenceError: Cannot access 'ROPE_DECL_RE' before initialization`）。
+function checkRopeArtDeclarations(text) {
   const dir = resolve(root, 'assets', 'rope');
-  const declRe = /^const (ROPE_IMG_([A-Z0-9_]+)) = "data:image\/png;base64,__ROPE_ART_([A-Z0-9_]+)__";$/gm;
+  const declRe = /^const (ROPE_IMG_([A-Z0-9_]+)) = BASE \+ "\/rope-art\/([a-z0-9]+)\.png";$/gm;
   const hits = [...text.matchAll(declRe)];
   const declared = (text.match(/^const ROPE_IMG_/gm) || []).length;
   if (!hits.length) {
-    console.error('[build-client] src/client.js 里一个立绘占位符都没有：载荷应写成'
-      + ' `const ROPE_IMG_<NAME> = "data:image/png;base64,__ROPE_ART_<NAME>__";`'
-      + '（字节在 assets/rope/<name>.png，见该目录 README）');
+    console.error('[build-client] src/client.js 里一个立绘声明都没有：应写成'
+      + ' `const ROPE_IMG_<NAME> = BASE + "/rope-art/<name>.png";`（字节在 assets/rope/，见该目录 README）');
     process.exit(1);
   }
-  let out = text;
+  if (declared !== hits.length) {
+    console.error(`[build-client] src/client.js 里 const ROPE_IMG_ 声明有 ${declared} 条，`
+      + `符合外置形态的只有 ${hits.length} 条 —— 有一条被改回内联 base64 或写坏了`);
+    process.exit(1);
+  }
+  const names = new Set();
   for (const m of hits) {
-    const [, decl, declName, phName] = m;
-    if (declName !== phName) {
-      console.error(`[build-client] src/client.js 的 ${decl} 与占位符 __ROPE_ART_${phName}__ 名字不一致`
-        + '（文件名 = 占位符名的小写形式，改名必须同时动源码与 assets/rope/）');
+    const [, decl, declName, fileStem] = m;
+    const want = declName.toLowerCase();
+    if (fileStem !== want) {
+      console.error(`[build-client] ${decl} 指向 rope-art/${fileStem}.png，但声明名要求 ${want}.png`
+        + '（文件名 = 声明名的小写形式，改名必须同时动源码与 assets/rope/）');
       process.exit(1);
     }
-    const ph = `__ROPE_ART_${phName}__`;
-    const anchor = `const ${decl} = "data:image/png;base64,${ph}";`;
-    if (text.split(anchor).length !== 2) {
-      console.error(`[build-client] 占位符 ${ph} 在正文里不是恰好命中一次 —— `
-        + '写重或写漏都会让注入结果不可预测');
+    if (names.has(want)) {
+      console.error(`[build-client] 立绘声明重复：${want}（同一张图被声明两次）`);
       process.exit(1);
     }
-    const asset = resolve(dir, `${phName.toLowerCase()}.png`);
+    names.add(want);
+    const asset = resolve(dir, `${want}.png`);
     let bytes;
     try {
       bytes = readFileSync(asset);
     } catch {
-      console.error(`[build-client] 找不到立绘载荷 ${asset} —— 占位符 ${ph} 没有对应文件`);
+      console.error(`[build-client] 找不到立绘载荷 ${asset} —— 声明 ${decl} 没有对应文件`);
       process.exit(1);
     }
     if (bytes.subarray(0, 8).toString('hex') !== '89504e470d0a1a0a') {
-      console.error(`[build-client] ${asset} 不是 PNG（magic 不符）—— data URI 声明的是 image/png，`
+      console.error(`[build-client] ${asset} 不是 PNG（magic 不符）—— 路由按 .png 出 content-type，`
         + '载荷就必须真是 PNG');
       process.exit(1);
     }
-    out = out.replace(anchor, `const ${decl} = "data:image/png;base64,${bytes.toString('base64')}";`);
   }
-  if (declared !== hits.length) {
-    console.error(`[build-client] src/client.js 里 const ROPE_IMG_ 声明有 ${declared} 条，`
-      + `符合占位符形态的只有 ${hits.length} 条 —— 有一条既没内联字节也没占位符`
-      + '（构建期注入是唯一真源，不要手写 base64）');
+  let files = [];
+  try {
+    files = readdirSync(dir).filter((name) => name.toLowerCase().endsWith('.png')).map((name) => name.slice(0, -4));
+  } catch {
+    console.error(`[build-client] 读不到立绘目录 ${dir}`);
     process.exit(1);
   }
-  if (/__ROPE_ART_[A-Z0-9_]+__/.test(out)) {
-    console.error('[build-client] 注入后仍残留 __ROPE_ART_ 占位符 —— 漏了文件或名字对不上');
+  const orphans = files.filter((name) => !names.has(name));
+  if (orphans.length) {
+    console.error('[build-client] assets/rope/ 里有没被任何 ROPE_IMG_ 声明用到的孤儿文件：'
+      + orphans.map((n) => n + '.png').join(', ') + '（改名只改了一边？）');
     process.exit(1);
   }
-  return out;
+  if (/__ROPE_ART_[A-Z0-9_]+__/.test(text)) {
+    console.error('[build-client] 正文里残留旧的 __ROPE_ART_ 占位符 —— 半迁移状态会让立绘挂掉');
+    process.exit(1);
+  }
+  return text;
 }
 
 /**
@@ -952,7 +930,7 @@ function stripHeader(srcText) {
  * 组装一份客户端产物 —— 主 bundle 与子包 bundle **同形**（同一个 window.__ModuleLoader__.load
  * 形状），差别只有两处：
  *   · 子包 bundle 由构建发出 `const host = require('<主包名>')`，那是跨包通道的唯一入口
- *     （ADR-0013 D13 / BUNDLE-SPLIT §5.1 ②：子包不 import 主包源码，只消费主 bundle 的
+ *     （ADR-0013 D13 / ADR-0014（子包契约） §5.1 ②：子包不 import 主包源码，只消费主 bundle 的
  *     `module.exports`；`exports.hostBridgeKeys` 是冻结的显式键集）。
  *     这一行**必须**由构建发出：源码面写 require 会被 test/verify-subpackage-purity.mjs 判红
  *     （它只放行产物，只放行主包名出现在 packages/<pkg>/lib/client*.js 里）。
@@ -990,7 +968,8 @@ function assembleBundle({ id: bundleId, prelude, bodySrc, hostPackage = null, bo
 function buildMainBundle() {
   const source = readNormalized(resolve(root, 'src', 'client.js'));
   const { body: rawBody, codeStart: lineOffset } = stripHeader(source);
-  const bodySrc = injectRopeArt(rawBody.replace(/\n+$/, ''));
+  const bodySrc = rawBody.replace(/\n+$/, '');
+  checkRopeArtDeclarations(bodySrc);
   const prelude = readInlinedPrelude(INLINE_MODULES, root, bodySrc);
   // 这两条必须在拼产物**之前**跑：撞名/重复声明的失败后果在语法解析层完全看不见，
   // 因此不能指望 `new Script(...)` 兜住（见 assertNoShadowedScopeDecls 的注释）。

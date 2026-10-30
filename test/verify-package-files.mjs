@@ -184,6 +184,29 @@ async function main() {
       'required=' + required.length + ' absent=[' + absent.join(', ') + '] unlisted=[' + unlisted.join(', ') + ']');
   }
 
+  // ── P3b: 客户端声明的 /rope-art/*.png 与发布 allowlist 双射 ────────────────
+  // 这些图 2026-10-30 起从 bundle 内联改为宿主路由直出：少一张随包发布，
+  // 构建和现有守卫都不会红，安装后只是某个立绘 404。判据从**客户端声明**出发
+  // （而不是硬编码文件名），这样新增角色时漏加 assets/rope 也会被抓住。
+  {
+    const clientSrc = readFileSync(join(ROOT, 'src/client.js'), 'utf8');
+    const declared = [...clientSrc.matchAll(
+      /const ROPE_IMG_[A-Z0-9_]+ = BASE \+ ["']\/rope-art\/([a-z0-9_-]+\.png)["'];/g,
+    )].map((m) => m[1]);
+    const ropePngs = walkFiles(join(ROOT, 'assets/rope'))
+      .filter((rel) => /\.png$/.test(rel))
+      .map((rel) => rel.split('/').pop());
+    const missingOnDisk = declared.filter((name) => !ropePngs.includes(name));
+    const uncoveredPngs = ropePngs.filter((name) => !files.some((e) => coveredBy('assets/rope/' + name, e)));
+    const strayPngs = ropePngs.filter((name) => !declared.includes(name));
+    check('P3b /rope-art declarations ↔ assets/rope/*.png ↔ `files` allowlist (no missing/stray PNG)',
+      declared.length > 0 && missingOnDisk.length === 0 && uncoveredPngs.length === 0 && strayPngs.length === 0,
+      'declared=' + declared.length + ' onDisk=' + ropePngs.length
+        + ' missingOnDisk=[' + missingOnDisk.join(', ') + ']'
+        + ' uncovered=[' + uncoveredPngs.join(', ') + ']'
+        + ' stray=[' + strayPngs.join(', ') + ']');
+  }
+
   // ── P6: 每个 lib/ 运行时模块都能被解析（语法 / 早期错误；`lib/` 里还有 .swift/LICENSE/.html，不参与）─────────────────────────
   // 为什么要 `node --check`：`export { parsePkg }` 而 parsePkg 未定义这种**再导出**错误让
   // 模块根本加载不起来，而没有任何守卫 import 它时整条链仍是绿的。只解析、不执行
@@ -345,8 +368,9 @@ async function main() {
     // `handOffTeardown` 必须早于 `apply()` 体内任何注册点，中途抛错时 fiber 才拿得到 teardown；
     // 硬档依据 = 后果是"路由整族残留在宿主表里、开关再也关不干净"）。
     //  再：verify 70→71 / docs 7→6 —— `verify-guard-chain`（链的形状自检）由 docs 软档升 hard
-    // （ADR-0004：链的形状属**发布面** —— 静默掉一条守卫 = 一条硬档判据无声脱离 PR 门禁，而 CI 对
-    // `verify:docs` 是 `continue-on-error`，软档拦不住；R-4。它另含 R-5「脱链必须有代码内理由」⑤）。
+    // （ADR-0004：链的形状属**发布面** —— 静默掉一条守卫 = 一条硬档判据无声脱离 PR 门禁；旧 CI 对
+    // `verify:docs` 曾是 `continue-on-error`，正是它拦不住的原因；R-4。它另含 R-5「脱链必须有代码内理由」⑤）。
+    // 现在内务已移到定时 housekeeping，full 链无软档，但这条升 hard 的历史理由仍成立。
     // all 不变（组内搬家）。
     //  再：verify 71→72 / all 84→85 —— 新增 `test/verify-ci-steps.mjs`（R-7：CI 步骤表自身无判据时，
     // 删掉 `verify:static` / `verify:bridge` 步不会让任何判据变红；硬档依据 = 后果是"一整类门禁静默
@@ -377,7 +401,16 @@ async function main() {
     // 公告快通道守卫（verify-notice-routing）+ 预设弹窗浏览器实测各加一步：verify 90 → 91，all 103 → 104。
     // 事前认领审批门禁增加一条硬档；推广弹窗下线时其浏览器实测同步删除（净回到 91 / 104）。
     // 发布集**字节**守卫（`test/verify-release-set.mjs`）加一步：verify 91 → 92，all 104 → 105。
-    const CHAIN_FLOOR = { verify: 92, docs: 6, smoke: 6, all: 105 };
+    // ：合流 upstream v1.4.0（sync/upstream-1.4.0）后按**本树**实测重取 —— 上游步骤集
+    // （桌宠/发布/治理/浏览器等）与本地 P-D 的两条（verify-layer-ownership / verify-token-domain）
+    // 并存：verify 92→94、all 105→107（docs / smoke 仍各 6）。地板只许抬、不许降。
+    // 再：verify 94→95 / all 107→108 —— 新增 `test/verify-occlusion-debounce.mjs`（#288 可见性防抖契约）。
+    // 再：verify 95→96 / all 108→109 —— 新增 `test/verify-tolerant-register.mjs`（#267 升级重复路由容错）。
+    // 再：verify 96→97 / all 109→110 —— 新增 `test/verify-resume-repaint.mjs`（#274 遮挡恢复重绘契约）。
+    // 再：verify 97→98 / all 110→111 —— 新增 `test/verify-lazy-engine-dir.mjs`（#218 运行期依赖惰性解析）。
+    // 再：verify 98→99 / all 111→112 —— 新增 `test/verify-cache-keys.mjs`（#208 缓存键短哈希、与 checkout 深度解耦）。
+    // 再：verify 99→100 / all 112→113 —— 新增 `test/verify-titlebar-anchor.mjs`（#235 标题栏运行时锚点探针）。
+    const CHAIN_FLOOR = { verify: 100, docs: 6, smoke: 6, all: 113 };
     /** 地板表与 GROUPS 的对齐体检：键名必须与**组名**逐一对齐（纯函数 ⇒ 负对照可直接喂）。 */
     const floorGaps = (groups, floors) => groups.map(([, g]) => g).filter((g) => !Number.isInteger(floors[g]));
     const problems = floorGaps(GROUPS, CHAIN_FLOOR).map((g) => '地板表缺组 ' + g

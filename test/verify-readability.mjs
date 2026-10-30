@@ -63,7 +63,7 @@
 //       这是地板的**反向判据**：它证明"绕过地板"只能经这一个显式开关发生。
 //
 // Usage: node test/verify-readability.mjs
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { styleSources, cssBodyOf } from './tools/src-scope.mjs';
 
 const results = [];
@@ -73,6 +73,12 @@ function check(name, ok, detail) {
 }
 
 const SRC = readFileSync(new URL('../lib/client.js', import.meta.url), 'utf8');
+// ADR-0016 第二刀起玻璃设置节的 UI 行（现 packages/glass/src/glass-panel.js）住玻璃子包产物 ⇒ 需要"UI 行
+// 在不在 / 文案过不过 weT"这类**面板文本**判据的，读双工件拼接面（主包 + packages/glass）；
+// 数值/配方判据仍以主包 SRC 为准（玻璃量写入仍在 src/effects.js，第三刀才随包走）。
+const GLASS_BUNDLE_SRC = readFileSync(new URL('../packages/glass/lib/client.glass.js', import.meta.url), 'utf8');
+const PANEL_SRC_ALL = SRC + GLASS_BUNDLE_SRC;
+const GLASS_CSS_SRC = readFileSync(new URL('../packages/glass/src/glass-css.js', import.meta.url), 'utf8');
 
 // ── source → values ─────────────────────────────────────────────────────────
 function num(re, text = SRC) {
@@ -82,8 +88,9 @@ function num(re, text = SRC) {
 
 // 1) the named JS constants (single source of truth for both floor values)
 const FLOOR_JS = {
-  light: num(/const READABILITY_FLOOR = ([\d.]+);/),
-  dark: num(/const READABILITY_FLOOR_DARK = ([\d.]+);/),
+  // ADR-0016 第四刀：常量随玻璃 CSS 走（packages/glass/src/glass-css.js）⇒ 从玻璃包源提取。
+  light: num(/const READABILITY_FLOOR = ([\d.]+);/, GLASS_CSS_SRC),
+  dark: num(/const READABILITY_FLOOR_DARK = ([\d.]+);/, GLASS_CSS_SRC),
 };
 
 // 2) the injected stylesheet: evaluate the CSS template literal with exactly
@@ -91,7 +98,7 @@ const FLOOR_JS = {
 // ⚠️ 锚点锚在行首且容忍缩进（产物把内联模块整段缩进过）：散文里出现同样的声明字面量会把锚点带偏。
 // （刀3）：样式表拆成 8 个域模板 + 组装点 ⇒ 取文改走 cssBodyOf（按声明顺序拼回一份
 // CSS 体，与旧单模板取文逐字节相同）；取不到任何模板会抛错，不再静默返回空串让判据恒真。
-const CSS_BODY = cssBodyOf(SRC);
+const CSS_BODY = cssBodyOf(SRC + readFileSync(new URL('../packages/glass/lib/client.glass.js', import.meta.url), 'utf8'));
 let CSS = '';
 let cssError = null;
 try {
@@ -100,7 +107,8 @@ try {
 } catch (err) { cssError = err && err.message; }
 
 // 3) the glass-alpha mapping, derived from the source (never re-typed here)
-const GMAP = SRC.match(/const glassAlpha = Math\.max\(([\d.]+), ([\d.]+) - \(selection\.glassAlpha \/ ([\d.]+)\) \* ([\d.]+)\);/);
+// ADR-0016 第三刀：glassAlpha 曲线随玻璃层出户 ⇒ 从双工件拼接面提取（主包 + 玻璃包产物）。
+const GMAP = PANEL_SRC_ALL.match(/const glassAlpha = Math\.max\(([\d.]+), ([\d.]+) - \(selection\.glassAlpha \/ ([\d.]+)\) \* ([\d.]+)\);/);
 const glassAlpha = GMAP
   ? (pct) => Math.max(Number(GMAP[1]), Number(GMAP[2]) - (pct / Number(GMAP[3])) * Number(GMAP[4]))
   : null;
@@ -471,7 +479,8 @@ function main() {
       && declValue(chip.body, 'backdrop-filter') === 'blur(var(--we-inline-code-blur, 8px)) saturate(var(--we-saturate, 1.3)) brightness(var(--we-glass-brightness, 1.04))'
       && declValue(chip.body, '-webkit-backdrop-filter') === declValue(chip.body, 'backdrop-filter')
       && declValue(chip.body, 'background-image') === 'none !important'
-      && declValue(chip.body, 'border-color') === 'rgba(255, 255, 255, 0.14) !important'
+      && (declValue(chip.body, 'border-color') || '').startsWith('var(--dsw-alias-border-l2')
+      && declValue(chip.body, 'border-color') === 'var(--dsw-alias-border-l2, rgba(128, 128, 128, 0.14)) !important'
       && !/(?:^|[;\s])(?:color|filter|opacity)\s*:/.test(chip.body));
     // #197：推理正文由宿主用 compact 变体渲染（宿主模块类带 _thinkBody 后缀），那里的
     // 行内代码是 display:inline。跨行折断时 backdrop-filter 的取值区取的是**所有行盒的
@@ -962,13 +971,14 @@ function main() {
     // 链路：默认关（安全不变量）+ 成对挂摘 + UI 行过 weT。
     check('F7e 设置键默认关且 kind 为 boolFalse（默认态地板照旧兜底）',
       /sidebarFullClear:\s*false,/.test(SRC) && /sidebarFullClear:\s*\{\s*kind:\s*'boolFalse'\s*\}/.test(SRC));
-    const sets = (SRC.match(/setAttribute\("data-we-sidebar-fullclear"/g) || []).length;
-    const rems = (SRC.match(/removeAttribute\("data-we-sidebar-fullclear"/g) || []).length;
-    const paired = SRC.includes('else document.body.removeAttribute("data-we-sidebar-fullclear")');
+    // ADR-0016 第三刀：挂/摘都在玻璃包产物里（glass.js 写、disposeGlassLayer 摘）⇒ 双工件面计数。
+    const sets = (PANEL_SRC_ALL.match(/setAttribute\("data-we-sidebar-fullclear"/g) || []).length;
+    const rems = (PANEL_SRC_ALL.match(/removeAttribute\("data-we-sidebar-fullclear"/g) || []).length;
+    const paired = PANEL_SRC_ALL.includes('else document.body.removeAttribute("data-we-sidebar-fullclear")');
     check('F7f 门控属性有挂有摘：applyGlass 成对（if/else）+ clearEffects 卸载再摘一次（rem ≥2）',
       sets >= 1 && paired && rems >= 2, 'set=' + sets + ' rem=' + rems + ' paired=' + paired);
-    check('F7g UI 行存在且文案过 weT（新中文必须进 weT + 词表）',
-      /weT\("侧栏全透明"\)/.test(SRC) && /"侧栏全透明":\s*"/.test(SRC));
+    check('F7g UI 行存在且文案过 weT（新中文必须进 weT + 词表；UI 行在玻璃包产物里，ADR-0016）',
+      /weT\("侧栏全透明"\)/.test(PANEL_SRC_ALL) && /"侧栏全透明":\s*"/.test(SRC));
     // 负对照：把上面几条判据各自喂坏输入，必须判出（判据不是恒真）。
     const gateOk = (r) => r.header.includes('data-we-wallpaper');
     check('negative control F7-1: 缺壁纸门的全透明规则会被同一条判据判出',
@@ -986,9 +996,9 @@ function main() {
     const unpairOk = (src) => (src.match(/setAttribute\("data-we-sidebar-fullclear"/g) || []).length >= 1
       && src.includes('else document.body.removeAttribute("data-we-sidebar-fullclear")')
       && (src.match(/removeAttribute\("data-we-sidebar-fullclear"/g) || []).length >= 2;
-    check('negative control F7-4: 只挂不摘（漏 clearEffects 那次）会被同一条判据判出',
+    check('negative control F7-4: 只挂不摘（漏 dispose 那次）会被同一条判据判出（挂/摘面 = 双工件，ADR-0016）',
       !unpairOk('setAttribute("data-we-sidebar-fullclear","on"); else document.body.removeAttribute("data-we-sidebar-fullclear")')
-      && unpairOk(SRC));
+      && unpairOk(PANEL_SRC_ALL));
   }
 
   // ── F8 (#164)：原生 select 弹层的选项行必须显式「不透明底 + 对比墨」──────────────────
@@ -1220,6 +1230,50 @@ function main() {
       check('negative control F10-3: 旧的九档采样面对旧实现漏判（该面最差 ≥4.5 ⇒ 全绿）—— 采样面必须连续',
         oldWorstNine >= 4.5, '旧实现九档最差=' + oldWorstNine.toFixed(2) + ':1');
     }
+  }
+
+  // ── F11 内置预设的 themeColors（light）必须在浅色面板上达到 AA（#276）─────────
+  // 字体集的 themeColors 会被写进宿主 --dsw-alias-label-*（影响所有原生插件的说明文字）。
+  // 预设此前 light/dark 写同一组亮色（#fafafa / #75e6f5 / #2de8eb …）⇒ 浅色主题下
+  // 原生界面说明文字对比度只有 1.08–1.34:1（实测背景 #ecf1fc）。本条对**每个**内置预设
+  // 的 light 值判 ≥4.5:1，防止同类漂移再回来；dark 值不判（深色底另有背景）。
+  {
+    const PANEL_BG = '#ecf1fc';
+    const relLum = (hex) => {
+      const rgb = hex2rgb(hex).map((v) => {
+        const c = v / 255;
+        return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+      });
+      return 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2];
+    };
+    const contrast = (a, b) => {
+      const [hi, lo] = relLum(a) >= relLum(b) ? [relLum(a), relLum(b)] : [relLum(b), relLum(a)];
+      return (hi + 0.05) / (lo + 0.05);
+    };
+    const presetDir = new URL('../lib/glass-presets/', import.meta.url);
+    const names = readdirSync(presetDir).filter((f) => f.endsWith('.json'));
+    const bad = [];
+    let seenPresets = 0;
+    for (const name of names) {
+      let doc;
+      try { doc = JSON.parse(readFileSync(new URL(name, presetDir), 'utf8')); } catch { continue; }
+      const colors = doc && doc.assets && doc.assets.font && doc.assets.font.values
+        && doc.assets.font.values.themeColors;
+      if (!colors || typeof colors !== 'object') continue;
+      seenPresets += 1;
+      for (const [role, pair] of Object.entries(colors)) {
+        if (!pair || typeof pair.light !== 'string' || !/^#[0-9a-f]{6}$/i.test(pair.light)) continue;
+        const r = contrast(pair.light, PANEL_BG);
+        if (r < 4.5) bad.push(name + ':' + role + '=' + pair.light + ' (' + r.toFixed(2) + ':1)');
+      }
+    }
+    check('F11 内置预设的 themeColors.light 在浅色面板上达到 AA 4.5:1（#276）',
+      seenPresets >= 2 && bad.length === 0,
+      'presets=' + seenPresets + (bad.length ? ' · ' + bad.join('; ') : ' · 全部达标'));
+    // 负对照：同一判据喂"旧作者自用亮色"必须判红（证明判据有牙）。
+    const legacy = ['#fafafa', '#75e6f5', '#2de8eb'].map((v) => contrast(v, PANEL_BG));
+    check('F11 negative control: 旧的作者自用亮色会被同一条阈值判红',
+      legacy.every((r) => r < 4.5), legacy.map((r) => r.toFixed(2) + ':1').join(' / '));
   }
 
   const failed = results.filter((r) => !r.ok);

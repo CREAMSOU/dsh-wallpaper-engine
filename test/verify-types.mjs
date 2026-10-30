@@ -208,7 +208,7 @@ console.log('\nP3  Inventory（顶层载荷）');
   check('钉住的必需字段全部已声明，且没有多出的字段',
     // 集合已逐名相等（下面 missing/extra 两项）⇒ 长度相等是冗余合取项：本条只保留
     // 两项 missing/extra 与 `a.parsed`；"钉住的每条都真的在 .d.ts 里"由前面那条
-    // 按名字逐一钉名的判据（约 203-205 行）负责，两处分工不重复。
+    // 按名字逐一钉名的判据负责，两处分工不重复。
     a.parsed && a.missingDeclared.length === 0 && a.extraDeclared.length === 0,
     a.parsed
       ? 'missing=[' + a.missingDeclared.join(', ') + '] extra=[' + a.extraDeclared.join(', ') + ']'

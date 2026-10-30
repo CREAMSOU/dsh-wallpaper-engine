@@ -200,13 +200,13 @@
     return new Proxy(function () {}, { get: boom, apply: boom });
   }
   const QP_CTX_SETTINGS_ONLY = [
-    // ── #159② 玻璃颜色的「分套设置」（门在 `src/glass-panel.js` 的 `!sidebarSurface`）──
+    // ── #159② 玻璃颜色的「分套设置」（门在 packages/glass/packages/glass/src/glass-panel.js 的 `!sidebarSurface`）──
     //    「深色单独设置」开关与「玻璃颜色 · 深色」那一行都只在设置页画；侧栏档只画
     //    "写当前配色那一侧"的一个色板（`onGlassColor` 走真值，不在这里）。列这个处理器
     //    进来是给那道门上牙：哪天它在侧栏档被取用 = 渲染时当场抛错，而不是静默冒出深色行。
     "onGlassDarkSeparate",
     // ── 预设方案（ADR-0008 D4：跨面批量覆盖 + 无撤销，只在设置页画）──
-    //    门在 `src/glass-panel.js`（`!sidebarSurface`）。列它进来是给"预设块只在设置页"这件事上牙：
+    //    门在 packages/glass/packages/glass/src/glass-panel.js（`!sidebarSurface`）。列它进来是给"预设块只在设置页"这件事上牙：
     //    补上这个字段 = 渲染时**当场抛错**（替身取用即炸），而不是静默让预设块冒到侧栏 ——
     //    那些"整块快照覆盖且不可撤销"的动作不该随手可达。
     "glassPresets",
@@ -523,7 +523,7 @@
           onLayerPositionX, onLayerPositionY, onLayerScale, onLayerReset,
           // 与设置页同源的那几个播放控制：实时渲染总开关 / 启动等待 / 实时帧率 /
           // 倍速 / 适配 / 翻转（侧栏档真的会画到它们）。
-          onToggleSceneLive, onLiveBootDelay, onSceneLiveFps, onPlaybackRate, onObjectFit, onFlip,
+          onToggleSceneLive, onLiveBootDelay, onSceneLiveFps, onSceneAutoQuality, onPlaybackRate, onObjectFit, onFlip,
           onOpenPicker, setPickerOpener,
           // 侧栏档的空态 CTA：切到本面板的壁纸页（不是设置页的库下钻）。
           onPickWallpaper: () => switchQpTab("wallpaper"),

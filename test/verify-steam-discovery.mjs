@@ -27,7 +27,7 @@ const ISO = join(ROOT, '.test-cache', 'steam-discovery-guard');
 const SRC = join(ROOT, 'lib', 'steam-discovery.js');
 /** 合成 appid：它出现在所有夹具里 ⇒ 一旦模块硬编码真值（431960）就会被判出。 */
 const APPID = '777777';
-/** 生产真值（lib/index.js:123）—— 只用来做"别的 appid 不算"的负例。 */
+/** 生产真值（`lib/kernel/host-kernel.js` 的 `WE_APPID`）—— 只用来做"别的 appid 不算"的负例。 */
 const REAL_WE_APPID = '431960';
 
 rmSync(ISO, { recursive: true, force: true });
@@ -48,7 +48,7 @@ function section(title) {
 }
 
 /**
- * 生产谓词（lib/index.js:245）就是 `access` —— 它**不区分文件与目录**。守卫沿用同一语义，
+ * 生产谓词（`lib/kernel/host-kernel.js` 的 `access`）就是它 —— 它**不区分文件与目录**。守卫沿用同一语义，
  * 否则测的就不是产品里的那条路径。
  */
 const realAccessExists = async (p) => {
@@ -466,7 +466,7 @@ if (dead.length) {
 skipNotes.push('`STEAM_PROBE_TTL_MS` 的过期路径（本层不可观察：无注入时钟、没有 60s 预算）');
 console.log('  ⚠ SKIP（本层不可观察，不用假判据填）：`STEAM_PROBE_TTL_MS` 的**过期路径** —— 无注入时钟、'
   + '没有 60s 预算；本守卫只钉"env 变化不被 TTL 掩盖"（A2）与"候选遍历/结果不缓存"（B1）');
-console.log('  ⚠ 观察（不是判据）：生产谓词 `lib/index.js:245` 是 `access` ⇒ 不区分文件与目录，'
+console.log('  ⚠ 观察（不是判据）：生产谓词（`lib/kernel/host-kernel.js` 的 `access`）不区分文件与目录，'
   + '`distribution/version.json` 若被建成**目录**同样算安装根；本模块内不钉这条，'
   + '要收紧就改宿主那个谓词（已报 Lead）');
 

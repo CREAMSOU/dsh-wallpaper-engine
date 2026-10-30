@@ -155,7 +155,8 @@
         "uiColorTab": "",
         "uiColorDeepDiving": "",
         "extraGlassSelectors": "",
-        "glassSurfacePolicy": {}
+        "glassSurfacePolicy": {},
+        "sceneAutoQuality": true
       },
       "host": {
         "id": "",
@@ -181,6 +182,7 @@
         "fpsCap": 0,
         "sceneLive": true,
         "sceneLiveFps": 30,
+        "sceneAutoQuality": true,
         "liveBootDelay": 3,
         "audioSource": "auto",
         "adapterTarget": "auto",
@@ -467,7 +469,8 @@
         "uiColorTab": "",
         "uiColorDeepDiving": "",
         "extraGlassSelectors": "",
-        "glassSurfacePolicy": {}
+        "glassSurfacePolicy": {},
+        "sceneAutoQuality": true
       },
       "host": "__null__"
     },
@@ -633,7 +636,8 @@
         "uiColorTab": "",
         "uiColorDeepDiving": "",
         "extraGlassSelectors": "",
-        "glassSurfacePolicy": {}
+        "glassSurfacePolicy": {},
+        "sceneAutoQuality": true
       },
       "host": "__null__"
     },
@@ -799,7 +803,8 @@
         "uiColorTab": "",
         "uiColorDeepDiving": "",
         "extraGlassSelectors": "",
-        "glassSurfacePolicy": {}
+        "glassSurfacePolicy": {},
+        "sceneAutoQuality": true
       },
       "host": "__null__"
     },
@@ -957,7 +962,8 @@
         "uiColorTab": "",
         "uiColorDeepDiving": "",
         "extraGlassSelectors": "",
-        "glassSurfacePolicy": {}
+        "glassSurfacePolicy": {},
+        "sceneAutoQuality": true
       },
       "host": {
         "id": "",
@@ -983,6 +989,7 @@
         "fpsCap": 0,
         "sceneLive": true,
         "sceneLiveFps": 30,
+        "sceneAutoQuality": true,
         "liveBootDelay": 3,
         "audioSource": "auto",
         "adapterTarget": "auto",
@@ -1318,7 +1325,8 @@
         "uiColorTab": "",
         "uiColorDeepDiving": "",
         "extraGlassSelectors": "",
-        "glassSurfacePolicy": {}
+        "glassSurfacePolicy": {},
+        "sceneAutoQuality": true
       },
       "host": {
         "id": "",
@@ -1344,6 +1352,7 @@
         "fpsCap": 0,
         "sceneLive": true,
         "sceneLiveFps": 30,
+        "sceneAutoQuality": true,
         "liveBootDelay": 3,
         "audioSource": "auto",
         "adapterTarget": "auto",
@@ -1724,7 +1733,8 @@
         "uiColorTab": "",
         "uiColorDeepDiving": "",
         "extraGlassSelectors": "",
-        "glassSurfacePolicy": {}
+        "glassSurfacePolicy": {},
+        "sceneAutoQuality": true
       },
       "host": {
         "id": "",
@@ -1750,6 +1760,7 @@
         "fpsCap": 0,
         "sceneLive": true,
         "sceneLiveFps": 30,
+        "sceneAutoQuality": true,
         "liveBootDelay": 3,
         "audioSource": "auto",
         "adapterTarget": "auto",
@@ -2029,7 +2040,8 @@
         "uiColorTab": "",
         "uiColorDeepDiving": "",
         "extraGlassSelectors": "",
-        "glassSurfacePolicy": {}
+        "glassSurfacePolicy": {},
+        "sceneAutoQuality": true
       },
       "host": {
         "id": "",
@@ -2055,6 +2067,7 @@
         "fpsCap": 0,
         "sceneLive": true,
         "sceneLiveFps": 30,
+        "sceneAutoQuality": true,
         "liveBootDelay": 3,
         "audioSource": "auto",
         "adapterTarget": "auto",
@@ -2348,7 +2361,8 @@
         "uiColorTab": "",
         "uiColorDeepDiving": "",
         "extraGlassSelectors": "",
-        "glassSurfacePolicy": {}
+        "glassSurfacePolicy": {},
+        "sceneAutoQuality": true
       },
       "host": {
         "id": "",
@@ -2374,6 +2388,7 @@
         "fpsCap": 0,
         "sceneLive": true,
         "sceneLiveFps": 30,
+        "sceneAutoQuality": true,
         "liveBootDelay": 3,
         "audioSource": "auto",
         "adapterTarget": "auto",
@@ -2667,7 +2682,8 @@
         "uiColorTab": "",
         "uiColorDeepDiving": "",
         "extraGlassSelectors": "",
-        "glassSurfacePolicy": {}
+        "glassSurfacePolicy": {},
+        "sceneAutoQuality": true
       },
       "host": {
         "id": "",
@@ -2693,6 +2709,7 @@
         "fpsCap": 0,
         "sceneLive": true,
         "sceneLiveFps": 15,
+        "sceneAutoQuality": true,
         "liveBootDelay": 0,
         "audioSource": "auto",
         "adapterTarget": "auto",
@@ -2973,7 +2990,8 @@
         "uiColorTab": "",
         "uiColorDeepDiving": "",
         "extraGlassSelectors": "",
-        "glassSurfacePolicy": {}
+        "glassSurfacePolicy": {},
+        "sceneAutoQuality": true
       },
       "host": {
         "id": "",
@@ -2999,6 +3017,7 @@
         "fpsCap": 0,
         "sceneLive": true,
         "sceneLiveFps": 30,
+        "sceneAutoQuality": true,
         "liveBootDelay": 3,
         "audioSource": "auto",
         "adapterTarget": "auto",
@@ -3284,7 +3303,8 @@
         "uiColorTab": "",
         "uiColorDeepDiving": "",
         "extraGlassSelectors": "",
-        "glassSurfacePolicy": {}
+        "glassSurfacePolicy": {},
+        "sceneAutoQuality": true
       },
       "host": {
         "id": "",
@@ -3310,6 +3330,7 @@
         "fpsCap": 0,
         "sceneLive": true,
         "sceneLiveFps": 30,
+        "sceneAutoQuality": true,
         "liveBootDelay": 3,
         "audioSource": "auto",
         "adapterTarget": "auto",
@@ -3592,7 +3613,8 @@
         "uiColorTab": "",
         "uiColorDeepDiving": "",
         "extraGlassSelectors": "",
-        "glassSurfacePolicy": {}
+        "glassSurfacePolicy": {},
+        "sceneAutoQuality": true
       },
       "host": {
         "id": "",
@@ -3618,6 +3640,7 @@
         "fpsCap": 0,
         "sceneLive": true,
         "sceneLiveFps": 30,
+        "sceneAutoQuality": true,
         "liveBootDelay": 3,
         "audioSource": "auto",
         "adapterTarget": "auto",
@@ -3907,7 +3930,8 @@
         "uiColorTab": "",
         "uiColorDeepDiving": "",
         "extraGlassSelectors": "",
-        "glassSurfacePolicy": {}
+        "glassSurfacePolicy": {},
+        "sceneAutoQuality": true
       },
       "host": {
         "id": "",
@@ -3933,6 +3957,7 @@
         "fpsCap": 0,
         "sceneLive": true,
         "sceneLiveFps": 30,
+        "sceneAutoQuality": true,
         "liveBootDelay": 3,
         "audioSource": "auto",
         "adapterTarget": "auto",
@@ -4287,7 +4312,8 @@
         "uiColorTab": "",
         "uiColorDeepDiving": "",
         "extraGlassSelectors": "",
-        "glassSurfacePolicy": {}
+        "glassSurfacePolicy": {},
+        "sceneAutoQuality": true
       },
       "host": {
         "id": "",
@@ -4327,6 +4353,7 @@
         "fpsCap": 0,
         "sceneLive": true,
         "sceneLiveFps": 30,
+        "sceneAutoQuality": true,
         "liveBootDelay": 3,
         "audioSource": "auto",
         "adapterTarget": "auto",
@@ -4616,7 +4643,8 @@
         "uiColorTab": "",
         "uiColorDeepDiving": "",
         "extraGlassSelectors": "",
-        "glassSurfacePolicy": {}
+        "glassSurfacePolicy": {},
+        "sceneAutoQuality": true
       },
       "host": {
         "id": "",
@@ -4642,6 +4670,7 @@
         "fpsCap": 30,
         "sceneLive": true,
         "sceneLiveFps": 60,
+        "sceneAutoQuality": true,
         "liveBootDelay": 3,
         "audioSource": "auto",
         "adapterTarget": "auto",
@@ -4920,7 +4949,8 @@
         "uiColorTab": "",
         "uiColorDeepDiving": "",
         "extraGlassSelectors": "",
-        "glassSurfacePolicy": {}
+        "glassSurfacePolicy": {},
+        "sceneAutoQuality": true
       },
       "host": {
         "id": "wallpaper-42",
@@ -4946,6 +4976,7 @@
         "fpsCap": 0,
         "sceneLive": true,
         "sceneLiveFps": 30,
+        "sceneAutoQuality": true,
         "liveBootDelay": 3,
         "audioSource": "auto",
         "adapterTarget": "auto",
@@ -5225,7 +5256,8 @@
         "uiColorTab": "",
         "uiColorDeepDiving": "",
         "extraGlassSelectors": "",
-        "glassSurfacePolicy": {}
+        "glassSurfacePolicy": {},
+        "sceneAutoQuality": true
       },
       "host": {
         "id": "",
@@ -5251,6 +5283,7 @@
         "fpsCap": 0,
         "sceneLive": true,
         "sceneLiveFps": 30,
+        "sceneAutoQuality": true,
         "liveBootDelay": 3,
         "audioSource": "auto",
         "adapterTarget": "auto",

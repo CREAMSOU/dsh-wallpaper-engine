@@ -103,7 +103,7 @@ const npmStep = (script) => ({ file: null, npm: script, args: [], tier: 'hard', 
  * 并把 `test/verify-package-files.mjs` 的 `CHAIN_FLOOR` 收紧到实测值（那里有"删一步即红"的负对照）。
  */
 const VERIFY_STEPS = [
-  // ⓪ **行尾契约**（D-G1，2026-10-16 收口）：`.gitattributes:9` 的 `* text=auto eol=lf` 此前
+  // ⓪ **行尾契约**（D-G1，收口）：`.gitattributes:9` 的 `* text=auto eol=lf` 此前
   //    **零判据** —— 而它坏了不会报错，只会让下面一大批"按行锚定的字面替换"负对照**假红**
   //    （本仓真踩过：一次整轮改动被 CRLF 污染，靠人眼在 `git diff` 里找 `^M` 才发现；Windows 上
   //    `core.autocrlf=true` 会把文本文件检出成 CRLF）。它是**字节级前提**，故放链首：破了就不该
@@ -142,7 +142,7 @@ const VERIFY_STEPS = [
   step('test/verify-package-files.mjs'),
   step('test/verify-package-publish.mjs'),
   step('test/verify-deployment.mjs'),
-  // 发布集**字节**（P2-7）：真打一次发布集，解出八个 tarball，判"主包声明的七个子包 = 精确版本且在
+  // 发布集**字节**（P2-7）：真打一次发布集，解开全部 tarball，判"主包声明的全部子包 = 精确版本且在
   // 集内""主包不带开发面目录""每个子包 tarball 真有自己 exports["./client"] 的浏览器半边"。
   // 归硬档：主包少声一条依赖 / 子包漏打客户端半边 ⇒ 用户 `pnpm add` 在**他的机器上**以
   // ERR_PNPM_FETCH_404 或静默缺半边失败（"只拿到母包"的唯一形态），仓库内此前只有散文可依。
@@ -156,6 +156,11 @@ const VERIFY_STEPS = [
   step('test/verify-route-index.mjs'),
   step('test/verify-route-families.mjs'),
   step('test/verify-inject-contracts.mjs'),   // ← 还原（旧链位：route-families 之后、cache-dir 之前）
+  // S5c 刀2：token 域单主权（R1，P-D S5.3）。9 族整簇同侧 + 只经 `...keys` 的 apply 面取实例 +
+  // 键表交出的 mediaMap/tokenFor/serveFile… 与服务面 `apply` **同一引用** + 门面 applyView 键集
+  // 恰好 15 键。硬档依据：token 域裂成两张 Map 时 /media、/props、/scene-* 对 /inventory 签发的
+  // token 全 404（静默、无日志）—— 用户侧只看到"壁纸黑屏"，没有别的判据会红。
+  step('test/verify-token-domain.mjs'),
   step('test/verify-cache-dir.mjs'),
   step('test/verify-cache-prune.mjs'),
   step('test/verify-we-install-probe.mjs'),
@@ -185,7 +190,7 @@ const VERIFY_STEPS = [
   step('test/verify-video-preview.mjs'),
   step('test/verify-asset-paths.mjs'),
   step('test/verify-settings-schema-exports.mjs'),
-  // BUNDLE-SPLIT 7.6 的四条新判据（P2-5b）。全部 hard：
+  // ADR-0014 S3/S5 的四条新判据（P2-5b）。全部 hard：
   //   ① 启动自检：主包 apply 必须先 resolve 每个子包与其行，失败大声报错（I5 是行级静默失败）；
   //   ② 浏览器半边在场：声明 dsh.client 的子包，其行必须被主 patch 插入、产物按 id 注册且只注册一份；
   //   ③ 跨包纯度：子包只许 import 主包叶子 subpackage-boot.js + node: 内置，子包之间零 import；
@@ -196,7 +201,7 @@ const VERIFY_STEPS = [
   step('test/verify-subpackage-client-half.mjs'),
   step('test/verify-subpackage-purity.mjs'),
   step('test/verify-subpackage-toggle-roundtrip.mjs'),
-  // ⑤ 子包包面（P2-5；2026-10-15 收口时**由软档升 hard**）：`packages/*/package.json` 的
+  // ⑤ 子包包面（P2-5；收口时**由软档升 hard**）：`packages/*/package.json` 的
   //    name/version/main/exports/peer 与自带 patch 行、根 `exports` 三连对账（组件行 + 独立子包行两段）。
   //    按 ADR-0004 的分档判据，它守的是**发布面 / 打包面**：版本漂离主包、peer 范围与主包不逐字相等
   //    （I6：宿主整次安装被拒 + 回滚）、`dsh.client` ⟺ `exports['./client']` 失配（C2：浏览器半边静默不加载）
@@ -212,7 +217,28 @@ const VERIFY_STEPS = [
   //    真 cordis 往返仍未跑（`@deepseek-ai/cordis` 是 peer，本轮口径 `npm ci --omit=peer`）⇒
   //    fiber 回滚语义是**源码推读**，守卫只在文件头如实标注，不升级为"已验证"。
   step('test/verify-host-teardown.mjs'),
-  // 官方协议的协调、真实 HTTP、自有气泡和四排播；不加载或修改第三方客户端。
+  // 壁纸层所有权（P-D S4；ADR-0013 D12 / §13 风险 9）：层是**单例 DOM 节点**
+  //    （`#dsh-wallpaper-engine-layer` / `#dsh-wallpaper-engine-scrim`），P-D 把渲染半边搬进
+  //    `packages/media-bridge` 时，最坏的结构性失效是两半边各建一层、各拆各的 —— 用户看到的是
+  //    "壁纸永远停在上一张 / 关掉插件层不撤 / 两个 scrim 叠出双倍暗化"。判据四条：层单例声明
+  //    与 id 赋值点冻结（声明只许 src/client.js，id 赋值只许 src/live-layer.js）、body
+  //    挂载白名单逐点归属、fiber cleanup 拆卸零残留（真源码跑在 mini mock DOM 上）、iframe
+  //    父链不得直接含 body。硬档依据：每一条的后果都是**用户在屏上能看见的残留/错层**，不是
+  //    仓库内务（同上方包面判据的发布面口径）。
+  step('test/verify-layer-ownership.mjs'),
+  // pauseOnHidden 的持续期防抖契约（#288：宿主可见性误判会让 6.4MB scene 包每次抖动全量冷重载）。
+  step('test/verify-occlusion-debounce.mjs'),
+  // 注册面容错（#267：原地升级撞 1.3.3 残留的 duplicate route，不能让整条 apply 抛错回滚）。
+  step('test/verify-tolerant-register.mjs'),
+  // 遮挡恢复后的重绘契约（#274：stale transform 残留在层上 / 媒体叶子没有重新布局 / onscreen 缺实际盒）。
+  step('test/verify-resume-repaint.mjs'),
+  // 运行期依赖目录按请求惰性解析（#218：装上 webwallgl 不重启宿主也能出引擎文件）。
+  step('test/verify-lazy-engine-dir.mjs'),
+  // 缓存产物文件名与 checkout 深度解耦（#208：键里不放 base64url(abs)，统一短哈希）。
+  step('test/verify-cache-keys.mjs'),
+  // 标题栏玻璃的容器锚点必须是运行时探针（#235：不写死宿主 CSS-module 构建哈希）。
+  step('test/verify-titlebar-anchor.mjs'),
+  // 可选桌宠联动的离线回归；安装和浏览器集成另走显式环境入口。
   step('test/verify-pet-package.mjs'),
   step('test/verify-pet-hotplug-host.mjs'),
   step('test/verify-pet-hotplug-client.mjs'),
@@ -234,14 +260,14 @@ const VERIFY_STEPS = [
   // ⑧ 链的**形状自检**（R-4 收口：由 docs 软档升 hard）。它把 MANIFEST 与
   //    `test/fixtures/verify-chain.json` 逐条对账（顺序 / 档位 / 参数 / 文件名），另判每组硬档地板、
   //    每个 file 真实存在、`all` = build + 三组有序拼接，以及 ⑤「守卫面上脱链者必须有代码内理由」。
-  //    原先它挂在 docs 组，而 CI 的 `verify:docs` 步是 `continue-on-error: true` ⇒ 把链上头两步
-  //    交换一下，**硬档可以全绿**、只有软档出声。"链的形状"是发布面（静默掉一条守卫 = 一条硬档
+  //    原先它挂在 docs 组，而 CI 的 `verify:docs` 步曾是 `continue-on-error: true` ⇒ 把链上头两步
+  //    交换一下，**硬档可以全绿**、只有软档出声（现内务已移到定时 housekeeping，full 链不再有软档）。"链的形状"是发布面（静默掉一条守卫 = 一条硬档
   //    判据无声脱离 PR 门禁）⇒ 按 ADR-0004 归硬档，放本组末尾（它是全组的自检，读的是 MANIFEST
   //    而非某一步的产物；`--list-json` 只打印不执行，不会递归）。
   step('test/verify-guard-chain.mjs'),
   // ⑨ CI 步骤表自检（R-7，task-11 交付）：`test/tools/ci-workflow.mjs` 的行扫描 + 判据（序列 / 脚本
-  //    存在性 / `continue-on-error` 只在 verify:docs / 产物出库与无尾随空白两步真的在跑 / install 在
-  //    第一条 npm run 之前），正判据与 10 条负对照共用一个纯函数（变异喂内存文本，不碰真 workflow）。
+  //    存在性 / full 链零 continue-on-error / 判定脚本信任边界 / 作业 timeout / 产物出库与无尾随空白两步真的在跑 / install 在
+  //    第一条 npm run 之前），正判据与负对照共用一个纯函数（变异喂内存文本，不碰真 workflow）。
   //    与 ⑧ 同理归硬档：删掉 `verify:static` 或 `verify:bridge` 这类改动只有它能拦。
   step('test/verify-ci-steps.mjs'),
   // ⑩ CI 分流接线最小守卫（CI 阶段一）：verify.yml 必须带固定名 `ci/result` 汇总且真的在跑

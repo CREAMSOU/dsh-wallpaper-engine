@@ -10,7 +10,7 @@
 // 壁纸层 pointer-events:none，鼠标事件由 DSH UI 消费；window 级 capture 监听
 // 仍能收到全部 mousemove/mousedown/mouseup（capture 阶段先于任何元素），归一
 // 化后经 __wp.pushPointer 注入渲染页 —— 视差 / cursor 脚本 / 粒子锁点等
-// 指针消费方全部激活。协议同 webwallgl docs/INTEGRATION.md §4：u,v ∈ [0,1]、
+// 指针消费方全部激活。协议同 webwallgl 上游包的 docs/INTEGRATION.md §4：u,v ∈ [0,1]、
 // Y 朝下勿翻（shader 内自翻）、buttons bit0=左键、按下态保持 ≥16ms（渲染器
 // 按帧检测边缘，同帧内 down+up 会丢 click）。事件只在 DSH 窗口内可得 —— 与
 // WallpaperEM 的系统级轮询不同，窗口外不推（pointerLeave 语义由 blur 承担）。

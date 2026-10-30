@@ -26,7 +26,7 @@ export declare function apply(ctx: Context): void;
  * `require("dsh-plugin-wallpaper-engine")`. Every sub-package bundle destructures
  * these names from the host module and throws at evaluation time when one is
  * missing (`packages/<pkg>/src/client.js` `*_HOST_REQUIRED`), so the list is a
- * contract, not documentation — see docs/wip/BUNDLE-SPLIT.md §5.1 ②.
+ * contract, not documentation — see `docs/adr/0014-subpackage-contract.md` §S5.1 ②.
  */
 export declare const hostBridgeKeys: readonly string[];
 

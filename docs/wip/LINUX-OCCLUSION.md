@@ -117,6 +117,7 @@ bundle 是压缩产物，符号名（`me`/`Qb` 等）会随上游同步变化。
 
 - `GET /wallpaper-engine/occlusion` → 快照 JSON（鉴权、JSON 响应族沿
   [`packages/media-bridge/lib/routes/now-playing.js`](../../packages/media-bridge/lib/routes/now-playing.js)
+  （P-D 阶段1 前该包目录名是 `media-bridge`）
   等同族路由先例；
   `lib/json-response.js` 工具）；
 - 加路由后**必须**跑 `node test/tools/host-route-index.mjs --write` 重算
@@ -134,9 +135,9 @@ bundle 是压缩产物，符号名（`me`/`Qb` 等）会随上游同步变化。
    - `op:'setOcclusion'` → 校验 `payload.occluders` 为数组后调 `window.__weSetOcclusion`；
    - `op:'clearOcclusion'` → 调 `__weSetOcclusion(null)`；
    - `window.__weSetOcclusion` 未就绪时静默丢弃（渲染器晚启动是正常态）。
-3. **注入**：[`lib/routes/scene-serve.js`](../../lib/routes/scene-serve.js) 响应
-   `/scene-live/index.html`（现状 no-store）时注入
-   `<script src="<BASE>/scene-live/occlusion-bridge.js"></script>`，注入方式沿该文件既有的
+3. **注入**：[`packages/media-bridge/lib/routes/scene-serve.js`](../../packages/media-bridge/lib/routes/scene-serve.js) 响应
+   `/scene-live/index.html`（现状 no-store）时注入一个 `<script>`，其 `src` 指向
+   `<BASE>/scene-live/occlusion-bridge.js`；注入方式沿该文件既有的
    shim 注入先例；桥文件经 `WEBWALLGL_DIR` 围栏天然可服务。
 
 ## 6. 客户端（`src/`，构建产物 `lib/client.js`）

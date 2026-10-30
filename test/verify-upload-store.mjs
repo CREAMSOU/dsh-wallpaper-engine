@@ -500,7 +500,21 @@ async function udFreshInstance(tag) {
   const mod = await import(pathToFileURL(join(ROOT, 'lib', 'index.js')).href + '?' + tag);
   const host = mod.default || mod;
   const dispose = (host.apply || host.apply)(ctx);
-  return { route: routes.find((r) => r.path === '/wallpaper-engine/upload-dir'), dispose };
+  // S5c 刀2：`/upload-dir` 归 `wallpaper` 组件行（upload 族随包出户）⇒ 每次新实例都把该组件
+  // 一起 boot；判据判什么没变（同 verify-scene-live 的既有做法）。
+  // S5d 刀3：该组件行还拥有省电 hub 的生命周期（非 X11 会挂 30s 重试定时器）⇒ 组件 teardown
+  // 必须跟着这份实例一起收，否则脚本跑完进程不退出。
+  let componentDispose = null;
+  if (typeof mod.applyComponent === 'function') {
+    try { componentDispose = mod.applyComponent(ctx, {}, 'media-bridge'); } catch (err) {
+      console.log('  · 组件行 boot 失败（wallpaper）：' + String(err && err.message));
+    }
+  }
+  const disposeAll = () => {
+    try { if (typeof componentDispose === 'function') componentDispose(); } catch { /* 收尾失败不影响判定 */ }
+    try { if (typeof dispose === 'function') dispose(); } catch { /* 收尾失败不影响判定 */ }
+  };
+  return { route: routes.find((r) => r.path === '/wallpaper-engine/upload-dir'), dispose: disposeAll };
 }
 
 /**

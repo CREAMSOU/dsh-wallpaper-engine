@@ -6,7 +6,7 @@ name: trendshift-best-badge
 
 on:
   schedule:
-    - cron: "17 * * * *"
+    - cron: "17 4 * * *" # 每日一次（原每小时一次；2026-10-27 审计：badge 不需要 hourly run 噪音）
   workflow_dispatch:
 
 permissions:
@@ -18,9 +18,12 @@ concurrency:
 
 jobs:
   sample:
+    # fork 上不跑：避免将 badge 分支/推送行为复制到 fork（GitHub 默认禁用 fork 定时任务，这里再兜一层）。
+    if: github.repository == 'elysia395/dsh-wallpaper-engine'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: 采样并在出现历史最好名次时更新 badges 分支
         run: |

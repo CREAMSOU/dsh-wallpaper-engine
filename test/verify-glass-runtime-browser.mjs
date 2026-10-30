@@ -4,16 +4,24 @@ import { readFileSync, writeFileSync, mkdirSync, mkdtempSync, existsSync, openSy
 import { resolve, join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { cssBodyOf } from './tools/src-scope.mjs';
+import { readabilityFloors } from './tools/readability-floors.mjs';
 import { createHash } from 'node:crypto';
 import { verifyPetSidebarGlassBrowser } from './verify-pet-sidebar-glass-browser-case.mjs';
 
 const bundle = readFileSync(resolve('lib/client.js'), 'utf8');
-const css = new Function('READABILITY_FLOOR', 'READABILITY_FLOOR_DARK', 'return `' + cssBodyOf(bundle) + '`;')(0.45, 0.59);
+// ADR-0016 第三刀：玻璃运行时（glass-surfaces / glass-extra）随玻璃包出产物 ⇒
+// 模块提取面改读**玻璃包产物**（主 bundle 的 officialPull 等主包段仍读主产物）。
+const glassBundle = readFileSync(resolve('packages/glass/lib/client.glass.js'), 'utf8');
+// 可读性下限常量随玻璃 CSS 出户（ADR-0016 第四刀）⇒ 唯一读法在 test/tools/readability-floors.mjs
+// （旧写法在这里硬编码 0.45 / 0.59：常量一改就静默对不上真注入的样式）。
+const FLOOR = readabilityFloors();
+const css = new Function('READABILITY_FLOOR', 'READABILITY_FLOOR_DARK', 'return `' + cssBodyOf(bundle + glassBundle) + '`;')(FLOOR.light, FLOOR.dark);
 function moduleText(name) {
-  const start = bundle.indexOf('// ── 内联模块：src/' + name + '.js');
+  // 子包产物的内联 marker 带**全路径**（packages/glass/src/<name>.js），与主 bundle 的 src/<name>.js 不同。
+  const start = glassBundle.indexOf('// ── 内联模块：packages/glass/src/' + name + '.js');
   if (start < 0) return '';
-  const end = bundle.indexOf('// ── 内联模块：', start + 10);
-  return bundle.slice(bundle.indexOf('\n', start), end < 0 ? bundle.length : end);
+  const end = glassBundle.indexOf('// ── 内联模块：', start + 10);
+  return glassBundle.slice(glassBundle.indexOf('\n', start), end < 0 ? glassBundle.length : end);
 }
 const runtime = moduleText('glass-surfaces');
 const extra = moduleText('glass-extra');
@@ -102,7 +110,7 @@ try {
       document.documentElement.style.cssText='background:white';
       document.body.innerHTML='<div id="wall"></div><main id="app"><div id="left"><div data-slot="sidebar"><span>Sidebar</span><div id="modal" role="dialog" aria-modal="true"><section id="dialog-panel"><button id="modal-close">Close</button></section></div></div></div><section id="main"><button id="composer">Composer</button></section></main><aside id="right" data-sidebar-right-panel="push" data-sidebar-right-open><div data-dockkit-host="dock">Dock</div></aside><div id="unknown" class="extra"></div>';
       const fixture=document.createElement('style');fixture.textContent=
-        'body{margin:0;font:16px sans-serif;--we-readability-floor:${dark ? '0.59' : '0.45'};--we-surface-tint-light:#8fd0ff;--we-surface-tint-dark:#0d1524;--we-left-sidebar-alpha:.12;--we-left-sidebar-blur:14px;--we-sidebar-blur:14px;--we-sidebar-saturate:1.3;--we-sidebar-color:${dark ? '#151515' : '#ffffff'};--we-sidebar-tint:20%;--we-panel-color:${dark ? '#151515' : '#ffffff'};--we-panel-sheen-a:.1;--we-panel-sheen-b:.03;--we-panel-sheen-c:.05;--we-sidebar-sheen-a:.1;--we-sidebar-sheen-b:.03;--we-sidebar-sheen-c:.05;--we-sidebar-sheen:1;--we-blur:14px}' +
+        'body{margin:0;font:16px sans-serif;--we-readability-floor:${dark ? FLOOR.dark : FLOOR.light};--we-surface-tint-light:#8fd0ff;--we-surface-tint-dark:#0d1524;--we-left-sidebar-alpha:.12;--we-left-sidebar-blur:14px;--we-sidebar-blur:14px;--we-sidebar-saturate:1.3;--we-sidebar-color:${dark ? '#151515' : '#ffffff'};--we-sidebar-tint:20%;--we-panel-color:${dark ? '#151515' : '#ffffff'};--we-panel-sheen-a:.1;--we-panel-sheen-b:.03;--we-panel-sheen-c:.05;--we-sidebar-sheen-a:.1;--we-sidebar-sheen-b:.03;--we-sidebar-sheen-c:.05;--we-sidebar-sheen:1;--we-blur:14px}' +
         '#wall{position:fixed;inset:0;z-index:-2;background:repeating-linear-gradient(90deg,#244f46 0 4px,#e6b929 4px 8px)}#app{display:flex;height:820px}#left{width:30%;height:100%;background:transparent}#main{flex:1;position:relative;z-index:1}#composer{position:fixed;left:38vw;top:150px;width:58vw;height:220px;background:#128a4d;border:0;z-index:10}#modal{position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.25)}#dialog-panel{position:fixed;left:38vw;top:150px;width:58vw;height:220px;background:#b32235}#modal-close{position:absolute;left:12px;top:12px;width:90px;height:38px}#right{position:fixed;right:0;bottom:0;width:25%;height:180px}#unknown{position:fixed;left:10px;bottom:10px;width:30px;height:30px;z-index:20;background:#57a0e0}';
       document.head.append(fixture);
       const style=document.createElement('style');style.dataset.testBundle='on';style.textContent=${JSON.stringify(css)};document.head.append(style);
@@ -120,14 +128,14 @@ try {
     })()`);
     await evaluate('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');
     const tag = (dark ? 'dark-' : 'light-') + width;
-    // 两段配方解析器（t9-003 computed 取证）：与 src/glass-extra.js:63-73 / src/styles-panel.js:378-400
+    // 两段配方解析器（t9-003 computed 取证）：与 packages/glass/src/glass-extra.js / src/styles-panel.js
     // 同构 —— base@readability-floor 叠 tint 段@settings-window-alpha×0.9。序列化兼容
     // rgba(...) 与 Chrome 新式 color(srgb r g b / a)。floor/tint 按 loop 的 dark 取值，
     // 与 fixture 注入一致；base 不再硬编码（t30 F1：#151515/#ffffff 与产品真源
-    // src/styles-base.js:554/585 的 tint 链自相矛盾）—— 读解析后的 --we-readability-base，
+    // src/styles-base.js/585 的 tint 链自相矛盾）—— 读解析后的 --we-readability-base，
     // 期望与真实级联同源；解析失败 ⇒ NaN 让 own-four 如实 FAIL（detail 带原始文本）。
     const hex1 = (h) => parseInt(h, 16) / 255;
-    const floor = dark ? 0.59 : 0.45;
+    const floor = dark ? FLOOR.dark : FLOOR.light;
     const baseHex = await evaluate("getComputedStyle(document.body).getPropertyValue('--we-readability-base').trim()");
     const baseMatch = /^#([0-9a-fA-F]{6})$/.exec(baseHex);
     const tintHex = dark ? '0d1524' : '8fd0ff';
@@ -152,6 +160,82 @@ try {
     })()`);
     check(tag + ' 模态命中与fixed包含块', state.hit === 'modal-close' && state.left.z === 'auto' && state.left.blur === 'none' && Math.abs(state.rect.x - (width * .38 + 12)) < 1 && state.focus === 'modal-close', state);
     check(tag + ' 左栏默认关：不认领所有权且仅右栏plate（玻璃开关关=原生外观）', state.plates === 1 && !await evaluate(`document.querySelector('#left').hasAttribute('data-we-surface-runtime')`), state);
+    // 宿主可能同时保留另一份“在布局里但未展开”的右栏面板（fullscreen/push 或旧会话）；
+    // 当前展开的那份仍必须被认领，不能被 rightLive.length !== 1 整体否掉。
+    await evaluate(`(() => {
+      const extra = document.createElement('div');
+      extra.id = 'extra-right-panel';
+      extra.setAttribute('data-sidebar-right-panel', 'push');
+      extra.style.cssText = 'position:fixed;right:0;top:0;width:160px;height:420px;';
+      document.body.append(extra);
+      __glass.sync();
+      return true;
+    })()`);
+    check(tag + ' 可见但未展开的第二份右栏面板不否定当前展开面板', await evaluate(`document.querySelector('#right').getAttribute('data-we-surface-runtime')==='right-sidebar' && !!document.querySelector('[data-we-surface-plate="right-sidebar"]') && !document.querySelector('#extra-right-panel').hasAttribute('data-we-surface-runtime')`));
+    await evaluate("document.querySelector('#extra-right-panel').remove();__glass.sync()");
+    // 负对照：没有 data-we-nudge 的静态 transform 仍须回退原生，豁免不能被放宽成通用后门。
+    await evaluate(`(() => {
+      const p = document.querySelector('#right');
+      p.style.transform = 'translateX(1px)';
+      __glass.sync();
+      return true;
+    })()`);
+    check(tag + ' 无 nudge 标记的静态 transform 仍回退原生', await evaluate(`!document.querySelector('#right').hasAttribute('data-we-surface-runtime') && !document.querySelector('[data-we-surface-plate="right-sidebar"]')`));
+    await evaluate("document.querySelector('#right').style.removeProperty('transform');__glass.sync()");
+    // HMR / 行重挂可能留下另一份模块实例的装饰根与 plate；sync 必须只保留当前根，
+    // 否则多层同几何 backdrop-filter 叠加 = 右栏对应位置壁纸对比度/饱和度爆表。
+    await evaluate(`(() => {
+      for (let i = 0; i < 3; i += 1) {
+        const root = document.createElement('div');
+        root.setAttribute('data-we-surface-root', 'v1');
+        root.style.cssText = 'position:fixed;inset:0;z-index:-1;pointer-events:none';
+        const plate = document.createElement('div');
+        plate.setAttribute('data-we-surface-plate', 'right-sidebar');
+        plate.style.cssText = 'position:absolute;left:0;top:0;width:40px;height:40px';
+        root.append(plate);
+        document.body.append(root);
+      }
+      __glass.sync();
+      return true;
+    })()`);
+    check(tag + ' 孤儿装饰根/plate 被收口为当前唯一一份', await evaluate(`document.querySelectorAll('[data-we-surface-root]').length === 1 && document.querySelectorAll('[data-we-surface-plate="right-sidebar"]').length === 1 && document.querySelector('#right').getAttribute('data-we-surface-runtime')==='right-sidebar'`));
+    // 别的实例/旧清理把当前装饰根摘掉时，marker 仍在；下一次 sync 必须把 root+plate
+    // 一起重建（旧 plate 记录指向断开节点，不能只留 marker 不画玻璃）。
+    await evaluate(`(() => {
+      document.querySelectorAll('[data-we-surface-root]').forEach(x => x.remove());
+      __glass.sync();
+      return true;
+    })()`);
+    check(tag + ' 装饰根被外部摘掉后按 marker 重建 root/plate', await evaluate(`document.querySelectorAll('[data-we-surface-root]').length === 1 && document.querySelectorAll('[data-we-surface-plate="right-sidebar"]').length === 1 && document.querySelector('#right').getAttribute('data-we-surface-runtime')==='right-sidebar'`));
+    // 旧版微推泄漏的 translateZ(0)+will-change（没有 data-we-nudge 归属）要自动清掉，
+    // 否则 safeRoot 会被永远判死、右栏退回纯色。
+    await evaluate(`(() => {
+      const p = document.querySelector('#right');
+      p.style.transform = 'translateZ(0px)';
+      p.style.willChange = 'transform';
+      __glass.sync();
+      return true;
+    })()`);
+    check(tag + ' 旧微推泄漏的内联 translateZ(0) 自动清理并恢复认领', await evaluate(`(() => { const p = document.querySelector('#right'); return !p.style.transform && !p.style.willChange && p.getAttribute('data-we-surface-runtime')==='right-sidebar'; })()`));
+    // 合成微推（nudge）两帧内会给宿主右栏写 translateZ(0)/will-change；带 data-we-nudge
+    // 时只豁免 target 自身，不能因此把右栏判成 unsafe-root 而退回纯色。
+    await evaluate(`(() => {
+      const p = document.querySelector('#right');
+      p.setAttribute('data-we-nudge', 'on');
+      p.style.transform = 'translateZ(0)';
+      p.style.willChange = 'transform';
+      __glass.sync();
+      return true;
+    })()`);
+    check(tag + ' 合成微推两帧内右栏仍可认领（data-we-nudge 只豁免 target 自身）', await evaluate(`document.querySelector('#right').getAttribute('data-we-surface-runtime')==='right-sidebar'`));
+    await evaluate(`(() => {
+      const p = document.querySelector('#right');
+      p.removeAttribute('data-we-nudge');
+      p.style.removeProperty('transform');
+      p.style.removeProperty('will-change');
+      __glass.sync();
+      return true;
+    })()`);
     await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: state.x, y: state.y, button: 'left', clickCount: 1 });
     await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: state.x, y: state.y, button: 'left', clickCount: 1 });
     check(tag + ' 点击未穿透到composer', await evaluate('__clicks.modal===1 && __clicks.composer===0'), await evaluate('__clicks'));
@@ -165,7 +249,27 @@ try {
       await until('document.querySelectorAll("[data-we-surface-plate=left-sidebar]").length===1');
       await evaluate("document.querySelector('#modal').remove();__glass.sync()");
       await until('document.querySelectorAll("[data-we-surface-plate]").length>=1');
-      check(tag + ' 安全侧栏玻璃实际载体存在', await evaluate(`(()=>{const plate=document.querySelector('[data-we-surface-plate="left-sidebar"]');return !!plate && getComputedStyle(plate).backdropFilter.includes('blur(') && plate.children.length===0 && plate.getBoundingClientRect().width>20;})()`));
+      // #272：<1100px 的折叠抽屉里装饰板 backdrop-filter 采样不到（宿主 transform），
+      // 产品政策是「近不透明兜底 + 显式关掉不会生效的模糊」；宽视口仍是 blur 载体。
+      const carrier = await evaluate(`(()=>{
+        const plate=document.querySelector('[data-we-surface-plate="left-sidebar"]');
+        if(!plate) return {ok:false, why:'no-plate'};
+        const w=plate.getBoundingClientRect().width;
+        const cs=getComputedStyle(plate);
+        const narrow=window.matchMedia('(max-width: 1100px)').matches;
+        if(plate.children.length!==0 || w<=20) return {ok:false, why:'geometry', w, kids:plate.children.length};
+        if(!narrow) return {ok:cs.backdropFilter.includes('blur('), why:'wide', bf:cs.backdropFilter};
+        if(cs.backdropFilter!=='none') return {ok:false, why:'narrow-bf', bf:cs.backdropFilter};
+        const seat=document.querySelector('[data-slot="sidebar"]');
+        const col=seat && seat.parentElement;
+        const bg=col && getComputedStyle(col).backgroundColor;
+        const m=/rgba?\\(([^)]+)\\)/.exec(bg||'');
+        const parts=m ? m[1].split(',').map(Number) : [];
+        const slash=/\\/\\s*([0-9.]+)\\s*\\)/.exec(bg||'');
+        const alpha=parts.length===4 ? parts[3] : (parts.length===3 ? 1 : (slash ? Number(slash[1]) : 0));
+        return {ok:alpha>=0.9, why:'narrow', seat:!!seat, bg, alpha};
+      })()`);
+      check(tag + ' 安全侧栏玻璃实际载体存在（宽视口 blur / 窄视口近不透明兜底）', Boolean(carrier && carrier.ok), JSON.stringify(carrier));
       // 宿主（ui-sidebar-right 的 RightbarRoot）给**每个被保留的会话**各渲染一份右栏面板，
       // 非当前会话那份在 `.session[hidden]` 里。旧判据按全文档 NodeList 长度要求"恰好一份"
       // ⇒ 用户开过第二个会话后右栏永远不接管、整块退回原生不透明底。隐藏的兄弟不得参与竞争。
@@ -266,8 +370,7 @@ try {
       await evaluate("document.querySelector('#left').style.width='25%'");
       await until('Math.abs(document.querySelector("[data-we-surface-plate=left-sidebar]").getBoundingClientRect().width-document.querySelector("#left").getBoundingClientRect().width)<1');
       // 多 right 节点（G1 历史栏位）：后台保留节点（无 open 属性）+ 活动节点。
-      // 双 right ⇒ 两条候选都 disabled（weSurfaceCandidates 只认领唯一宿主区域），
-      // 原右栏须撤销所有权；移除后台节点后自动恢复（observer 消费，不手动 sync）。
+      // 可见但未展开的后台节点**不应**否定当前展开面板；只有两份都展开时才保守放弃。
       await evaluate(`(() => {
         const dock=document.createElement('aside');
         dock.id='right-bg';dock.setAttribute('data-sidebar-right-panel','push');
@@ -275,11 +378,16 @@ try {
         dock.innerHTML='<div data-dockkit-host="dock">BG</div>';
         document.body.append(dock);return true;
       })()`);
+      await until('!!document.querySelector("[data-we-surface-plate=right-sidebar]")');
+      check(tag + ' 多right：后台保留节点未展开不否定活动右栏', await evaluate(`(()=>{const r=document.querySelector('#right'),p=document.querySelector('#right-bg');return r.getAttribute('data-we-surface-runtime')==='right-sidebar' && !!document.querySelector('[data-we-surface-plate=right-sidebar]') && !p.hasAttribute('data-we-surface-runtime');})()`));
+      await evaluate("document.querySelector('#right-bg').setAttribute('data-sidebar-right-open','')");
       await until('!document.querySelector("[data-we-surface-plate=right-sidebar]") && !document.querySelector("#right").hasAttribute("data-we-surface-runtime")');
-      check(tag + ' 多right：后台保留+活动双节点均不认领', await evaluate(`(()=>{const r=document.querySelector('#right'),p=document.querySelector('#right-bg');return !r.hasAttribute('data-we-surface-runtime') && !p.hasAttribute('data-we-surface-runtime') && !document.querySelector('[data-we-surface-plate=right-sidebar]');})()`));
+      check(tag + ' 多right：两份都展开时保守放弃认领', await evaluate(`(()=>{const r=document.querySelector('#right'),p=document.querySelector('#right-bg');return !r.hasAttribute('data-we-surface-runtime') && !p.hasAttribute('data-we-surface-runtime') && !document.querySelector('[data-we-surface-plate=right-sidebar]');})()`));
+      await evaluate("document.querySelector('#right-bg').removeAttribute('data-sidebar-right-open')");
+      await until('!!document.querySelector("[data-we-surface-plate=right-sidebar]")');
+      check(tag + ' 多right：后台节点收起后唯一展开右栏恢复所有权（observer 自动）', await evaluate(`document.querySelector('#right').getAttribute('data-we-surface-runtime')==='right-sidebar'`));
       await evaluate("document.querySelector('#right-bg').remove()");
       await until('!!document.querySelector("[data-we-surface-plate=right-sidebar]")');
-      check(tag + ' 多right：移除后台节点后唯一右栏恢复所有权（observer 自动）', await evaluate(`document.querySelector('#right').getAttribute('data-we-surface-runtime')==='right-sidebar'`));
       await evaluate("document.querySelector('#right').removeAttribute('data-sidebar-right-open')");
       await until('!document.querySelector("[data-we-surface-plate=right-sidebar]")');
       check(tag + ' 收起右栏无残板', true);
@@ -324,6 +432,46 @@ try {
       await evaluate('window.__endFrames=__frames;document.body.append(document.createElement("section"))');
       await delay(100);
       check(tag + ' 卸载后无监听残留更新', await evaluate('__frames===__endFrames'));
+      // 行级开关不会重载页面：上一轮若留下装饰根/运行标记，重新同步必须从干净状态开始。
+      await evaluate(`(() => {
+        const orphan = document.createElement('div');
+        orphan.id = 'orphan-surface-root';
+        orphan.setAttribute('data-we-surface-root', 'v1');
+        document.body.append(orphan);
+        document.querySelector('#left').setAttribute('data-we-surface-runtime', 'left-sidebar');
+        return true;
+      })()`);
+      await evaluate('__glass.sync()');
+      check(tag + ' 行开关重启：旧装饰根/标记清掉后只重建一层', await evaluate(`!document.querySelector('#orphan-surface-root') && document.querySelectorAll('[data-we-surface-root]').length<=1`));
+      await evaluate('__glass.dispose()');
+      // 行停用期间右栏被关掉再打开，随后重新启用玻璃：必须仍认领右栏并重建底板。
+      await evaluate("document.querySelector('#right').removeAttribute('data-sidebar-right-open');__glass.dispose()");
+      await evaluate("document.querySelector('#right').setAttribute('data-sidebar-right-open','');__glass.sync()");
+      check(tag + ' 停用期间重开右栏，重新启用仍认领玻璃面', await evaluate(`document.querySelector('#right').getAttribute('data-we-surface-runtime')==='right-sidebar' && !!document.querySelector('[data-we-surface-plate="right-sidebar"]')`));
+      // 更贴近真实行开关：停用期间撤 gates + 玻璃样式表，打开右栏，再回注并重新启用。
+      await evaluate(`(() => {
+        const style = document.querySelector('style[data-test-bundle="on"]');
+        window.__savedGlassStyle = style;
+        document.body.removeAttribute('data-we-glass-page');
+        document.body.removeAttribute('data-we-sidebar-glass');
+        document.body.removeAttribute('data-we-left-sidebar');
+        if (style) style.remove();
+        __glass.dispose();
+        const right = document.querySelector('#right');
+        right.removeAttribute('data-sidebar-right-open');
+        right.setAttribute('data-sidebar-right-open', '');
+        return __glass.status();
+      })()`);
+      const rowCycleStatus = await evaluate(`(() => {
+        document.head.append(window.__savedGlassStyle);
+        document.body.setAttribute('data-we-glass-page', 'on');
+        document.body.setAttribute('data-we-sidebar-glass', 'on');
+        __glass.sync();
+        return __glass.status();
+      })()`);
+      check(tag + ' 完整行开关循环后右栏认领', await evaluate(`document.querySelector('#right').getAttribute('data-we-surface-runtime')==='right-sidebar' && !!document.querySelector('[data-we-surface-plate="right-sidebar"]')`), rowCycleStatus);
+      check(tag + ' 合成微推不把内联 transform/will-change 写进宿主右栏', await evaluate(`(() => { const p = document.querySelector('#right'); return !p.style.transform && !p.style.willChange; })()`), await evaluate(`({ transform: document.querySelector('#right').style.transform, willChange: document.querySelector('#right').style.willChange })`));
+      await evaluate('__glass.dispose()');
     }
     await evaluate(`(() => {
       document.body.innerHTML='<div id="wall"></div><section id="settings" role="dialog" aria-modal="true"><div data-slot="settings.section" id="settings-layout"><section id="plugin-native"><button id="native-button">Native</button><div id="warning">Warning</div></section><section id="declared" data-we-surface="v1"><div data-we-surface-layout id="layout">Layout<div data-we-surface-preserve id="keep">Preserve<div data-we-surface-layout id="preserve-child">Keep</div></div><section data-we-surface="v1" id="nested"><div data-we-surface-layout id="nested-layout">Nested</div></section></div></section><button id="nested-modal" style="position:fixed;left:10px;top:20px;z-index:1001">Nested</button></div></section><aside data-sidebar-right-panel="push" data-sidebar-right-open id="content-dock"><div class="cm-editor" id="editor"><span id="syntax" style="color:rgb(197,104,228)">Syntax</span><div class="cm-selectionBackground" id="selection"></div></div><div id="preview" data-we-surface="v1"><div data-we-surface-layout>Preview</div></div></aside><div id="own-host"><div class="we-picker" id="own-picker"><div class="we-tabs" id="own-tabs"><button class="we-tabs__tab">Library</button></div><div class="we-picker__current" id="own-current"><span class="we-picker__current-title">Current</span></div><div class="we-picker__uploads" id="own-uploads"><span>Upload</span></div><div class="we-ext" id="own-ext"><div class="we-ext__module" id="own-module"><span class="we-ext__module-title">Module</span></div></div></div><button class="we-rope" id="rope">Rope</button><div class="we-update-notice" id="notice">Notice</div>';
@@ -350,13 +498,41 @@ try {
     check(tag+' 宿主设置窗控件吃玻璃令牌（不是宿主实底）',
       compat.token !== 'rgb(225, 226, 227)', compat.token);
     check(tag+' 壁纸仅清宿主外壳而非任意root和frame',await evaluate(`getComputedStyle(document.querySelector('#host-frame')).backgroundColor==='rgba(0, 0, 0, 0)' && getComputedStyle(document.querySelector('#host-root')).backgroundColor==='rgba(0, 0, 0, 0)'`));
+    // ── 跨插件内联令牌（DS Bot 的 Bot 模式）────────────────────────────────────────
+    // 全界面插件用 DSH 的 ctx.theme.overrideTokens 给宿主上色时，宿主把令牌以**内联
+    // 样式**写在 <body> 上；普通作者声明输给内联声明 ⇒ 页面基色/侧栏填充保持不透明，
+    // 壁纸层被盖死（现场：DS Bot 模式下壁纸完全不可见）。本插件让页面让开的那两条
+    // 必须用作者 !important 压过内联普通声明。判据两个方向都断言：
+    //   · 壁纸在场 ⇒ 消费这两枚令牌的壳层元素 computed 透明；
+    //   · 摘掉壁纸门 ⇒ 内联值原样生效 —— 证明这是**按门的单向接管**，不是把宿主主题
+    //     永久改掉；否则「!important 换成普通声明」或「门被摘掉」任一漂移都可能假绿。
+    const inlineTokens = await evaluate(`(() => {
+      const probe = document.createElement('div');
+      probe.innerHTML = '<div id="dsb-frame" style="background:var(--dsw-alias-bg-base)"><div id="dsb-sidebar" style="background:var(--dsw-specific-sidebar-fill)"></div></div>';
+      document.body.append(probe);
+      document.body.style.setProperty('--dsw-alias-bg-base', 'rgb(20, 20, 20)');
+      document.body.style.setProperty('--dsw-specific-sidebar-fill', 'rgb(27, 27, 27)');
+      const read = () => [getComputedStyle(document.getElementById('dsb-frame')).backgroundColor, getComputedStyle(document.getElementById('dsb-sidebar')).backgroundColor];
+      const withWallpaper = read();
+      document.body.removeAttribute('data-we-wallpaper');
+      const withoutWallpaper = read();
+      document.body.setAttribute('data-we-wallpaper', 'on');
+      document.body.style.removeProperty('--dsw-alias-bg-base');
+      document.body.style.removeProperty('--dsw-specific-sidebar-fill');
+      probe.remove();
+      return { withWallpaper, withoutWallpaper };
+    })()`);
+    check(tag+' 壁纸在场时页面令牌压过宿主内联主题（DS Bot 的 Bot 模式）',
+      inlineTokens.withWallpaper.every((color) => color === 'rgba(0, 0, 0, 0)'), inlineTokens);
+    check(tag+' 壁纸退场后宿主内联令牌原样生效（单向接管，不改宿主主题）',
+      inlineTokens.withoutWallpaper[0] === 'rgb(20, 20, 20)' && inlineTokens.withoutWallpaper[1] === 'rgb(27, 27, 27)', inlineTokens);
     check(tag+' 已知设置面与显式布局接管且preserve优先',compat.mark==='settings-window' && compat.layout==='rgba(0, 0, 0, 0)' && compat.keep==='rgb(222, 223, 224)' && compat.child==='rgb(222, 223, 224)',compat);
     check(tag+' 编辑内容底板受控且语法选区不改',compat.editor!=='rgb(255, 255, 255)' && compat.syntax==='rgb(197, 104, 228)' && compat.selection==='rgb(60, 80, 160)',compat);
     check(tag+' 本插件页签与上传区不继承宿主黑色实底',compat.ownTab!=='rgb(0, 0, 0)' && compat.ownUploads!=='rgb(0, 0, 0)',compat);
     // own 面 computed 精确配方（t8 修复的浏览器级验证）：玻璃页门别名块
-    // （src/styles-panel.js:375-400）在 .we-picker 根上把 --dsw-alias-bg-layer-1 换成
+    // （src/styles-panel.js）在 .we-picker 根上把 --dsw-alias-bg-layer-1 换成
     // 两段 color-mix（tint×alpha×0.9 + floor 地板）；.we-tabs(:249)/.we-picker__current(:208)/
-    // .we-picker__uploads(:258)/.we-ext__module(styles-ext.js:222) 消费同一令牌 ⇒
+    // .we-picker__uploads(:258)/.we-ext__module(styles-ext.js) 消费同一令牌 ⇒
     // 四元素 computed 必须等于配方解析值，且不等于宿主黑实底/宿主灰。深浅主题分叉由
     // tint 色相差异体现（light #8fd0ff / dark #0d1524，mixOut 已按主题取值）。
     const ownMix = mixOut(0.15); // phase-two fixture 显式给了 --we-settings-window-alpha:.15
@@ -427,11 +603,11 @@ try {
     check(tag+' 内容preserve恢复原生画布',await evaluate("getComputedStyle(document.querySelector('#editor')).backgroundColor==='rgb(255, 255, 255)'"));
     await screenshot(tag+'-settings');
     // extra 端值 × 双主题（t9-003，真实参数合同取证）。真实范围（源码实测，非虚构滑杆）：
-    // --we-settings-window-alpha ∈ [0.10, 0.25]（src/glass.js:103 Math.max(0.10, 0.25-pct/100*0.15)，
-    // 不是自有设置窗 5..42/5..50）；--we-blur ∈ [0,60]px（src/glass-panel.js SliderRow(cn.blur,0,60,1)）。
-    // extra normal 霜读 --we-blur（src/glass-extra.js:59-61），底色两段 color-mix 消费
-    // --we-settings-window-alpha×0.9 + readability-floor 地板（src/glass-extra.js:63-73）；
-    // own-current 走同一配方表（src/styles-panel.js:378）⇒ 同一断言面。phase-two 此处
+    // --we-settings-window-alpha ∈ [0.10, 0.25]（packages/glass/src/glass.js Math.max(0.10, 0.25-pct/100*0.15)，
+    // 不是自有设置窗 5..42/5..50）；--we-blur ∈ [0,60]px（packages/glass/packages/glass/src/glass-panel.js SliderRow(cn.blur,0,60,1)）。
+    // extra normal 霜读 --we-blur（packages/glass/src/glass-extra.js），底色两段 color-mix 消费
+    // --we-settings-window-alpha×0.9 + readability-floor 地板（packages/glass/src/glass-extra.js）；
+    // own-current 走同一配方表（src/styles-panel.js）⇒ 同一断言面。phase-two 此处
     // 已无 #settings（:248 移除），霜载体读 extra 面 ::before 本体。
     await evaluate(`(() => {
       __selection.extraGlassSelectors='.extra';

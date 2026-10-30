@@ -2,7 +2,7 @@
 /**
  * ci-workflow.mjs — `.github/workflows/verify.yml` 的**作业结构判据**（纯函数库：不读盘、不写盘、无副作用）。
  *
- * ## 守的是什么实害（BUNDLE-SPLIT §13.1 R-7 + CI 分流第一阶段）
+ * ## 守的是什么实害（ADR-0004 / ADR-0014 S9 + CI 分流第一阶段）
  * 这个 workflow 是"提交前必须绿"那条铁律在 CI 上的**唯一**执行者。但它自己的**接线**
  * —— 跑哪些作业、哪条路径跑哪些步骤、什么顺序、哪一步允许失败 —— 此前**没有任何判据**：
  * 删掉 `verify:static` 或 `verify:bridge` 一步、把 `continue-on-error` 从软档挪到硬档、
@@ -37,20 +37,17 @@ export const CI_WORKFLOW_REL = '.github/workflows/verify.yml';
  * 改动它等于改动"哪些门在 PR 上真的会拦人"，因此必须显式、成对地改这份清单与 workflow。
  */
 export const EXPECTED_NPM_SEQUENCE = [
-  'verify:static', 'build', 'verify', 'verify:bridge', 'smoke', 'verify:docs',
+  'verify:static', 'build', 'verify', 'verify:bridge', 'smoke',
 ];
 
 /** `full` 必须按序包含的完整验证链（与上面的完整序列一致；判据名按"覆盖责任"表达）。 */
 export const FULL_REQUIRED_SEQUENCE = EXPECTED_NPM_SEQUENCE;
 
-/** 非空转地板：分流后 `full` 作业仍是 12 条步骤（含 3 条非 npm 步）。解析器空转 ⇒ 其余判据全假绿。 */
+/** 非空转地板：分流后 `full` 作业仍是 11 条步骤（含 3 条非 npm 步）。解析器空转 ⇒ 其余判据全假绿。 */
 export const STEP_FLOOR = 10;
 
 /** 运行期依赖安装步的**逐字**命令（"CI 不装 devDependencies"这个前提就写在它里面）。 */
 export const INSTALL_COMMAND = 'npm ci --omit=peer --ignore-scripts --no-audit --no-fund';
-
-/** 软档步：`continue-on-error` 是这一档的定义本身（full 链上的 verify:docs）。 */
-export const SOFT_STEP = 'verify:docs';
 
 /** 产物出库判据的指纹：CSS/产物出库那一类"非 npm 步骤"里必须真的在跑 git。 */
 export const ARTIFACT_STEP_NEEDLE = 'git ls-files';
@@ -354,7 +351,7 @@ export function auditCiWorkflow(input) {
 
   // ④ docs 快通道边界：核心步必须是**真 docs CLI**（`node scripts/ci-routing.mjs docs`），
   //    且与 changes 取**同一份 PR 差异**（--base/--head 表达式与 changes 腿逐字符同一，
-  //    见 DIFF_BASE_EXPR/DIFF_HEAD_EXPR）—— 六步 warn-only 内务 `npm run verify:docs`
+  //    见 DIFF_BASE_EXPR/DIFF_HEAD_EXPR）—— warn-only 内务 `npm run verify:docs` 已移到定时 housekeeping，
   //    拦不住冲突标记/断链/素材问题，不能顶替分类审计（队内裁定）。
   //    不许装依赖、不许混入任何 `npm run` 门禁步、不许偷偷跑 verify:docs、必须有路径 if 守卫。
   //    docs 腿 checkout 还必须显式 ref 到 head 表达式（否则审计树 ≠ 实际 head 树）。
@@ -409,19 +406,16 @@ export function auditCiWorkflow(input) {
       + ' npm=' + JSON.stringify(noticeNpmSteps.map(npmScriptOf)) + ' install=' + noticeInstalls.length
       + ' if=' + briefOf(noticeJob.if) : '缺 notice 作业');
 
-  // ⑤ 软档的定义：`continue-on-error` 只允许长在 full 的 verify:docs 上，别处一律 fail-closed；
-  //    且软档必须**真的**带着这个旗标（摘掉 ⇒ 内务判据反过来拦下所有人的改动）。
+  // ⑤ 软档已撤出 full 链：`verify:docs` 是仓库内务（非文档检查），按 ADR-0017 移到
+  //    `.github/workflows/housekeeping.yml` 定时跑；本链因此**不允许任何 continue-on-error**，
+  //    所有步骤都必须是 fail-closed 的（否则就是"灰档"）。
   const coerce = steps.filter((s) => s.continueOnError);
-  const softOk = coerce.length === 1 && npmScriptOf(coerce[0]) === SOFT_STEP;
-  const offSoft = coerce
-    .filter((s) => npmScriptOf(s) !== SOFT_STEP)
-    .map((s) => (npmScriptOf(s) || s.name || s.uses || '#' + (s.index + 1)));
   add('soft-tier',
-    'continue-on-error 只允许出现在 ' + SOFT_STEP + '（软档的定义：docs 组不拦 PR，其余一律 fail-closed）'
-    + '，且必须真的带着它（摘掉 ⇒ 软档变硬档）',
-    softOk,
-    offSoft.length ? '越界步：' + offSoft.join(' ')
-      : (coerce.length === 1 ? '软档步唯一且正确' : 'continue-on-error 步数=' + coerce.length));
+    'full 链不再有软档（verify:docs 已移入定时 housekeeping）：continue-on-error 一律不允许出现',
+    coerce.length === 0,
+    coerce.length
+      ? '越界步：' + coerce.map((s) => (npmScriptOf(s) || s.name || s.uses || '#' + (s.index + 1))).join(' ')
+      : 'continue-on-error 步数=0');
 
   // ⑥ 分类接线：changes 作业真的在调分类器、把 mode 写进 GITHUB_OUTPUT，且差异边界与 docs
   //    腿**同一表达式**（丢掉 --base/--head ⇒ 与 docs 各审各的，非同一差异 ⇒ 判红；
@@ -450,6 +444,33 @@ export function auditCiWorkflow(input) {
     !!result && resultNeedsOk && resultAlways && resultJudge,
     result ? 'needs=' + JSON.stringify(result.needs) + ' always=' + resultAlways + ' judge=' + resultJudge
       : '缺 result 作业');
+
+  // ⑦-b 判定脚本信任边界（P0）：changes / docs / notice / result 四个作业都必须先取 base 分支的
+  //     判定脚本（`git show <base>:scripts/ci-routing.mjs`），**之后**才允许执行 `node scripts/ci-routing.mjs`。
+  //     否则 PR 可改分类器/汇总器，让自己的 full 链整段跳过；fail-closed 只对"作业失败"成立，
+  //     对"判定器被改"不成立。
+  const gateJobIds = ['changes', 'docs', 'notice', 'result'];
+  const gateFailures = [];
+  for (const id of gateJobIds) {
+    const job = jobOf(id);
+    if (!job) { gateFailures.push(id + ':缺作业'); continue; }
+    const overlayIdx = job.steps.findIndex((s) => /git show/.test(String(s.run || ''))
+      && /scripts\/ci-routing\.mjs/.test(String(s.run || '')));
+    const cliIdx = job.steps.findIndex((s) => /node\s+\S*ci-routing\.mjs\s+(check|docs|notice|judgeResult)/.test(String(s.run || '')));
+    if (overlayIdx < 0 || cliIdx < 0 || overlayIdx > cliIdx) gateFailures.push(id + ':overlay=' + overlayIdx + '/cli=' + cliIdx);
+  }
+  add('trusted-gate',
+    '判定脚本信任边界：changes / docs / notice / result 先从 base 分支取 ci-routing 脚本（git show），再执行'
+    + '（否则 PR 可改判定器跳过 full 链）',
+    gateFailures.length === 0,
+    gateFailures.length ? gateFailures.join(' · ') : '四个判定作业均为 base 脚本 → 再执行');
+
+  // ⑦-c 每个作业都必须有 timeout-minutes（默认 360 分钟对挂起/网络不动是巨大的浪费面）。
+  const jobTimeoutCount = (workflowText.match(/^ {4}timeout-minutes:\s*\d+\s*$/gm) || []).length;
+  add('job-timeouts',
+    '每个作业都声明 timeout-minutes（挂起不占用默认 360 分钟；至少 5 个作业各一条）',
+    jobTimeoutCount >= REQUIRED_JOBS.length,
+    'timeout-minutes 行=' + jobTimeoutCount + '（需要 ≥ ' + REQUIRED_JOBS.length + '）');
 
   // ⑧ fork 安全：不许 pull_request_target（fork 拿到写上下文），也不许顶层 paths-ignore
   //    （把 .github/** 排除掉会让"改 CI 接线"的提交静默不跑任何门）。

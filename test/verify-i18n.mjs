@@ -5,7 +5,7 @@
  *   ① **界面零裸中文**：`src/**` 里每条含中文的字符串字面量都必须进 `weT(...)`；带 `${}` 的模板
  *      与 `+` 拼接的碎片**不算**包过（前者 JS 先插值 ⇒ 查不到键；后者是半句话，英文语序对不上）。
  *      例外只有两类，都写死在下面的允许清单里：诊断/日志实参（`liveLog(...)` 等，不进界面）、
- *      纯数据块（`src/styles.js` 的整份样式表 —— 其中的中文全在 CSS 注释里）。
+ *      纯数据块（主包样式域模块与玻璃包样式表 —— 其中的中文全在 CSS 注释里）。
  *   ② **词表双向对账**：`WE_I18N_EN` 的键集 ⇄ 代码里 `weT("…")` 的字面量集合。少一条 = 该处
  *      在英文界面里原样露中文；多一条 = 孤儿键（改了中文原文却没清旧键，翻译白做）。两个方向
  *      都判，且**允许清单不许空转**（每条都必须在源码里真的还有）。
@@ -52,10 +52,12 @@ const check = (name, ok, detail) => {
  *  （刀3）：原先登记的单文件 `src/styles.js` 已按视觉域拆成 8 个域模块 + 组装点
  *  （组装点无 CSS）⇒ 逐域登记，判据（kind / minLength / 空转检查）一字未改。 */
 const DATA_BLOCKS = [
-  { file: 'src/styles-base.js', kind: 'template', minLength: 10000, why: '样式域 base 是纯数据；其内的中文只出现在 CSS 注释（不渲染到界面）' },
-  { file: 'src/styles-shell.js', kind: 'template', minLength: 10000, why: '样式域 shell 是纯数据；其内的中文只出现在 CSS 注释（不渲染到界面）' },
-  { file: 'src/styles-sidebar.js', kind: 'template', minLength: 10000, why: '样式域 sidebar 是纯数据；其内的中文只出现在 CSS 注释（不渲染到界面）' },
-  { file: 'src/styles-chrome.js', kind: 'template', minLength: 10000, why: '样式域 chrome 是纯数据；其内的中文只出现在 CSS 注释（不渲染到界面）' },
+  // ADR-0016 第四刀：玻璃段出户到 packages/glass/src/glass-css.js（templates 表登记它、
+  // 主包被切的四个域模板放宽 minLength——它们只剩非玻璃段）。
+  { file: 'src/styles-base.js', kind: 'template', minLength: 3000, why: '样式域 base 是纯数据；其内的中文只出现在 CSS 注释（不渲染到界面）' },
+  { file: 'src/styles-shell.js', kind: 'template', minLength: 800, why: '样式域 shell 是纯数据；其内的中文只出现在 CSS 注释（不渲染到界面）' },
+  { file: 'src/styles-chrome.js', kind: 'template', minLength: 2000, why: '样式域 chrome 是纯数据；其内的中文只出现在 CSS 注释（不渲染到界面）' },
+  { file: 'packages/glass/src/glass-css.js', kind: 'template', minLength: 10000, why: '玻璃样式表（原 sidebar 整域 + base/shell/chrome/ext 的玻璃段）是纯数据；其内的中文只出现在 CSS 注释（不渲染到界面）' },
   { file: 'src/styles-settings.js', kind: 'template', minLength: 10000, why: '样式域 settings 是纯数据；其内的中文只出现在 CSS 注释（不渲染到界面）' },
   { file: 'src/styles-panel.js', kind: 'template', minLength: 10000, why: '样式域 panel 是纯数据；其内的中文只出现在 CSS 注释（不渲染到界面）' },
   { file: 'src/styles-quick.js', kind: 'template', minLength: 10000, why: '样式域 quick 是纯数据；其内的中文只出现在 CSS 注释（不渲染到界面）' },
@@ -214,7 +216,7 @@ const DICT_MODULE = 'src/i18n-copy.js';
 const DICT_FAMILY = parseInlineModules().map(({ file }) => file)
   .filter((file) => /(?:^|\/)i18n-copy(?:-[^/]+)?\.js$/.test(file));
 const DICT_MODULES = new Set(DICT_FAMILY);
-// A3（多包，BUNDLE-SPLIT §7.1）之后产品源码分居两处：主包 src/** 与 lib/**，子包 packages/<pkg>/{src,lib}/**。
+// A3（多包，ADR-0014 S10.2）之后产品源码分居两处：主包 src/** 与 lib/**，子包 packages/<pkg>/{src,lib}/**。
 // 扫描面必须同源扩到 packages/**：否则迁出去的 weT(…) 调用点（如 packages/fx/src/ext-fx.js）
 // 与宿主「原句」出处（如 packages/fonts/lib/fontsets.js）双双掉出扫描面 —— 症状恰好是
 // 「一堆孤儿键 + 一堆凭空造句」，而源码两半其实都合规。这正是 A3 打崩本守卫的形态。
@@ -415,7 +417,7 @@ console.log('④ 宿主表（WE_I18N_HOST_EN 的键必须来自 lib/ 下的真�
   // 不许用「库里没有的键会被判红」这类对照：`['不存在的串'].filter((k) => !libValues.has(k))`
   // 对任何不含该字面量的集合都成立（含空集），只是复述 `Array.prototype.filter` 而已；
   // 覆盖点：上游 `stray = hostKeys.keys.filter(…)` 那条判据自身的开火路径
-  // （test/verify-i18n.mjs:332-337：`lib/` 抓不到某条宿主键时 stray 非空、当场判红，同一失效模式）。
+  // （test/verify-i18n.mjs：`lib/` 抓不到某条宿主键时 stray 非空、当场判红，同一失效模式）。
 }
 
 // ══ ⑤ 运行期行为（真跑 i18n 层）══════════════════════════════════════════════
@@ -466,7 +468,7 @@ console.log('⑤ 运行期行为（vm 沙箱里跑词表族 src/i18n-copy*.js + 
   const enDisk = parseCopyEntries(blocks.WE_I18N_EN);
   const hostDisk = parseCopyEntries(blocks.WE_I18N_HOST_EN);
   const asDict = (entries) => Object.fromEntries(entries.map((e) => [e.key, e.value]));
-  // 合并形态照产品实现（`src/i18n.js:197` 的 `Object.assign({}, WE_I18N_EN, WE_I18N_HOST_EN)` ⇒ 宿主表覆盖同名键）。
+  // 合并形态照产品实现（`src/i18n.js` 的 `Object.assign({}, WE_I18N_EN, WE_I18N_HOST_EN)` ⇒ 宿主表覆盖同名键）。
   const enExpected = Object.assign({}, asDict(enDisk), asDict(hostDisk));
   const diskMismatches = (dict, expected) => Object.keys(expected).filter((k) => dict[k] !== expected[k]);
   const enDictKeys = Object.keys(enDict);
