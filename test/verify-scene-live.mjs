@@ -3304,7 +3304,7 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
   //    渲染重建一份，函数 / 对象身份全变）。
   // ⚠️ 例外（**必须留组件内**，故意不进名单）：`group` / `candidates` 是读**可变** store 算出的
   //    派生值 —— 提到模块级会退化成"只在模块初始化时算一次"的冻结快照。下面那条负对照钉住它。
-  const PROMOTED_HANDLERS = ['onRefresh', 'onRatingFilterChange', 'onTypeFilterChange',
+  const PROMOTED_HANDLERS = ['onRefresh', 'onRatingFilterToggle', 'onTypeFilterChange',
     'onLayoutChange', 'onEdgeCompatChange', 'onGroupInterval', 'onArmDeleteGroup', 'onDeleteGroup',
     'onSwitchTransition', 'onSwitchTransitionDir', 'onSwitchTransitionSpeed',
     'onRopeVisibilityChange', 'onRopeFormChange', 'onRopeScaleChange',
@@ -3629,7 +3629,7 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
   const selBase = Object.assign({}, schema.DEFAULTS, {
     loaded: true, loading: false, id: 'w1', url: '/x', playing: true, videoPlaying: true,
     videoVolume: 0.5, videoAudioEnabled: false, videoError: '', type: 'video',
-    contentRatingFilter: 'all', hiddenIds: [], rotationGroups: [{ id: 'g1', name: 'G', interval: 10, order: 'sequence', wallpaperIds: ['w1', 'w2'] }], rotationGroupId: 'g1',
+    contentRatingFilter: ['everyone', 'pg13', 'mature', 'unrated'], hiddenIds: [], rotationGroups: [{ id: 'g1', name: 'G', interval: 10, order: 'sequence', wallpaperIds: ['w1', 'w2'] }], rotationGroupId: 'g1',
     rotationEnabled: false, qpSearch: '', qpType: 'all', url2: '',
     inventory: { wallpapers: [], error: null, installDir: '/we', uploadDir: '/up', weAssetsDir: null, sceneMediaBase: '', total: 0, portableCount: 0, playlists: [] },
     accent: '#4f8cff', glassColor: '#ffffff', glassAlpha: 0, blur: 0, border: 0,
@@ -6275,7 +6275,7 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
   const st = Object.assign({}, schemaMod.DEFAULTS, {
     loaded: true, loading: false, id: 'w1', url: '/x', type: 'video', playing: true,
     videoPlaying: true, videoVolume: 0.5, videoAudioEnabled: false, videoError: '',
-    contentRatingFilter: 'all', hiddenIds: [], rotationGroups: [{ id: 'g1', name: 'G', interval: 10, order: 'sequence', wallpaperIds: ['w1', 'w2'] }], rotationGroupId: 'g1',
+    contentRatingFilter: ['everyone', 'pg13', 'mature', 'unrated'], hiddenIds: [], rotationGroups: [{ id: 'g1', name: 'G', interval: 10, order: 'sequence', wallpaperIds: ['w1', 'w2'] }], rotationGroupId: 'g1',
     rotationEnabled: false, flip: false, objectFit: 'cover', playbackRate: 1,
     sceneLive: true, sceneLiveFailures: {}, themeFollow: false, themeFollowLine: '',
     adapterTarget: 'auto', pauseOnHidden: false, pauseOnBlur: false, pauseOnBattery: false,

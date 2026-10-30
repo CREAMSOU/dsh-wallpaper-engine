@@ -977,7 +977,7 @@ function scheduleSceneVideoResync() {
 function selectionBlockedNote(w) {
   if (!w) return weT("当前壁纸已不在列表里（可能已被移除或隐藏）");
   if (!isPlayableType(w)) return weT("这张壁纸没有可播放的媒体文件");
-  if (!matchesRatingFilter(w, selection.contentRatingFilter)) return weT("这张壁纸被「内容分级」过滤排除了 —— 把内容分级切回「全部」即可播放");
+  if (!matchesRatingFilter(w, selection.contentRatingFilter)) return weT("这张壁纸的内容分级不在勾选的分级里 —— 在「内容分级」里勾上它所在的档即可播放");
   return "";
 }
 
@@ -997,9 +997,9 @@ function rotationPoolAll() {
 
 // Re-validate the active selection against the current inventory + filters.
 // Called after a refresh AND after changing the rating/type filter. 丢弃闸门是
-// keepPlayingWallpaper：分级是内容闸门（拦播放，档位是**累积上限**）；类型档只筛选择器
+// keepPlayingWallpaper：分级是内容闸门（勾选集合：勾上的档才允许播）；类型档只筛选择器
 // 网格的**显示**，既不得把正在应用的壁纸干掉，也不得改变轮播成员与「下一张」（用户口径
-// 2026-10-30 / issue #294）。轮播在场时拿不到候选就换下一张；当前壁纸被收窄的分级档挡掉
+// 2026-10-30 / issue #294）。轮播在场时拿不到候选就换下一张；当前壁纸被勾选集合挡掉
 // 时**立即换台**（用户口径 2026-10-30：「换得了就换，换不了才提示」）。
 function revalidateSelection() {
   // 被过滤条件丢弃的选择要留下原因：先取下来，applySelection("") 会清掉
@@ -1007,7 +1007,7 @@ function revalidateSelection() {
   let droppedNote = "";
   const cur = selection.id ? selection.inventory.wallpapers.find((w) => w.id === selection.id) : null;
   const keepCurrent = keepPlayingWallpaper(cur, selection.contentRatingFilter);
-  // 「被分级档挡掉」这一支要区分于「壁纸被移除 / 已不在列表」：只有前者才自动换台。
+  // 「被勾选集合挡掉」这一支要区分于「壁纸被移除 / 已不在列表」：只有前者才自动换台。
   const droppedByRating = Boolean(cur) && isPlayableType(cur)
     && !matchesRatingFilter(cur, selection.contentRatingFilter);
   if (selection.id && !keepCurrent) {
@@ -1015,7 +1015,7 @@ function revalidateSelection() {
     setSetting("id", "");
   }
   // 轮播在场时：当前壁纸不在候选里就换下一张。候选判据（isRotationEligible：可播放 ∧
-  // 分级上限）不含类型档 ⇒ 切类型档既不会把人踢下台，也不会改变轮播成员与「下一张」。
+  // 勾选集合）不含类型档 ⇒ 切类型档既不会把人踢下台，也不会改变轮播成员与「下一张」。
   if (selection.rotationEnabled && selection.id
     && !rotationCandidates().some((w) => w.id === selection.id)) {
     const first = rotationCandidates()[0];
@@ -4022,8 +4022,13 @@ const onFontResetAll = () => {
 const onRefresh = () => loadInventory();
 // Filter changes: persist + re-validate so wallpapers outside the selected
 // categories drop out of the grid/rotation immediately.
-const onRatingFilterChange = (e) => {
-  setSetting("contentRatingFilter", e.target.value);
+// 内容分级是**多档勾选**（v7 起值是数组）：切某一档 = 往集合里加/删，且不允许把最后一档
+// 取消（一个都不勾等于全库空白，用户只会以为坏了）。
+const onRatingFilterToggle = (tier, on) => {
+  const cur = Array.isArray(selection.contentRatingFilter) ? selection.contentRatingFilter : [];
+  const next = RATING_TIERS.filter((t) => (t === tier ? on : cur.indexOf(t) !== -1));
+  if (!next.length) return;
+  setSetting("contentRatingFilter", next);
   revalidateSelection();
 };
 const onTypeFilterChange = (e) => {
@@ -4746,7 +4751,7 @@ function WallpaperPicker() {
         cdMode, query, basePlayable, ratingCounts, typeCounts,
         gridRef: pickerGridRef, vwin: pickerVwin,
         armedConfirm: sel.armedConfirm, onArmConfirm: armConfirm, onDisarmConfirm: disarmConfirm,
-        onClear, onTogglePlay, onRatingFilterChange, onTypeFilterChange,
+        onClear, onTogglePlay, onRatingToggle: onRatingFilterToggle, onTypeFilterChange,
         onShowNormalView, onShowHiddenView,
         onToggleBatchMode, onArmBatchHide, onBatchHide, onBatchCancel, onSearchInput, onPickCard,
       }) : React.createElement(React.Fragment, null,

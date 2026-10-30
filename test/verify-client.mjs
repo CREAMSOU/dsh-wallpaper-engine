@@ -2878,10 +2878,9 @@ setTimeout(async () => {
     const EXPECTED_NORMAL = [
       '0:we-picker__modal 1:we-picker__modal-head 2:we-picker__modal-head-left 3:we-vinyl 3:we-vinyl--playing 3:we-vinyl--sm 4:we-vinyl__cover 5:we-vinyl__empty 4:we-vinyl__hole',
       '3:we-picker__modal-title 2:we-picker__btn 1:we-picker__modal-tabs 2:we-picker__btn 2:we-picker__tab 2:we-picker__tab--active 2:we-picker__btn 2:we-picker__tab 1:we-picker__modal-body',
-      '2:we-picker__row 3:we-picker__hint 3:we-picker__btn 2:we-picker__row 2:we-picker__filter-row 3:we-picker__text 3:we-picker__search 3:we-picker__hint 3:we-picker__label',
-      '3:we-picker__playlist-select 3:we-picker__hint 3:we-picker__label 3:we-picker__playlist-select 2:we-picker__grid 3:we-picker__card 4:we-picker__card-close 3:we-picker__card 4:we-picker__card-placeholder',
-      '4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card',
-      '4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide',
+      '2:we-picker__row 3:we-picker__hint 3:we-picker__btn 2:we-picker__row 2:we-picker__filter-row 3:we-picker__text 3:we-picker__search 3:we-picker__rating-menu 4:we-picker__rating-btn',
+      '5:we-picker__rating-text 5:we-picker__rating-caret 4:we-picker__rating-list 5:we-picker__rating-toggle 5:we-picker__rating-toggle--on 6:we-picker__rating-check 5:we-picker__rating-toggle 6:we-picker__rating-check 5:we-picker__rating-toggle',
+      '6:we-picker__rating-check 5:we-picker__rating-toggle 6:we-picker__rating-check 3:we-picker__hint 3:we-picker__label 3:we-picker__playlist-select 2:we-picker__grid 3:we-picker__card 4:we-picker__card-close',
       '3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title',
       '4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type',
       '4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder',
@@ -2895,17 +2894,18 @@ setTimeout(async () => {
       '3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title',
       '4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type',
       '4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder',
-      '4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide 1:we-picker__modal-foot',
-      '2:we-picker__hint',
+      '4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card',
+      '4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide',
+      '3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title',
+      '4:we-picker__card-hide 1:we-picker__modal-foot 2:we-picker__hint',
     ].join(' ').split(' ');
     const EXPECTED_BATCH = [
       '0:we-picker__modal 1:we-picker__modal-head 2:we-picker__modal-head-left 3:we-vinyl 3:we-vinyl--playing 3:we-vinyl--sm 4:we-vinyl__cover 5:we-vinyl__empty 4:we-vinyl__hole',
       '3:we-picker__modal-title 2:we-picker__btn 1:we-picker__modal-tabs 2:we-picker__btn 2:we-picker__tab 2:we-picker__tab--active 2:we-picker__btn 2:we-picker__tab 1:we-picker__modal-body',
       '2:we-picker__row 3:we-picker__hint 3:we-picker__btn 2:we-picker__row 2:we-picker__batch-bar 3:we-picker__hint 3:we-picker__btn 3:we-picker__btn 2:we-picker__row',
-      '2:we-picker__filter-row 3:we-picker__text 3:we-picker__search 3:we-picker__hint 3:we-picker__label 3:we-picker__playlist-select 3:we-picker__hint 3:we-picker__label 3:we-picker__playlist-select',
-      '2:we-picker__grid 3:we-picker__card 4:we-picker__card-close 3:we-picker__card 3:we-picker__card--checked 4:we-picker__card-placeholder 4:we-picker__card-title 4:we-picker__card-check 3:we-picker__card',
-      '4:we-picker__card-placeholder 4:we-picker__card-title 4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title 4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder',
-      '4:we-picker__card-title 4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title 4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title',
+      '2:we-picker__filter-row 3:we-picker__text 3:we-picker__search 3:we-picker__rating-menu 4:we-picker__rating-btn 5:we-picker__rating-text 5:we-picker__rating-caret 4:we-picker__rating-list 5:we-picker__rating-toggle',
+      '5:we-picker__rating-toggle--on 6:we-picker__rating-check 5:we-picker__rating-toggle 6:we-picker__rating-check 5:we-picker__rating-toggle 6:we-picker__rating-check 5:we-picker__rating-toggle 6:we-picker__rating-check 3:we-picker__hint',
+      '3:we-picker__label 3:we-picker__playlist-select 2:we-picker__grid 3:we-picker__card 4:we-picker__card-close 3:we-picker__card 3:we-picker__card--checked 4:we-picker__card-placeholder 4:we-picker__card-title',
       '4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title 4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title 4:we-picker__card-check',
       '3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title 4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title 4:we-picker__card-check 3:we-picker__card',
       '4:we-picker__card-placeholder 4:we-picker__card-title 4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title 4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder',
@@ -2916,7 +2916,9 @@ setTimeout(async () => {
       '4:we-picker__card-title 4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title 4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title',
       '4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title 4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title 4:we-picker__card-check',
       '3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title 4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title 4:we-picker__card-check 3:we-picker__card',
-      '4:we-picker__card-placeholder 4:we-picker__card-title 4:we-picker__card-check 1:we-picker__modal-foot 2:we-picker__hint',
+      '4:we-picker__card-placeholder 4:we-picker__card-title 4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title 4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder',
+      '4:we-picker__card-title 4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title 4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title',
+      '4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title 4:we-picker__card-check 1:we-picker__modal-foot 2:we-picker__hint',
     ].join(' ').split(' ');
     const EXPECTED_HIDDEN = [
       '0:we-picker__modal 1:we-picker__modal-head 2:we-picker__modal-head-left 3:we-vinyl 3:we-vinyl--playing 3:we-vinyl--sm 4:we-vinyl__cover 5:we-vinyl__empty 4:we-vinyl__hole',
@@ -2927,7 +2929,7 @@ setTimeout(async () => {
     const modalRoot = findByClass(tree, 'we-picker__modal');
     const seqNormal = modalClassSequence(tree);
     // 绝对锚点（不读 golden）：否则"两边都空"也算相等。
-    assert.equal(seqNormal.length, 181, '绝对锚点：普通视图的 class 令牌数（空序列不得算通过）');
+    assert.equal(seqNormal.length, 192, '绝对锚点：普通视图的 class 令牌数（空序列不得算通过）');
       assert.ok(collectCards(modalRoot).length >= 25, '绝对锚点：模态框里的卡片数 ≥ 25（关闭卡 + 首窗 29 张）');
       assert.ok(classSequenceMatches(seqNormal, EXPECTED_NORMAL), '普通视图：模态框标记序列与下钻改版后逐字一致（golden 录自虚拟窗口形态）');
     // 负对照：把**变异输入**喂进**同一条判据**
@@ -4182,7 +4184,7 @@ setTimeout(async () => {
       const migratedV5 = sanitizeFromSchema({ settingsVersion: 5, glassColor: '#0d1524' }, 'host') || {};
       assert.deepEqual(migratedV5.glassColor, { light: '#0d1524', dark: '#0d1524' },
         'v5 老存档 ⇒ 迁移后玻璃色是一对');
-      assert.equal(migratedV5.settingsVersion, 6, '规范化后版本号盖成当前值');
+      assert.equal(migratedV5.settingsVersion, 7, '规范化后版本号盖成当前值');
       // 读容忍的**真实入口**：带当前版本的档**不过迁移** ⇒ 标量只能由 `readGlassColors` 自己认。
       // ⚠️ 来路（ADR-0011 D6 之后）：**手改的 config.json**（本机那份就是标量 + 旧版本号，绕过迁移直传）、
       //    **作废后仍留在盘上的用户层旧预设**、以及测试台架自造的输入。

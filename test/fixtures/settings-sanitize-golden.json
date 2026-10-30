@@ -43,7 +43,9 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
+        "contentRatingFilter": [
+          "everyone"
+        ],
         "typeFilter": "all",
         "pickerLayout": "fixed",
         "edgeCompat": true,
@@ -62,7 +64,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 7,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -194,7 +196,9 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
+        "contentRatingFilter": [
+          "everyone"
+        ],
         "typeFilter": "all",
         "pickerLayout": "fixed",
         "edgeCompat": true,
@@ -213,7 +217,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 7,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -345,7 +349,9 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
+        "contentRatingFilter": [
+          "everyone"
+        ],
         "typeFilter": "all",
         "pickerLayout": "fixed",
         "edgeCompat": true,
@@ -372,7 +378,7 @@
           "thinkingTrigger": "inherit",
           "floaters": "inherit"
         },
-        "settingsVersion": 6,
+        "settingsVersion": 7,
         "settingsWindowTransparency": 100,
         "settingsWindowBlur": 60,
         "conversationColor": "#ffffff",
@@ -512,7 +518,9 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
+        "contentRatingFilter": [
+          "everyone"
+        ],
         "typeFilter": "all",
         "pickerLayout": "fixed",
         "edgeCompat": true,
@@ -539,7 +547,7 @@
           "thinkingTrigger": "inherit",
           "floaters": "inherit"
         },
-        "settingsVersion": 6,
+        "settingsVersion": 7,
         "settingsWindowTransparency": 100,
         "settingsWindowBlur": 60,
         "conversationColor": "#ffffff",
@@ -679,7 +687,9 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
+        "contentRatingFilter": [
+          "everyone"
+        ],
         "typeFilter": "all",
         "pickerLayout": "fixed",
         "edgeCompat": true,
@@ -706,7 +716,7 @@
           "thinkingTrigger": "inherit",
           "floaters": "inherit"
         },
-        "settingsVersion": 6,
+        "settingsVersion": 7,
         "settingsWindowTransparency": 100,
         "settingsWindowBlur": 60,
         "conversationColor": "#ffffff",
@@ -850,7 +860,9 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
+        "contentRatingFilter": [
+          "everyone"
+        ],
         "typeFilter": "all",
         "pickerLayout": "fixed",
         "edgeCompat": true,
@@ -869,7 +881,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 7,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -1001,7 +1013,9 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
+        "contentRatingFilter": [
+          "everyone"
+        ],
         "typeFilter": "all",
         "pickerLayout": "fixed",
         "edgeCompat": true,
@@ -1020,7 +1034,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 7,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -1213,7 +1227,9 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
+        "contentRatingFilter": [
+          "everyone"
+        ],
         "typeFilter": "all",
         "pickerLayout": "fixed",
         "edgeCompat": true,
@@ -1232,7 +1248,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 7,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -1364,7 +1380,9 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
+        "contentRatingFilter": [
+          "everyone"
+        ],
         "typeFilter": "all",
         "pickerLayout": "fixed",
         "edgeCompat": true,
@@ -1383,7 +1401,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 7,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -1621,7 +1639,9 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
+        "contentRatingFilter": [
+          "everyone"
+        ],
         "typeFilter": "all",
         "pickerLayout": "fixed",
         "edgeCompat": true,
@@ -1640,7 +1660,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 7,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -1772,7 +1792,9 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
+        "contentRatingFilter": [
+          "everyone"
+        ],
         "typeFilter": "all",
         "pickerLayout": "fixed",
         "edgeCompat": true,
@@ -1791,7 +1813,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 7,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -1928,7 +1950,9 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
+        "contentRatingFilter": [
+          "everyone"
+        ],
         "typeFilter": "all",
         "pickerLayout": "fixed",
         "edgeCompat": true,
@@ -1947,7 +1971,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 7,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -2079,7 +2103,9 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
+        "contentRatingFilter": [
+          "everyone"
+        ],
         "typeFilter": "all",
         "pickerLayout": "fixed",
         "edgeCompat": true,
@@ -2098,7 +2124,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 7,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -2249,7 +2275,9 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
+        "contentRatingFilter": [
+          "everyone"
+        ],
         "typeFilter": "all",
         "pickerLayout": "fixed",
         "edgeCompat": true,
@@ -2268,7 +2296,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 7,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -2400,7 +2428,9 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
+        "contentRatingFilter": [
+          "everyone"
+        ],
         "typeFilter": "all",
         "pickerLayout": "fixed",
         "edgeCompat": true,
@@ -2419,7 +2449,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 7,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -2570,7 +2600,9 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
+        "contentRatingFilter": [
+          "everyone"
+        ],
         "typeFilter": "all",
         "pickerLayout": "fixed",
         "edgeCompat": true,
@@ -2589,7 +2621,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 7,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -2721,7 +2753,9 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
+        "contentRatingFilter": [
+          "everyone"
+        ],
         "typeFilter": "all",
         "pickerLayout": "fixed",
         "edgeCompat": true,
@@ -2740,7 +2774,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 7,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -2878,7 +2912,9 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
+        "contentRatingFilter": [
+          "everyone"
+        ],
         "typeFilter": "all",
         "pickerLayout": "fixed",
         "edgeCompat": true,
@@ -2897,7 +2933,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 7,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -3029,7 +3065,9 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
+        "contentRatingFilter": [
+          "everyone"
+        ],
         "typeFilter": "all",
         "pickerLayout": "fixed",
         "edgeCompat": true,
@@ -3048,7 +3086,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 7,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -3191,7 +3229,9 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
+        "contentRatingFilter": [
+          "everyone"
+        ],
         "typeFilter": "all",
         "pickerLayout": "fixed",
         "edgeCompat": true,
@@ -3210,7 +3250,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 7,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -3342,7 +3382,9 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
+        "contentRatingFilter": [
+          "everyone"
+        ],
         "typeFilter": "all",
         "pickerLayout": "fixed",
         "edgeCompat": true,
@@ -3361,7 +3403,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 7,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -3501,7 +3543,9 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
+        "contentRatingFilter": [
+          "everyone"
+        ],
         "typeFilter": "all",
         "pickerLayout": "fixed",
         "edgeCompat": true,
@@ -3520,7 +3564,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 7,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -3652,7 +3696,9 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
+        "contentRatingFilter": [
+          "everyone"
+        ],
         "typeFilter": "all",
         "pickerLayout": "fixed",
         "edgeCompat": true,
@@ -3671,7 +3717,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 7,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -3818,7 +3864,9 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
+        "contentRatingFilter": [
+          "everyone"
+        ],
         "typeFilter": "all",
         "pickerLayout": "fixed",
         "edgeCompat": true,
@@ -3837,7 +3885,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 7,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -3969,7 +4017,9 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
+        "contentRatingFilter": [
+          "everyone"
+        ],
         "typeFilter": "all",
         "pickerLayout": "fixed",
         "edgeCompat": true,
@@ -3988,7 +4038,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 7,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -4192,7 +4242,9 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
+        "contentRatingFilter": [
+          "everyone"
+        ],
         "typeFilter": "all",
         "pickerLayout": "fixed",
         "edgeCompat": true,
@@ -4211,7 +4263,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 7,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -4372,7 +4424,9 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
+        "contentRatingFilter": [
+          "everyone"
+        ],
         "typeFilter": "all",
         "pickerLayout": "fixed",
         "edgeCompat": true,
@@ -4391,7 +4445,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 7,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -4531,7 +4585,9 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
+        "contentRatingFilter": [
+          "everyone"
+        ],
         "typeFilter": "all",
         "pickerLayout": "fixed",
         "edgeCompat": true,
@@ -4550,7 +4606,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 7,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -4682,7 +4738,9 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
+        "contentRatingFilter": [
+          "everyone"
+        ],
         "typeFilter": "all",
         "pickerLayout": "fixed",
         "edgeCompat": true,
@@ -4701,7 +4759,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 7,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -4837,7 +4895,9 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
+        "contentRatingFilter": [
+          "everyone"
+        ],
         "typeFilter": "all",
         "pickerLayout": "fixed",
         "edgeCompat": true,
@@ -4856,7 +4916,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 7,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -4988,7 +5048,9 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
+        "contentRatingFilter": [
+          "everyone"
+        ],
         "typeFilter": "all",
         "pickerLayout": "fixed",
         "edgeCompat": true,
@@ -5007,7 +5069,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 7,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -5144,7 +5206,9 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
+        "contentRatingFilter": [
+          "everyone"
+        ],
         "typeFilter": "all",
         "pickerLayout": "fixed",
         "edgeCompat": true,
@@ -5163,7 +5227,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 7,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -5295,7 +5359,9 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
+        "contentRatingFilter": [
+          "everyone"
+        ],
         "typeFilter": "all",
         "pickerLayout": "fixed",
         "edgeCompat": true,
@@ -5314,7 +5380,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 7,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",

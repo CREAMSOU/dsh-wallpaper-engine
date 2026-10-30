@@ -255,6 +255,21 @@ function findSelect(tree, ariaLabel) {
   });
   return hit;
 }
+/** 分级多档勾选：按档位找下拉里的那个 checkbox（v7 起 contentRatingFilter 是数组）。 */
+function findRatingCheck(tree, tier) {
+  let hit = null;
+  walk(tree, (n) => {
+    if (hit) return;
+    if (n.type === 'input' && n.props && n.props.className === 'we-picker__rating-check'
+      && n.props.value === tier) hit = n;
+  });
+  return hit;
+}
+function toggleRating(tree, tier) {
+  const box = findRatingCheck(tree, tier);
+  assert(box && typeof box.props.onChange === 'function', 'rating checkbox found: ' + tier);
+  box.props.onChange();
+}
 const renderTree = () => pickerRenders[0]();
 const tick = (ms = 20) => new Promise((r) => { setTimeout(r, ms); });
 const treeText = () => JSON.stringify(renderTree());
@@ -409,60 +424,63 @@ async function main() {
   await tick(30);
   check('D3 that 「播放」 resumes the new wallpaper', layerVideo().paused === false && toggleLabel(renderTree()) === '暂停');
 
-  // ── E. Content rating is a CUMULATIVE CEILING, and narrowing switches over ──
-  tree = openLibrary(); // 分级筛选下拉住在库视图里
-  const ratingSelect = findSelect(tree, '内容分级');
-  assert(ratingSelect && typeof ratingSelect.props.onChange === 'function', 'rating filter select found');
-  // E1/E2：「成人」是累积上限（Everyone + PG13 + Mature）⇒ 正在播的 Everyone 壁纸不受影响。
-  ratingSelect.props.onChange({ target: { value: 'mature' } });
+  // ── E. Content rating is a MULTI-TIER ALLOW-SET, and narrowing switches over ──
+  tree = openLibrary(); // 分级勾选下拉住在库视图里
+  assert(findRatingCheck(tree, 'everyone') && findRatingCheck(tree, 'mature'),
+    'rating checkboxes found');
+  // E1/E2：默认只勾「全年龄」；再勾上「成人」= {全年龄, 成人} ⇒ 正在播的 Everyone 壁纸不受影响。
+  toggleRating(tree, 'mature');
   await tick(30);
   closeLibrary();
-  check('E1 a cumulative tier does not drop the lighter-rated wallpaper (no blank)',
+  check('E1 ticking a heavier tier does not drop the lighter-rated wallpaper (no blank)',
     !!document.getElementById('dsh-wallpaper-engine-layer'));
   check('E2 …and playback simply continues',
     layerVideo() && layerVideo().paused === false);
-  check('E3 …without any "filtered out" note',
-    !treeText().includes('过滤排除'));
+  check('E3 …without any "not ticked" note',
+    !treeText().includes('不在勾选的分级里'));
 
-  // The Mature upload is now inside the ceiling too: play it.
+  // The Mature upload is inside the allow-set now: play it.
   tree = openLibrary();
   const matureCard = findWallpaperCard(tree, 'My Mature Upload');
-  check('E4 the cumulative tier offers the explicitly Mature upload', !!matureCard);
+  check('E4 the ticked tier offers the explicitly Mature upload', !!matureCard);
   if (matureCard) {
     matureCard.props.onClick();
     await tick(30);
     check('E5 an explicitly rated upload plays like any other', layerVideo() && layerVideo().paused === false);
   }
 
-  // 收窄到「全年龄」：当前 Mature 壁纸不再允许 ⇒ 立即换台到当前档内第一张候选
-  // （库存顺序第一张是 WE Video），而不是无声清空。
-  findSelect(openLibrary(), '内容分级').props.onChange({ target: { value: 'everyone' } });
+  // 取消勾选「成人」⇒ 回到 {全年龄}：当前 Mature 壁纸不再允许 ⇒ 立即换台到允许集合里第一张
+  // 候选（库存顺序第一张是 WE Video），而不是无声清空。
+  toggleRating(openLibrary(), 'mature');
   await tick(30);
   closeLibrary();
-  check('E6 narrowing the tier switches to an allowed wallpaper instead of blanking',
+  check('E6 unticking the current tier switches to an allowed wallpaper instead of blanking',
     !!document.getElementById('dsh-wallpaper-engine-layer')
     && !!layerVideo() && layerVideo().src.includes('/media/w1'),
     layerVideo() ? layerVideo().src : '(no layer)');
   check('E7 …and playback continues on the replacement', layerVideo() && layerVideo().paused === false);
-  check('E8 …with no "filtered out" note (a switch is not a refusal)',
-    !treeText().includes('过滤排除'));
+  check('E8 …with no "not ticked" note (a switch is not a refusal)',
+    !treeText().includes('不在勾选的分级里'));
 
-  // 收窄到「未分级」：夹具里没有未分级壁纸 ⇒ 换不了才是拒绝，必须解释。
-  findSelect(openLibrary(), '内容分级').props.onChange({ target: { value: 'unrated' } });
+  // 只勾「未分级」：夹具里没有未分级壁纸 ⇒ 换不了才是拒绝，必须解释。
+  tree = openLibrary();
+  toggleRating(tree, 'unrated');
+  await tick(30);
+  toggleRating(openLibrary(), 'everyone');
   await tick(30);
   closeLibrary();
   check('E9 with no allowed candidate the drop is still explained (never a silent blank)',
-    treeText().includes('被「内容分级」过滤排除了'));
+    treeText().includes('这张壁纸的内容分级不在勾选的分级里'));
   check('E10 …and the layer really is gone (the note replaces an unexplained blank)',
     !document.getElementById('dsh-wallpaper-engine-layer'));
 
-  // 放宽回「全年龄」：网格重新可选，点一张即恢复播放、提示清除。
+  // 勾回「全年龄」：网格重新可选，点一张即恢复播放、提示清除。
   tree = openLibrary();
-  findSelect(tree, '内容分级').props.onChange({ target: { value: 'everyone' } });
+  toggleRating(tree, 'everyone');
   await tick(30);
   tree = openLibrary();
   const weAgain = findWallpaperCard(tree, 'WE Video');
-  check('E11 the wallpaper is selectable again under the wider tier', !!weAgain);
+  check('E11 the wallpaper is selectable again with its tier ticked', !!weAgain);
   if (weAgain) {
     weAgain.props.onClick();
     await tick(30);

@@ -52,21 +52,17 @@
 // "Everyone" (G) / "PG13" / "Mature" (R)；没有该字段的项目算「未分级」。匹配大小写
 // 不敏感并接受常见拼写，好让别的本地副本行为一致。
 //
-// 过滤档是**累积上限**（不是精确等值，用户拍板 2026-10-30）：分级系统存在的意义就是
-// 「保证不该出现的地方刷不出成人内容」，所以收窄档位必须把更轻的档一起放行 ——
-//   全部   = 全年龄 + PG13 + 成人 + 未分级
-//   全年龄 = 仅 Everyone（G）
-//   PG13   = Everyone + PG13
-//   成人   = Everyone + PG13 + Mature（R）
-//   未分级 = 仅「未分级」（单独一档、精确匹配；不并进「成人」，免得默认 Everyone 档下
-//            把来历不明的本地副本整片消失）
-// 未知档位一律 fail-closed（判不匹配），免得拼错的键把成人内容放出来。
+// 过滤档是**勾选集合**（用户口径 2026-10-30，像 WE 本身的多档勾选）：勾上的档才允许
+// 出现在列表、轮播与播放里，组合完全自由（含"只勾成人"这种纯 R18 用法）。
+//   · 空集合 / 非数组 / 认不得的值一律 fail-closed（判不匹配）—— 免得脏档把成人内容放出来；
+//   · 旧的单档枚举只作为**读兜底**（旧预设、手改 config 不走迁移那一层），映射成等价集合：
+//     'all' ⇒ 四档全勾，'everyone'/'pg13'/'mature' ⇒ 它及其更低的档，'unrated' ⇒ 仅未分级。
 const ADULT_RATING_PATTERN = /^(mature|adult|adultonly|18\+|r18)$/i;
 const PG13_RATING_PATTERN = /^(pg13|pg-13|pg ?13|questionable)$/i;
 
-// 敏感度排序值（Everyone 最轻）+ 各档的累积上限。`unrated` 没有排序值：三档累积档都挡它。
-const RATING_RANK = { everyone: 0, pg13: 1, mature: 2 };
-const RATING_CEILING = { everyone: 0, pg13: 1, mature: 2 };
+// 合法分级档（规范顺序；与 lib/settings-schema.js 的 RATING_TIER_VALUES 同一张表，
+// 守卫 test/verify-picker-model.mjs 对账两处）。
+const RATING_TIERS = ['everyone', 'pg13', 'mature', 'unrated'];
 
 function isUploadedWallpaper(w) {
   return Boolean(w && w.id && w.id.indexOf("up-") === 0);
@@ -95,15 +91,24 @@ function ratingOf(w) {
   return "unrated";
 }
 
-function matchesRatingFilter(w, filter) {
-  if (filter === "all") return true;
-  // 「未分级」是精确档：它既不是 Everyone 也不是更轻的档，累积档不放行它。
-  if (filter === "unrated") return ratingOf(w) === "unrated";
-  const ceiling = RATING_CEILING[filter];
-  if (ceiling === undefined) return false; // 未知档位 fail-closed
-  const rank = RATING_RANK[ratingOf(w)];
-  if (rank === undefined) return false; // 「未分级」不在累积档里
-  return rank <= ceiling;
+// 勾选集合 → 允许档的集合。非数组 / 空 / 全垃圾 ⇒ null（调用方 fail-closed）。
+// 字符串只在这里做**旧档读兜底**：写入路径永远是数组（设置 v7 + 迁移）。
+function ratingAllowSet(allow) {
+  if (typeof allow === "string") {
+    if (allow === "all") return new Set(RATING_TIERS);
+    const legacy = { everyone: ["everyone"], pg13: ["everyone", "pg13"], mature: ["everyone", "pg13", "mature"], unrated: ["unrated"] };
+    const mapped = legacy[allow];
+    return mapped ? new Set(mapped) : null;
+  }
+  if (!Array.isArray(allow)) return null;
+  const set = new Set(allow.filter((tier) => RATING_TIERS.indexOf(tier) !== -1));
+  return set.size ? set : null;
+}
+
+function matchesRatingFilter(w, allow) {
+  const set = ratingAllowSet(allow);
+  if (!set) return false; // 空集合 / 非法 ⇒ fail-closed
+  return set.has(ratingOf(w));
 }
 
 function matchesTypeFilter(w, filter) {

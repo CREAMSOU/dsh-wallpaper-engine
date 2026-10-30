@@ -353,15 +353,18 @@ const CSS_QUICK = `  /* ── Rope dock: chibi pull-cord + glass repo drawer �
   .we-qp__group { flex: 1; min-width: 0; }
   .we-qp__search { width: 100%; box-sizing: border-box; }
   .we-qp__list { display: flex; flex-direction: column; gap: 2px; }
-  /* 视图切换：搜索 + 分级筛选 + 类型筛选 + 列表/卡片，**确定性两行**。一行排下不可行 ——
-     最窄官方右栏里第四个控件在结构上放不下（分级最短也要 ~70px，搜索框会被挤到不可用），
-     而依赖 flex-wrap 假想尺寸的折行在中间宽度会碎出"只有页签折下去"的行。故搜索框独占
-     首行（**封顶 300px**：用户口径，太长的搜索框没用还占地方；basis 钉 100% 强制换行），
-     分级/类型/视图三个控件右对齐成第二行（分级 select 的 margin-left:auto 恰是第二行首项，
-     把整组推到右侧）。 */
+  /* 视图切换：搜索 + 分级勾选 + 类型筛选 + 列表/卡片，**确定性两行**。一行排下不可行 ——
+     最窄官方右栏里第四个控件在结构上放不下，而依赖 flex-wrap 假想尺寸的折行在中间宽度会
+     碎出"只有页签折下去"的行。故搜索框独占首行（**封顶 300px**：用户口径，太长的搜索框
+     没用还占地方；basis 钉 100% 强制换行），分级下拉/类型/视图三个控件右对齐成第二行
+     （分级下拉的 margin-left:auto 恰是第二行首项，把它推到右侧）。 */
   .we-qp__viewbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .we-qp__viewbar .we-qp__search { flex: 1 1 100%; min-width: 0; max-width: 300px; width: auto; }
-  .we-qp__viewbar .we-qp__rating { flex: none; max-width: 110px; margin-left: auto; }
+  /* 内容分级：下拉 + 多档勾选（与壁纸选择器同款设计；用户口径 2026-10-30 ——
+     四枚胶囊在快捷面板里同样观感差）。候选框的限宽/省略在 .we-picker__rating-*
+     里统一定义，这里只把按钮尺寸收进本面板的密度。 */
+  .we-qp__rating-menu { margin-left: auto; max-width: 210px; }
+  .we-qp__rating-btn { width: 108px; height: 26px; padding: 0 8px; font-size: 11px; border-radius: 7px; }
   .we-qp__viewbar .we-qp__type { flex: none; max-width: 84px; }
   /* 列表 / 卡片：标签式切换 —— 复用 .we-tabs 的滑动胶囊做激活指示，但去掉分段底与
      描边（用户口径：不要默认背景）；页签收成内容宽（两枚都是两字，等宽成立，

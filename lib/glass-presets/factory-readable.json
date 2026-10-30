@@ -33,7 +33,7 @@
     "pauseOnBattery": false,
     "flip": false,
     "objectFit": "cover",
-    "contentRatingFilter": "all",
+    "contentRatingFilter": ["everyone", "pg13", "mature", "unrated"],
     "typeFilter": "all",
     "pickerLayout": "fixed",
     "edgeCompat": true,

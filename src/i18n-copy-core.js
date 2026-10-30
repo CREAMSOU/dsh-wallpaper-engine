@@ -37,7 +37,7 @@ const WE_I18N_EN_CORE = {
   "宿主返回 {status}": "Host returned {status}",
   "当前壁纸已不在列表里（可能已被移除或隐藏）": "The current wallpaper is no longer in the list (it may have been removed or hidden)",
   "这张壁纸没有可播放的媒体文件": "This wallpaper has no playable media file",
-  "这张壁纸被「内容分级」过滤排除了 —— 把内容分级切回「全部」即可播放": "This wallpaper is excluded by the content rating filter — set Content rating back to All to play it",
+  "这张壁纸的内容分级不在勾选的分级里 —— 在「内容分级」里勾上它所在的档即可播放": "This wallpaper's content rating is not in your checked ratings — tick its tier under Content rating to play it",
   "轮播列表": "Rotation list",
   "硬切": "Hard cut",
   "交叉淡化": "Cross-fade",
