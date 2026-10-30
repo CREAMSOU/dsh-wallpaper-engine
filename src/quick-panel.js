@@ -550,7 +550,7 @@
         value: ratingFilter,
         onChange: (e) => { setSetting("contentRatingFilter", e.target.value); emit(); },
         "aria-label": weT("内容分级"),
-        title: weT("对应 Wallpaper Engine 的内容分级（project.json contentrating）"),
+        title: weT("对应 Wallpaper Engine 的内容分级（project.json contentrating）；分档为累积上限：全年龄只含 Everyone，PG13 含全年龄，成人含全部三档，未分级单独一档"),
       },
       ...qpRatings().map((r) => React.createElement("option", { key: r.id, value: r.id }, r.label)),
       ),

@@ -231,14 +231,16 @@ const CASES = [
   { name: '类型过滤：scene 只留有静态帧的场景（无 frameUrl 的 s2 不算可播放）',
     over: { typeFilter: 'scene' }, project: P.playableIds, want: ['s1'],
     breakOver: { typeFilter: 'image' } },
-  { name: '评分过滤：everyone 保留 Everyone/G/宽松分级的自上传',
+  { name: '评分过滤：everyone 只留 Everyone/G/宽松分级的自上传（累积档的最窄一档）',
     over: { ratingFilter: 'everyone' }, project: P.playableIds,
     want: ['v1', 'i1', 's1', 'up-1', 'up-dir-2'], breakOver: { ratingFilter: 'pg13' } },
-  { name: '评分过滤：pg13',
-    over: { ratingFilter: 'pg13' }, project: P.playableIds, want: ['v2'],
+  { name: '评分过滤：pg13 = 全年龄 + PG13（累积上限，不是精确等值）',
+    over: { ratingFilter: 'pg13' }, project: P.playableIds,
+    want: ['v1', 'v2', 'i1', 's1', 'up-1', 'up-dir-2'],
     breakOver: { ratingFilter: 'mature' } },
-  { name: '评分过滤：mature',
-    over: { ratingFilter: 'mature' }, project: P.playableIds, want: ['v3'],
+  { name: '评分过滤：mature = 全年龄 + PG13 + 成人（累积上限）',
+    over: { ratingFilter: 'mature' }, project: P.playableIds,
+    want: ['v1', 'v2', 'v3', 'i1', 's1', 'up-1', 'up-dir-2'],
     breakOver: { ratingFilter: 'unrated' } },
   { name: '评分过滤：unrated（没有 contentrating 的 WE 条目）',
     over: { ratingFilter: 'unrated' }, project: P.playableIds, want: ['w1'],
@@ -597,6 +599,22 @@ console.log('\n3. 直调判定：六个谓词 + 两个过滤助手（负对照�
   check('matchesRatingFilter：all 档放行一切', callsTo(M.matchesRatingFilter, [W[3], 'all'], true));
   check('负对照：换成 everyone 档后同一张被拒（档位真的参与判定）',
     !callsTo(M.matchesRatingFilter, [W[3], 'everyone'], true));
+  // 分级档是**累积上限**（用户拍板 2026-10-30）：收窄档位必须连更轻的档一起放行，
+  // 免得「切到 PG13 反而把 Everyone 全清掉」；但绝不放行更重的档。
+  check('matchesRatingFilter：pg13 档放行 Everyone（累积）',
+    callsTo(M.matchesRatingFilter, [W[0], 'pg13'], true));
+  check('matchesRatingFilter：mature 档放行 PG13（累积）',
+    callsTo(M.matchesRatingFilter, [W[1], 'mature'], true));
+  check('负对照：pg13 档不放行成人（累积是上限，不是「放宽一切」）',
+    !callsTo(M.matchesRatingFilter, [W[2], 'pg13'], true));
+  check('负对照：everyone 档不放行 PG13',
+    !callsTo(M.matchesRatingFilter, [W[1], 'everyone'], true));
+  check('负对照：未分级是独立档 —— 成人档也不放行它',
+    !callsTo(M.matchesRatingFilter, [W[3], 'mature'], true));
+  check('负对照：未分级档只认未分级（不放行 Everyone）',
+    !callsTo(M.matchesRatingFilter, [W[0], 'unrated'], true));
+  check('负对照：未知档位 fail-closed（不放行任何人）',
+    !callsTo(M.matchesRatingFilter, [W[0], 'pg-18'], true));
   check('matchesTypeFilter：类型一致 ⇒ true', callsTo(M.matchesTypeFilter, [W[0], 'video'], true));
   check('负对照：换成别的类型档 ⇒ 不是 true',
     !callsTo(M.matchesTypeFilter, [W[0], 'web'], true));
@@ -604,8 +622,10 @@ console.log('\n3. 直调判定：六个谓词 + 两个过滤助手（负对照�
   // 类型档只筛列表与轮播候选，切过滤档不得把当前壁纸干掉（用户口径）。
   check('keepPlayingWallpaper：可播 + 分级放行 ⇒ true（类型档不参与播放闸门）',
     callsTo(M.keepPlayingWallpaper, [W[0], 'all'], true));
-  check('负对照：分级闸门仍在 —— mature 档下同一张被拒',
-    !callsTo(M.keepPlayingWallpaper, [W[0], 'mature'], true));
+  check('keepPlayingWallpaper：累积档 —— Everyone 在 mature 档下照旧可播',
+    callsTo(M.keepPlayingWallpaper, [W[0], 'mature'], true));
+  check('负对照：分级闸门仍在 —— everyone 档下 PG13 被拒',
+    !callsTo(M.keepPlayingWallpaper, [W[1], 'everyone'], true));
   check('keepPlayingWallpaper：不可播放的条目照旧拒（v4 playable:false）',
     !callsTo(M.keepPlayingWallpaper, [W[7], 'all'], true));
   check('pageSlice：30 张 / 每页 24 ⇒ 第 1 页 24 张、共 2 页',

@@ -409,44 +409,65 @@ async function main() {
   await tick(30);
   check('D3 that 「播放」 resumes the new wallpaper', layerVideo().paused === false && toggleLabel(renderTree()) === '暂停');
 
-  // ── E. A filter that drops the active wallpaper explains itself ───────────
+  // ── E. Content rating is a CUMULATIVE CEILING, and narrowing switches over ──
   tree = openLibrary(); // 分级筛选下拉住在库视图里
   const ratingSelect = findSelect(tree, '内容分级');
   assert(ratingSelect && typeof ratingSelect.props.onChange === 'function', 'rating filter select found');
+  // E1/E2：「成人」是累积上限（Everyone + PG13 + Mature）⇒ 正在播的 Everyone 壁纸不受影响。
   ratingSelect.props.onChange({ target: { value: 'mature' } });
   await tick(30);
-  closeLibrary(); // 被拒原因渲染在页签的当前壁纸卡里
-  check('E1 dropping the active wallpaper via a filter is explained (no silent blank)',
-    treeText().includes('被「内容分级」过滤排除了'));
-  check('E2 the layer really is gone (the note replaces an unexplained blank)',
-    !document.getElementById('dsh-wallpaper-engine-layer'));
+  closeLibrary();
+  check('E1 a cumulative tier does not drop the lighter-rated wallpaper (no blank)',
+    !!document.getElementById('dsh-wallpaper-engine-layer'));
+  check('E2 …and playback simply continues',
+    layerVideo() && layerVideo().paused === false);
+  check('E3 …without any "filtered out" note',
+    !treeText().includes('过滤排除'));
 
-  // The Mature upload is now the one that matches the filter.
+  // The Mature upload is now inside the ceiling too: play it.
   tree = openLibrary();
   const matureCard = findWallpaperCard(tree, 'My Mature Upload');
-  check('E3 the filter now offers the explicitly Mature upload', !!matureCard);
+  check('E4 the cumulative tier offers the explicitly Mature upload', !!matureCard);
   if (matureCard) {
     matureCard.props.onClick();
     await tick(30);
-    check('E4 an explicitly rated upload plays like any other', layerVideo() && layerVideo().paused === false);
+    check('E5 an explicitly rated upload plays like any other', layerVideo() && layerVideo().paused === false);
   }
 
-  // Back to the default filter: the now-unrated-for-that-filter wallpaper is
-  // dropped again, and the explanation follows the CURRENT reason truthfully.
-  //（库视图在 E3 后仍开着，直接切下拉；断言前再退回页签。）
-  findSelect(renderTree(), '内容分级').props.onChange({ target: { value: 'everyone' } });
+  // 收窄到「全年龄」：当前 Mature 壁纸不再允许 ⇒ 立即换台到当前档内第一张候选
+  // （库存顺序第一张是 WE Video），而不是无声清空。
+  findSelect(openLibrary(), '内容分级').props.onChange({ target: { value: 'everyone' } });
   await tick(30);
   closeLibrary();
-  check('E5 switching the filter back re-explains the drop (never a silent blank)',
+  check('E6 narrowing the tier switches to an allowed wallpaper instead of blanking',
+    !!document.getElementById('dsh-wallpaper-engine-layer')
+    && !!layerVideo() && layerVideo().src.includes('/media/w1'),
+    layerVideo() ? layerVideo().src : '(no layer)');
+  check('E7 …and playback continues on the replacement', layerVideo() && layerVideo().paused === false);
+  check('E8 …with no "filtered out" note (a switch is not a refusal)',
+    !treeText().includes('过滤排除'));
+
+  // 收窄到「未分级」：夹具里没有未分级壁纸 ⇒ 换不了才是拒绝，必须解释。
+  findSelect(openLibrary(), '内容分级').props.onChange({ target: { value: 'unrated' } });
+  await tick(30);
+  closeLibrary();
+  check('E9 with no allowed candidate the drop is still explained (never a silent blank)',
     treeText().includes('被「内容分级」过滤排除了'));
+  check('E10 …and the layer really is gone (the note replaces an unexplained blank)',
+    !document.getElementById('dsh-wallpaper-engine-layer'));
+
+  // 放宽回「全年龄」：网格重新可选，点一张即恢复播放、提示清除。
   tree = openLibrary();
-  const uploadAgain = findWallpaperCard(tree, 'My Upload Video');
-  check('E6 the user\'s own upload is selectable again under the default filter', !!uploadAgain);
-  if (uploadAgain) {
-    uploadAgain.props.onClick();
+  findSelect(tree, '内容分级').props.onChange({ target: { value: 'everyone' } });
+  await tick(30);
+  tree = openLibrary();
+  const weAgain = findWallpaperCard(tree, 'WE Video');
+  check('E11 the wallpaper is selectable again under the wider tier', !!weAgain);
+  if (weAgain) {
+    weAgain.props.onClick();
     await tick(30);
     closeLibrary();
-    check('E7 …and it plays, with the explanation cleared',
+    check('E12 …and it plays, with the explanation cleared',
       layerVideo() && layerVideo().paused === false && !treeText().includes('过滤排除'));
   }
 
@@ -468,13 +489,13 @@ async function main() {
   // 对照：过滤本身必须真的生效（否则 F1–F3 是空跑）—— 同一张卡在库里已经不在。
   tree = openLibrary();
   check('F4 the filter really applies to the list (the playing card is gone from the grid)',
-    !findWallpaperCard(tree, 'My Upload Video'));
+    !findWallpaperCard(tree, 'WE Video'));
   // 切回全部：卡回来，壁纸照旧在播（往返不打断）。
   findSelect(renderTree(), '类型').props.onChange({ target: { value: 'all' } });
   await tick(30);
   tree = renderTree();
   check('F5 switching the filter back restores the card without touching playback',
-    !!findWallpaperCard(tree, 'My Upload Video')
+    !!findWallpaperCard(tree, 'WE Video')
     && layerVideo() && layerVideo().paused === false && !treeText().includes('过滤排除'));
 
   const failed = results.filter((r) => !r.ok);

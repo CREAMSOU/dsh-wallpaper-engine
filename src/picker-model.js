@@ -51,8 +51,22 @@
 // ── 内容分级：复刻 Wallpaper Engine 自己的分类（project.json `contentrating`）────
 // "Everyone" (G) / "PG13" / "Mature" (R)；没有该字段的项目算「未分级」。匹配大小写
 // 不敏感并接受常见拼写，好让别的本地副本行为一致。
+//
+// 过滤档是**累积上限**（不是精确等值，用户拍板 2026-10-30）：分级系统存在的意义就是
+// 「保证不该出现的地方刷不出成人内容」，所以收窄档位必须把更轻的档一起放行 ——
+//   全部   = 全年龄 + PG13 + 成人 + 未分级
+//   全年龄 = 仅 Everyone（G）
+//   PG13   = Everyone + PG13
+//   成人   = Everyone + PG13 + Mature（R）
+//   未分级 = 仅「未分级」（单独一档、精确匹配；不并进「成人」，免得默认 Everyone 档下
+//            把来历不明的本地副本整片消失）
+// 未知档位一律 fail-closed（判不匹配），免得拼错的键把成人内容放出来。
 const ADULT_RATING_PATTERN = /^(mature|adult|adultonly|18\+|r18)$/i;
 const PG13_RATING_PATTERN = /^(pg13|pg-13|pg ?13|questionable)$/i;
+
+// 敏感度排序值（Everyone 最轻）+ 各档的累积上限。`unrated` 没有排序值：三档累积档都挡它。
+const RATING_RANK = { everyone: 0, pg13: 1, mature: 2 };
+const RATING_CEILING = { everyone: 0, pg13: 1, mature: 2 };
 
 function isUploadedWallpaper(w) {
   return Boolean(w && w.id && w.id.indexOf("up-") === 0);
@@ -83,7 +97,13 @@ function ratingOf(w) {
 
 function matchesRatingFilter(w, filter) {
   if (filter === "all") return true;
-  return ratingOf(w) === filter;
+  // 「未分级」是精确档：它既不是 Everyone 也不是更轻的档，累积档不放行它。
+  if (filter === "unrated") return ratingOf(w) === "unrated";
+  const ceiling = RATING_CEILING[filter];
+  if (ceiling === undefined) return false; // 未知档位 fail-closed
+  const rank = RATING_RANK[ratingOf(w)];
+  if (rank === undefined) return false; // 「未分级」不在累积档里
+  return rank <= ceiling;
 }
 
 function matchesTypeFilter(w, filter) {

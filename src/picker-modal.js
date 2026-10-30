@@ -372,6 +372,14 @@
 
   function renderPickerFilterRow(ctx) {
     const { sel, basePlayable, ratingCounts, typeCounts, onSearchInput, onRatingFilterChange, onTypeFilterChange } = ctx;
+    // 分级档是**累积上限**（见 picker-model 的 matchesRatingFilter）：下拉里的 n 用累计数，
+    // 才与「选中这一档后网格里实际能点多少张」一致（单档计数会让人以为 PG13 只剩几张）。
+    const cumulativeRatings = {
+      everyone: ratingCounts.everyone,
+      pg13: ratingCounts.everyone + ratingCounts.pg13,
+      mature: ratingCounts.everyone + ratingCounts.pg13 + ratingCounts.mature,
+      unrated: ratingCounts.unrated,
+    };
     return React.createElement("div", { className: "we-picker__row we-picker__filter-row" },
       // 标题搜索：几百上千张壁纸时最快的定位方式。输入即过滤，与分级/类型过滤叠加。
       React.createElement("input", {
@@ -387,13 +395,13 @@
         value: sel.contentRatingFilter,
         onChange: onRatingFilterChange,
         "aria-label": weT("内容分级"),
-        title: weT("对应 Wallpaper Engine 的内容分级（project.json contentrating）"),
+        title: weT("对应 Wallpaper Engine 的内容分级（project.json contentrating）；分档为累积上限：全年龄只含 Everyone，PG13 含全年龄，成人含全部三档，未分级单独一档"),
       },
       React.createElement("option", { value: "all" }, weT("全部（{n}）", { n: basePlayable.length })),
-      React.createElement("option", { value: "everyone" }, weT("Everyone / G（{n}）", { n: ratingCounts.everyone })),
-      React.createElement("option", { value: "pg13" }, weT("PG13（{n}）", { n: ratingCounts.pg13 })),
-      React.createElement("option", { value: "mature" }, weT("Mature / R（{n}）", { n: ratingCounts.mature })),
-      React.createElement("option", { value: "unrated" }, weT("未分级（{n}）", { n: ratingCounts.unrated })),
+      React.createElement("option", { value: "everyone" }, weT("全年龄 · 仅 G（{n}）", { n: cumulativeRatings.everyone })),
+      React.createElement("option", { value: "pg13" }, weT("PG13 · 含全年龄（{n}）", { n: cumulativeRatings.pg13 })),
+      React.createElement("option", { value: "mature" }, weT("成人 · Mature / R（{n}）", { n: cumulativeRatings.mature })),
+      React.createElement("option", { value: "unrated" }, weT("未分级（{n}）", { n: cumulativeRatings.unrated })),
       ),
       React.createElement("span", { className: "we-picker__hint we-picker__label" }, weT("类型")),
       React.createElement("select", {

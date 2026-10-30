@@ -989,15 +989,18 @@ function playableInventory() {
 
 // Re-validate the active selection against the current inventory + filters.
 // Called after a refresh AND after changing the rating/type filter. 丢弃闸门是
-// keepPlayingWallpaper：分级是内容闸门（拦播放），类型档只筛列表与轮播候选 ——
-// 切类型档不得把正在应用的壁纸干掉。轮播在场时拿不到候选就换下一张，但「仅被
-// 类型档排除」这一档不换台。
+// keepPlayingWallpaper：分级是内容闸门（拦播放，档位是**累积上限**），类型档只筛列表与
+// 轮播候选 —— 切类型档不得把正在应用的壁纸干掉。轮播在场时拿不到候选就换下一张；当前
+// 壁纸被收窄的分级档挡掉时**立即换台**（用户口径 2026-10-30：「换得了就换，换不了才提示」）。
 function revalidateSelection() {
   // 被过滤条件丢弃的选择要留下原因：先取下来，applySelection("") 会清掉
   // blockedNote，故在其之后写回 —— 否则用户改一次过滤条件，壁纸就无声变空白。
   let droppedNote = "";
   const cur = selection.id ? selection.inventory.wallpapers.find((w) => w.id === selection.id) : null;
   const keepCurrent = keepPlayingWallpaper(cur, selection.contentRatingFilter);
+  // 「被分级档挡掉」这一支要区分于「壁纸被移除 / 已不在列表」：只有前者才自动换台。
+  const droppedByRating = Boolean(cur) && isPlayableType(cur)
+    && !matchesRatingFilter(cur, selection.contentRatingFilter);
   if (selection.id && !keepCurrent) {
     droppedNote = selectionBlockedNote(cur);
     setSetting("id", "");
@@ -1017,8 +1020,14 @@ function revalidateSelection() {
     const first = rotationCandidates()[0];
     if (first) selection.id = first.id;
   }
+  // 收窄分级档把当前壁纸挡掉 ⇒ 立即换到当前档内第一张可播候选（轮播分支上面已接手，
+  // 这里兜「轮播关闭」与「轮播在场但候选为空」两种）；一张都找不到才留提示。
+  if (!selection.id && droppedByRating) {
+    const first = playableInventory()[0];
+    if (first) selection.id = first.id;
+  }
   applySelection(selection.id);
-  // 仍然没有可播壁纸 → 把被排除的原因显示出来（有轮播接手则不打扰）。
+  // 仍然没有可播壁纸 → 把被排除的原因显示出来（有接手则不打扰）。
   if (droppedNote && !selection.id) setTransient("blockedNote", droppedNote);
   emit();
 }
