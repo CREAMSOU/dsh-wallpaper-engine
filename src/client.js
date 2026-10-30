@@ -4031,8 +4031,13 @@ const onRatingFilterToggle = (tier, on) => {
   setSetting("contentRatingFilter", next);
   revalidateSelection();
 };
-const onTypeFilterChange = (e) => {
-  setSetting("typeFilter", e.target.value);
+// 类型筛选也是**多档勾选**（v8 起值是数组，与内容分级同款）：不允许取消最后一档
+//（一个都不勾等于网格空白）。类型只筛列表与「下一张」候选，不拦正在播的壁纸。
+const onTypeFilterToggle = (tier, on) => {
+  const cur = Array.isArray(selection.typeFilter) ? selection.typeFilter : [];
+  const next = TYPE_TIERS.filter((t) => (t === tier ? on : cur.indexOf(t) !== -1));
+  if (!next.length) return;
+  setSetting("typeFilter", next);
   revalidateSelection();
 };
 // Card style: classic (CD-rack) vs fixed (overlap-proof).
@@ -4751,7 +4756,7 @@ function WallpaperPicker() {
         cdMode, query, basePlayable, ratingCounts, typeCounts,
         gridRef: pickerGridRef, vwin: pickerVwin,
         armedConfirm: sel.armedConfirm, onArmConfirm: armConfirm, onDisarmConfirm: disarmConfirm,
-        onClear, onTogglePlay, onRatingToggle: onRatingFilterToggle, onTypeFilterChange,
+        onClear, onTogglePlay, onRatingToggle: onRatingFilterToggle, onTypeToggle: onTypeFilterToggle,
         onShowNormalView, onShowHiddenView,
         onToggleBatchMode, onArmBatchHide, onBatchHide, onBatchCancel, onSearchInput, onPickCard,
       }) : React.createElement(React.Fragment, null,

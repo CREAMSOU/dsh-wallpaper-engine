@@ -194,8 +194,9 @@ const BIG = W.concat(EXTRA);
 const EXTRA_IDS = EXTRA.map((w) => w.id);
 
 const RATING_ALL = ['everyone', 'pg13', 'mature', 'unrated'];
+const TYPE_ALL = ['video', 'web', 'image', 'scene'];
 const modelInput = (over) => Object.assign({
-  wallpapers: W, hiddenIds: [], search: '', ratingFilter: RATING_ALL, typeFilter: 'all',
+  wallpapers: W, hiddenIds: [], search: '', ratingFilter: RATING_ALL, typeFilter: TYPE_ALL,
   page: 0, hiddenPage: 0, editorPage: 0,
 }, over);
 
@@ -227,11 +228,11 @@ const CASES = [
   { name: '搜索：query 归一化（trim + 小写）随模型出去',
     over: { search: '  Alpha  ' }, project: P.query, want: 'alpha', breakOver: { search: '  Beta ' } },
   { name: '类型过滤：video 只留视频档',
-    over: { typeFilter: 'video' }, project: P.playableIds, want: ['v1', 'v2', 'v3'],
-    breakOver: { typeFilter: 'web' } },
+    over: { typeFilter: ['video'] }, project: P.playableIds, want: ['v1', 'v2', 'v3'],
+    breakOver: { typeFilter: ['web'] } },
   { name: '类型过滤：scene 只留有静态帧的场景（无 frameUrl 的 s2 不算可播放）',
-    over: { typeFilter: 'scene' }, project: P.playableIds, want: ['s1'],
-    breakOver: { typeFilter: 'image' } },
+    over: { typeFilter: ['scene'] }, project: P.playableIds, want: ['s1'],
+    breakOver: { typeFilter: ['image'] } },
   { name: '分级勾选：只勾全年龄 ⇒ Everyone/G/宽松分级的自上传（最窄组合）',
     over: { ratingFilter: ['everyone'] }, project: P.playableIds,
     want: ['v1', 'i1', 's1', 'up-1', 'up-dir-2'],
@@ -427,18 +428,6 @@ exportsObj.apply(ctx);
 const sleep = (ms) => new Promise((r) => { setTimeout(r, ms); });
 const render = () => pickerRenders[0]();
 
-/** 渲染树里某个 props 字段等于给定值的节点。 */
-function findByProp(root, name, value) {
-  let hit = null;
-  (function walk(n) {
-    if (hit) return;
-    if (Array.isArray(n)) { n.forEach(walk); return; }
-    if (!n || typeof n !== 'object') return;
-    if (n.props && n.props[name] === value) { hit = n; return; }
-    if (Array.isArray(n.children)) n.children.forEach(walk);
-  })(root);
-  return hit;
-}
 
 /** className 里带某个**令牌**的节点。 */
 function findByClass(root, cls) {
@@ -709,12 +698,8 @@ await sleep(80); // 等 loadPersisted → loadInventory → revalidateSelection 
   // 模型的入参**从渲染出的 UI 读**（不给默认档写死值）：类型档取 select 的当前值，
   // 分级取下拉里勾中的档位（多档勾选，v7 起是数组），搜索词取搜索框的值。这样
   // "两边看的是不是同一份状态"本身也被判住。
-  const selectValue = (root, label) => {
-    const s = findByProp(root, 'aria-label', label);
-    return s ? s.props.value : null;
-  };
-  /** 下拉里的 4 个勾选框（vdom 里始终在，不依赖 <details> 是否展开）。 */
-  const ratingCheckboxes = (root) => {
+  /** 下拉里的全部勾选框（分级与类型共用同一套 DOM 类名；vdom 里始终在，不依赖 <details>）。 */
+  const allCheckboxes = (root) => {
     const out = [];
     (function walk(n) {
       if (Array.isArray(n)) { n.forEach(walk); return; }
@@ -724,7 +709,14 @@ await sleep(80); // 等 loadPersisted → loadInventory → revalidateSelection 
     })(root);
     return out;
   };
+  const ratingCheckboxes = (root) => allCheckboxes(root)
+    .filter((n) => RATING_ALL.indexOf(n.props.value) !== -1);
   const ratingAllowFromUi = (root) => ratingCheckboxes(root)
+    .filter((n) => n.props.checked).map((n) => n.props.value);
+  /** 类型下拉里的 4 个勾选框（与分级同一套 DOM 类名，按 value 区分域）。 */
+  const typeCheckboxes = (root) => allCheckboxes(root)
+    .filter((n) => TYPE_ALL.indexOf(n.props.value) !== -1);
+  const typeAllowFromUi = (root) => typeCheckboxes(root)
     .filter((n) => n.props.checked).map((n) => n.props.value);
   const searchValue = (root) => {
     const i = findByClass(root, 'we-picker__search');
@@ -735,16 +727,18 @@ await sleep(80); // 等 loadPersisted → loadInventory → revalidateSelection 
     hiddenIds: [], // 起点没有隐藏项（localStorage 未种选择）
     search: searchValue(root),
     ratingFilter: ratingAllowFromUi(root),
-    typeFilter: selectValue(root, '类型'),
+    typeFilter: typeAllowFromUi(root),
     page: 0, hiddenPage: 0, editorPage: 0,
   }, over));
 
   const ratingChecks = ratingCheckboxes(tree);
-  const typeSel = findByProp(tree, 'aria-label', '类型');
-  check('跨层：分级下拉的 4 个勾选框 + 类型下拉都在（模型入参从它们读）',
-    ratingChecks.length === 4 && !!typeSel,
-    '勾选框=' + ratingChecks.length + ' 已勾=' + JSON.stringify(ratingAllowFromUi(tree))
-    + ' 类型=' + selectValue(tree, '类型'));
+  const typeChecks = typeCheckboxes(tree);
+  check('跨层：分级 4 个勾选框 + 类型 4 个勾选框都在（模型入参从它们读）',
+    ratingChecks.length === 4 && typeChecks.length === 4,
+    '分级勾选=' + ratingChecks.length + ' / 类型勾选=' + typeChecks.length
+    + ' 已勾=' + JSON.stringify(ratingAllowFromUi(tree)) + ' 类型=' + JSON.stringify(typeAllowFromUi(tree)));
+  check('跨层：类型默认四档全勾（DEFAULTS 的 allow-set 与 UI 勾选态一致）',
+    JSON.stringify(typeAllowFromUi(tree)) === JSON.stringify(TYPE_ALL), JSON.stringify(typeAllowFromUi(tree)));
   check('跨层：默认只勾「全年龄」（DEFAULTS 的 allow-set 与 UI 勾选态一致）',
     JSON.stringify(ratingAllowFromUi(tree)) === '["everyone"]', JSON.stringify(ratingAllowFromUi(tree)));
 

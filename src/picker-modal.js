@@ -371,7 +371,7 @@
   }
 
   function renderPickerFilterRow(ctx) {
-    const { sel, basePlayable, ratingCounts, typeCounts, onSearchInput, onRatingToggle, onTypeFilterChange } = ctx;
+    const { sel, basePlayable, ratingCounts, typeCounts, onSearchInput, onRatingToggle, onTypeToggle } = ctx;
     // 分级是**多档勾选**（用户口径 2026-10-30，像 WE 本身那样自由组合）：勾上的档才允许
     // 出现在列表、轮播与播放里；计数用各档精确张数（不是累加，勾选本身就是自由组合）。
     const ratingsOn = new Set(Array.isArray(sel.contentRatingFilter) ? sel.contentRatingFilter : []);
@@ -386,6 +386,15 @@
     };
     // 摘要只写固定的「内容分级」四个字（用户口径 2026-10-30：随勾选变宽会让整行不协调，
     // 选中状态读勾选框本身即可）。计数文案只出现在候选行的整句词条里。
+    // 类型勾选集合（v8 起 typeFilter 是数组，与内容分级同款下拉多选）；计数用各档精确张数。
+    const typesOn = new Set(Array.isArray(sel.typeFilter) ? sel.typeFilter : []);
+    const typeTiers = ["video", "web", "image", "scene"];
+    const typeLabelOf = {
+      video: () => weT("视频（{n}）", { n: typeCounts.video || 0 }),
+      web: () => weT("网页（{n}）", { n: typeCounts.web || 0 }),
+      image: () => weT("图片（{n}）", { n: typeCounts.image || 0 }),
+      scene: () => weT("场景（{n}）", { n: typeCounts.scene || 0 }),
+    };
     return React.createElement("div", { className: "we-picker__row we-picker__filter-row" },
       // 标题搜索：几百上千张壁纸时最快的定位方式。输入即过滤，与分级/类型过滤叠加。
       React.createElement("input", {
@@ -423,19 +432,32 @@
       )),
       ),
       ),
-      React.createElement("span", { className: "we-picker__hint we-picker__label" }, weT("类型")),
-      React.createElement("select", {
-        className: "we-picker__playlist-select",
-        value: sel.typeFilter,
-        onChange: onTypeFilterChange,
+      // 类型筛选：与内容分级同款「下拉 + 多档勾选」（v8 起 typeFilter 是勾选集合）；
+      // 类型档只筛列表与「下一张」候选，不拦正在应用的壁纸。
+      React.createElement("details", { className: "we-picker__type-menu" },
+      React.createElement("summary", {
+        className: "we-picker__type-btn",
         "aria-label": weT("类型"),
-        title: weT("按壁纸类型过滤（只筛列表与轮播候选，不打断正在应用的壁纸）"),
+        title: weT("按壁纸类型过滤（勾选集合；只筛列表与「下一张」候选，不打断正在应用的壁纸）"),
       },
-      React.createElement("option", { value: "all" }, weT("全部（{n}）", { n: basePlayable.length })),
-      React.createElement("option", { value: "video" }, weT("视频（{n}）", { n: typeCounts.video || 0 })),
-      React.createElement("option", { value: "web" }, weT("网页（{n}）", { n: typeCounts.web || 0 })),
-      React.createElement("option", { value: "image" }, weT("图片（{n}）", { n: typeCounts.image || 0 })),
-      React.createElement("option", { value: "scene" }, weT("场景（{n}）", { n: typeCounts.scene || 0 })),
+      React.createElement("span", { className: "we-picker__rating-text" }, weT("类型")),
+      React.createElement("span", { className: "we-picker__rating-caret", "aria-hidden": "true" }, "▾"),
+      ),
+      React.createElement("div", { className: "we-picker__rating-list" },
+      typeTiers.map((tier) => React.createElement("label", {
+        key: tier,
+        className: "we-picker__rating-toggle" + (typesOn.has(tier) ? " we-picker__rating-toggle--on" : ""),
+      },
+      React.createElement("input", {
+        type: "checkbox", className: "we-picker__rating-check",
+        value: tier,
+        checked: typesOn.has(tier),
+        onChange: () => onTypeToggle(tier, !typesOn.has(tier)),
+        "aria-label": weT("类型（{name}）", { name: typeLabelOf[tier]() }),
+      }),
+      React.createElement("span", null, typeLabelOf[tier]()),
+      )),
+      ),
       ),
     );
   }

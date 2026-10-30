@@ -363,9 +363,19 @@ const CSS_QUICK = `  /* ── Rope dock: chibi pull-cord + glass repo drawer �
   /* 内容分级：下拉 + 多档勾选（与壁纸选择器同款设计；用户口径 2026-10-30 ——
      四枚胶囊在快捷面板里同样观感差）。候选框的限宽/省略在 .we-picker__rating-*
      里统一定义，这里只把按钮尺寸收进本面板的密度。 */
+  /* 两个下拉共用同一套面板密度（字号 / 高度 / 内距 / 圆角）—— 之前只有分级按钮
+     带了 we-qp__rating-btn 覆盖，类型按钮落回设置页的 30px / 12px，于是同排两个
+     控件字号与框高不一致；宽度仍各自不同（摘要字数不同）。
+     ⚠️ 模板字符串里禁止出现裸反引号（会把 CSS 模板提前终止；verify-glass-surfaces 有判据）。 */
   .we-qp__rating-menu { margin-left: auto; max-width: 210px; }
-  .we-qp__rating-btn { width: 108px; height: 26px; padding: 0 8px; font-size: 11px; border-radius: 7px; }
-  .we-qp__viewbar .we-qp__type { flex: none; max-width: 84px; }
+  /* 两个下拉共用同一套面板密度（字号 / 高度 / 内距 / 圆角）—— 之前只有分级按钮
+     带了 we-qp__rating-btn 覆盖，类型按钮落回设置页的 30px / 12px，于是同排两个
+     控件字号与框高不一致；宽度仍各自不同（摘要字数不同）。 */
+  .we-qp__rating-btn,
+  .we-qp__type-btn { height: 26px; padding: 0 8px; font-size: 11px; border-radius: 7px; }
+  .we-qp__rating-btn { width: 108px; }
+  .we-qp__type-btn { width: 96px; }
+  .we-qp__viewbar .we-qp__type-menu { flex: none; }
   /* 列表 / 卡片：标签式切换 —— 复用 .we-tabs 的滑动胶囊做激活指示，但去掉分段底与
      描边（用户口径：不要默认背景）；页签收成内容宽（两枚都是两字，等宽成立，
      胶囊 (100%-6px)/2 的等分算式与 3px 内衬原样沿用）。 */

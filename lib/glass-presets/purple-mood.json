@@ -34,7 +34,12 @@
     "flip": false,
     "objectFit": "cover",
     "contentRatingFilter": ["everyone", "pg13", "mature", "unrated"],
-    "typeFilter": "all",
+    "typeFilter": [
+      "video",
+      "web",
+      "image",
+      "scene"
+    ],
     "pickerLayout": "fixed",
     "edgeCompat": true,
     "accent": "#b388ff",

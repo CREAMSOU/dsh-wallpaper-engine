@@ -247,14 +247,6 @@ function findWallpaperCard(tree, title) {
   });
   return hit;
 }
-function findSelect(tree, ariaLabel) {
-  let hit = null;
-  walk(tree, (n) => {
-    if (hit) return;
-    if (n.type === 'select' && n.props && n.props['aria-label'] === ariaLabel) hit = n;
-  });
-  return hit;
-}
 /** 分级多档勾选：按档位找下拉里的那个 checkbox（v7 起 contentRatingFilter 是数组）。 */
 function findRatingCheck(tree, tier) {
   let hit = null;
@@ -264,6 +256,20 @@ function findRatingCheck(tree, tier) {
       && n.props.value === tier) hit = n;
   });
   return hit;
+}
+function findTypeCheck(tree, tier) {
+  let hit = null;
+  walk(tree, (n) => {
+    if (hit) return;
+    if (n.type === 'input' && n.props && n.props.className === 'we-picker__rating-check'
+      && n.props.value === tier) hit = n;
+  });
+  return hit;
+}
+function toggleType(tree, tier) {
+  const box = findTypeCheck(tree, tier);
+  assert(box && typeof box.props.onChange === 'function', 'type checkbox found: ' + tier);
+  box.props.onChange();
 }
 function toggleRating(tree, tier) {
   const box = findRatingCheck(tree, tier);
@@ -325,13 +331,13 @@ async function main() {
   assert(video, 'video element mounted for the uploaded wallpaper');
   check('A4 the uploaded media URL is used', video.src === '/wallpaper-engine/media/up1', video.src);
   check('A5 playback actually starts', video.paused === false && video._playCalls > 0);
-  tree = renderTree();
+  tree = renderTree();   // eslint-disable-line require-atomic-updates -- 顺序 await 的判据；tree 无并发读写
   check('A6 the toggle offers 「暂停」 while it really plays', toggleLabel(tree) === '暂停', toggleLabel(tree));
 
   // ── B. Pause / resume through the toggle ──────────────────────────────────
   findButton(tree, 'we-picker__btn', '暂停').props.onClick();
   await tick(20);
-  tree = renderTree();
+  tree = renderTree();   // eslint-disable-line require-atomic-updates -- 顺序 await 的判据；tree 无并发读写
   check('B1 pausing stops the element and flips the control to 「播放」',
     video.paused === true && toggleLabel(tree) === '播放', 'label=' + toggleLabel(tree));
 
@@ -339,7 +345,7 @@ async function main() {
   assert(playBtn, '播放 button present while paused');
   playBtn.props.onClick();
   await tick(20);
-  tree = renderTree();
+  tree = renderTree();   // eslint-disable-line require-atomic-updates -- 顺序 await 的判据；tree 无并发读写
   check('B2 「播放」 resumes playback', video.paused === false && toggleLabel(tree) === '暂停', 'label=' + toggleLabel(tree));
 
   // ── B3. A REFUSED play() must not leave the UI claiming 「播放中」 ──────────
@@ -352,7 +358,7 @@ async function main() {
   const callsBeforeRefusal = video._playCalls;
   findButton(renderTree(), 'we-picker__btn', '播放').props.onClick(); // resume attempt
   await tick(30);
-  tree = renderTree();
+  tree = renderTree();   // eslint-disable-line require-atomic-updates -- 顺序 await 的判据；tree 无并发读写
   const callsAfterRefusal = video._playCalls;
   check('B3 a refused play() is retried (not silently swallowed)',
     retriedAfterRefusal(callsBeforeRefusal, callsAfterRefusal),
@@ -370,7 +376,7 @@ async function main() {
   video._playRejects = false;
   findButton(renderTree(), 'we-picker__btn', '播放').props.onClick();
   await tick(30);
-  tree = renderTree();
+  tree = renderTree();   // eslint-disable-line require-atomic-updates -- 顺序 await 的判据；tree 无并发读写
   check('B7 clicking 播放 retries and resumes playback', video.paused === false && toggleLabel(tree) === '暂停', 'label=' + toggleLabel(tree));
   check('B8 the reason clears once playback recovers', !treeText().includes('浏览器拒绝了播放请求'));
 
@@ -395,7 +401,7 @@ async function main() {
   video.error = { code: 4 }; // MEDIA_ERR_SRC_NOT_SUPPORTED
   video._fire('error');
   await tick(20);
-  tree = renderTree();
+  tree = renderTree();   // eslint-disable-line require-atomic-updates -- 顺序 await 的判据；tree 无并发读写
   check('C1 an undecodable video reports 「已暂停」, not 「播放中」',
     treeText().includes('已暂停') && toggleLabel(tree) === '播放', 'label=' + toggleLabel(tree));
   check('C2 the reason names the codec problem and suggests H.264',
@@ -403,20 +409,21 @@ async function main() {
   video.error = null;
   findButton(renderTree(), 'we-picker__btn', '播放').props.onClick();
   await tick(30);
-  tree = renderTree();
+  tree = renderTree();   // eslint-disable-line require-atomic-updates -- 顺序 await 的判据；tree 无并发读写
   check('C3 recovery clears the error state', !treeText().includes('无法解码') && toggleLabel(tree) === '暂停');
 
   // ── D. Switching video wallpapers while paused stays resumable ────────────
   findButton(tree, 'we-picker__btn', '暂停').props.onClick(); // pause before switching
   await tick(20);
-  tree = openLibrary(); // 卡片住在库视图里（页内下钻后与页签内容互斥）
+  // 卡片住在库视图里（页内下钻后与页签内容互斥）
+  tree = openLibrary();   // eslint-disable-line require-atomic-updates -- 顺序 await 的判据；tree 无并发读写
   const weCard = findWallpaperCard(tree, 'WE Video');
   assert(weCard, 'WE video card present');
   weCard.props.onClick();
   await tick(30);
   closeLibrary(); // 播放控制与被拒原因住在页签内容里
   video = layerVideo();
-  tree = renderTree();
+  tree = renderTree();   // eslint-disable-line require-atomic-updates -- 顺序 await 的判据；tree 无并发读写
   check('D1 a wallpaper switch while paused mounts the new video paused (not playing)',
     video.paused === true);
   check('D2 …and the control still offers a working 「播放」', toggleLabel(tree) === '播放', toggleLabel(tree));
@@ -425,7 +432,8 @@ async function main() {
   check('D3 that 「播放」 resumes the new wallpaper', layerVideo().paused === false && toggleLabel(renderTree()) === '暂停');
 
   // ── E. Content rating is a MULTI-TIER ALLOW-SET, and narrowing switches over ──
-  tree = openLibrary(); // 分级勾选下拉住在库视图里
+  // 分级勾选下拉住在库视图里
+  tree = openLibrary();   // eslint-disable-line require-atomic-updates -- 顺序 await 的判据；tree 无并发读写
   assert(findRatingCheck(tree, 'everyone') && findRatingCheck(tree, 'mature'),
     'rating checkboxes found');
   // E1/E2：默认只勾「全年龄」；再勾上「成人」= {全年龄, 成人} ⇒ 正在播的 Everyone 壁纸不受影响。
@@ -440,7 +448,7 @@ async function main() {
     !treeText().includes('不在勾选的分级里'));
 
   // The Mature upload is inside the allow-set now: play it.
-  tree = openLibrary();
+  tree = openLibrary();   // eslint-disable-line require-atomic-updates -- 顺序 await 的判据；tree 无并发读写
   const matureCard = findWallpaperCard(tree, 'My Mature Upload');
   check('E4 the ticked tier offers the explicitly Mature upload', !!matureCard);
   if (matureCard) {
@@ -463,7 +471,7 @@ async function main() {
     !treeText().includes('不在勾选的分级里'));
 
   // 只勾「未分级」：夹具里没有未分级壁纸 ⇒ 换不了才是拒绝，必须解释。
-  tree = openLibrary();
+  tree = openLibrary();   // eslint-disable-line require-atomic-updates -- 顺序 await 的判据；tree 无并发读写
   toggleRating(tree, 'unrated');
   await tick(30);
   toggleRating(openLibrary(), 'everyone');
@@ -475,10 +483,10 @@ async function main() {
     !document.getElementById('dsh-wallpaper-engine-layer'));
 
   // 勾回「全年龄」：网格重新可选，点一张即恢复播放、提示清除。
-  tree = openLibrary();
+  tree = openLibrary();   // eslint-disable-line require-atomic-updates -- 顺序 await 的判据；tree 无并发读写
   toggleRating(tree, 'everyone');
   await tick(30);
-  tree = openLibrary();
+  tree = openLibrary();   // eslint-disable-line require-atomic-updates -- 顺序 await 的判据；tree 无并发读写
   const weAgain = findWallpaperCard(tree, 'WE Video');
   check('E11 the wallpaper is selectable again with its tier ticked', !!weAgain);
   if (weAgain) {
@@ -492,10 +500,8 @@ async function main() {
   // ── F. The TYPE filter is a LIST filter — it never stops the applied wallpaper ──
   //（E 段钉的是分级闸门：内容分级照旧干掉并解释。类型档只筛列表与轮播候选 ——
   // 用户口径：设置页切类型不该把正在应用的壁纸干掉。）
-  tree = openLibrary();
-  const typeSelect = findSelect(tree, '类型');
-  assert(typeSelect && typeof typeSelect.props.onChange === 'function', 'type filter select found');
-  typeSelect.props.onChange({ target: { value: 'scene' } });
+  tree = openLibrary();   // eslint-disable-line require-atomic-updates -- 顺序 await 的判据；tree 无并发读写
+  ['video', 'web', 'image'].forEach((tier) => toggleType(tree, tier));
   await tick(30);
   closeLibrary();
   check('F1 switching the TYPE filter keeps the applied wallpaper mounted',
@@ -505,13 +511,13 @@ async function main() {
   check('F3 …and no note claims the wallpaper was filtered out',
     !treeText().includes('过滤排除'));
   // 对照：过滤本身必须真的生效（否则 F1–F3 是空跑）—— 同一张卡在库里已经不在。
-  tree = openLibrary();
+  tree = openLibrary();   // eslint-disable-line require-atomic-updates -- 顺序 await 的判据；tree 无并发读写
   check('F4 the filter really applies to the list (the playing card is gone from the grid)',
     !findWallpaperCard(tree, 'WE Video'));
   // 切回全部：卡回来，壁纸照旧在播（往返不打断）。
-  findSelect(renderTree(), '类型').props.onChange({ target: { value: 'all' } });
+  ['video', 'web', 'image'].forEach((tier) => toggleType(renderTree(), tier));
   await tick(30);
-  tree = renderTree();
+  tree = renderTree();   // eslint-disable-line require-atomic-updates -- 顺序 await 的判据；tree 无并发读写
   check('F5 switching the filter back restores the card without touching playback',
     !!findWallpaperCard(tree, 'WE Video')
     && layerVideo() && layerVideo().paused === false && !treeText().includes('过滤排除'));

@@ -2876,62 +2876,73 @@ setTimeout(async () => {
       return out;
     };
     const EXPECTED_NORMAL = [
-      '0:we-picker__modal 1:we-picker__modal-head 2:we-picker__modal-head-left 3:we-vinyl 3:we-vinyl--playing 3:we-vinyl--sm 4:we-vinyl__cover 5:we-vinyl__empty 4:we-vinyl__hole',
-      '3:we-picker__modal-title 2:we-picker__btn 1:we-picker__modal-tabs 2:we-picker__btn 2:we-picker__tab 2:we-picker__tab--active 2:we-picker__btn 2:we-picker__tab 1:we-picker__modal-body',
-      '2:we-picker__row 3:we-picker__hint 3:we-picker__btn 2:we-picker__row 2:we-picker__filter-row 3:we-picker__text 3:we-picker__search 3:we-picker__rating-menu 4:we-picker__rating-btn',
-      '5:we-picker__rating-text 5:we-picker__rating-caret 4:we-picker__rating-list 5:we-picker__rating-toggle 5:we-picker__rating-toggle--on 6:we-picker__rating-check 5:we-picker__rating-toggle 6:we-picker__rating-check 5:we-picker__rating-toggle',
-      '6:we-picker__rating-check 5:we-picker__rating-toggle 6:we-picker__rating-check 3:we-picker__hint 3:we-picker__label 3:we-picker__playlist-select 2:we-picker__grid 3:we-picker__card 4:we-picker__card-close',
-      '3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title',
-      '4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type',
-      '4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder',
-      '4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card',
-      '4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide',
-      '3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title',
-      '4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type',
-      '4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder',
-      '4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card',
-      '4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide',
-      '3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title',
-      '4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type',
-      '4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder',
-      '4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card',
-      '4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide',
-      '3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title',
-      '4:we-picker__card-hide 1:we-picker__modal-foot 2:we-picker__hint',
+      '0:we-picker__modal 1:we-picker__modal-head 2:we-picker__modal-head-left 3:we-vinyl 3:we-vinyl--playing 3:we-vinyl--sm 4:we-vinyl__cover 5:we-vinyl__empty',
+      '4:we-vinyl__hole 3:we-picker__modal-title 2:we-picker__btn 1:we-picker__modal-tabs 2:we-picker__btn 2:we-picker__tab 2:we-picker__tab--active 2:we-picker__btn',
+      '2:we-picker__tab 1:we-picker__modal-body 2:we-picker__row 3:we-picker__hint 3:we-picker__btn 2:we-picker__row 2:we-picker__filter-row 3:we-picker__text',
+      '3:we-picker__search 3:we-picker__rating-menu 4:we-picker__rating-btn 5:we-picker__rating-text 5:we-picker__rating-caret 4:we-picker__rating-list 5:we-picker__rating-toggle 5:we-picker__rating-toggle--on',
+      '6:we-picker__rating-check 5:we-picker__rating-toggle 6:we-picker__rating-check 5:we-picker__rating-toggle 6:we-picker__rating-check 5:we-picker__rating-toggle 6:we-picker__rating-check 3:we-picker__type-menu',
+      '4:we-picker__type-btn 5:we-picker__rating-text 5:we-picker__rating-caret 4:we-picker__rating-list 5:we-picker__rating-toggle 5:we-picker__rating-toggle--on 6:we-picker__rating-check 5:we-picker__rating-toggle',
+      '5:we-picker__rating-toggle--on 6:we-picker__rating-check 5:we-picker__rating-toggle 5:we-picker__rating-toggle--on 6:we-picker__rating-check 5:we-picker__rating-toggle 5:we-picker__rating-toggle--on 6:we-picker__rating-check',
+      '2:we-picker__grid 3:we-picker__card 4:we-picker__card-close 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide',
+      '3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type',
+      '4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card',
+      '4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title',
+      '4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder',
+      '4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide',
+      '3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type',
+      '4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card',
+      '4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title',
+      '4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder',
+      '4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide',
+      '3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type',
+      '4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card',
+      '4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title',
+      '4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder',
+      '4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide',
+      '3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type',
+      '4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide 3:we-picker__card',
+      '4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide 1:we-picker__modal-foot 2:we-picker__hint',
     ].join(' ').split(' ');
     const EXPECTED_BATCH = [
-      '0:we-picker__modal 1:we-picker__modal-head 2:we-picker__modal-head-left 3:we-vinyl 3:we-vinyl--playing 3:we-vinyl--sm 4:we-vinyl__cover 5:we-vinyl__empty 4:we-vinyl__hole',
-      '3:we-picker__modal-title 2:we-picker__btn 1:we-picker__modal-tabs 2:we-picker__btn 2:we-picker__tab 2:we-picker__tab--active 2:we-picker__btn 2:we-picker__tab 1:we-picker__modal-body',
-      '2:we-picker__row 3:we-picker__hint 3:we-picker__btn 2:we-picker__row 2:we-picker__batch-bar 3:we-picker__hint 3:we-picker__btn 3:we-picker__btn 2:we-picker__row',
-      '2:we-picker__filter-row 3:we-picker__text 3:we-picker__search 3:we-picker__rating-menu 4:we-picker__rating-btn 5:we-picker__rating-text 5:we-picker__rating-caret 4:we-picker__rating-list 5:we-picker__rating-toggle',
-      '5:we-picker__rating-toggle--on 6:we-picker__rating-check 5:we-picker__rating-toggle 6:we-picker__rating-check 5:we-picker__rating-toggle 6:we-picker__rating-check 5:we-picker__rating-toggle 6:we-picker__rating-check 3:we-picker__hint',
-      '3:we-picker__label 3:we-picker__playlist-select 2:we-picker__grid 3:we-picker__card 4:we-picker__card-close 3:we-picker__card 3:we-picker__card--checked 4:we-picker__card-placeholder 4:we-picker__card-title',
-      '4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title 4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title 4:we-picker__card-check',
-      '3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title 4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title 4:we-picker__card-check 3:we-picker__card',
-      '4:we-picker__card-placeholder 4:we-picker__card-title 4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title 4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder',
-      '4:we-picker__card-title 4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title 4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title',
-      '4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title 4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title 4:we-picker__card-check',
-      '3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title 4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title 4:we-picker__card-check 3:we-picker__card',
-      '4:we-picker__card-placeholder 4:we-picker__card-title 4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title 4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder',
-      '4:we-picker__card-title 4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title 4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title',
-      '4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title 4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title 4:we-picker__card-check',
-      '3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title 4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title 4:we-picker__card-check 3:we-picker__card',
-      '4:we-picker__card-placeholder 4:we-picker__card-title 4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title 4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder',
-      '4:we-picker__card-title 4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title 4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title',
+      '0:we-picker__modal 1:we-picker__modal-head 2:we-picker__modal-head-left 3:we-vinyl 3:we-vinyl--playing 3:we-vinyl--sm 4:we-vinyl__cover 5:we-vinyl__empty',
+      '4:we-vinyl__hole 3:we-picker__modal-title 2:we-picker__btn 1:we-picker__modal-tabs 2:we-picker__btn 2:we-picker__tab 2:we-picker__tab--active 2:we-picker__btn',
+      '2:we-picker__tab 1:we-picker__modal-body 2:we-picker__row 3:we-picker__hint 3:we-picker__btn 2:we-picker__row 2:we-picker__batch-bar 3:we-picker__hint',
+      '3:we-picker__btn 3:we-picker__btn 2:we-picker__row 2:we-picker__filter-row 3:we-picker__text 3:we-picker__search 3:we-picker__rating-menu 4:we-picker__rating-btn',
+      '5:we-picker__rating-text 5:we-picker__rating-caret 4:we-picker__rating-list 5:we-picker__rating-toggle 5:we-picker__rating-toggle--on 6:we-picker__rating-check 5:we-picker__rating-toggle 6:we-picker__rating-check',
+      '5:we-picker__rating-toggle 6:we-picker__rating-check 5:we-picker__rating-toggle 6:we-picker__rating-check 3:we-picker__type-menu 4:we-picker__type-btn 5:we-picker__rating-text 5:we-picker__rating-caret',
+      '4:we-picker__rating-list 5:we-picker__rating-toggle 5:we-picker__rating-toggle--on 6:we-picker__rating-check 5:we-picker__rating-toggle 5:we-picker__rating-toggle--on 6:we-picker__rating-check 5:we-picker__rating-toggle',
+      '5:we-picker__rating-toggle--on 6:we-picker__rating-check 5:we-picker__rating-toggle 5:we-picker__rating-toggle--on 6:we-picker__rating-check 2:we-picker__grid 3:we-picker__card 4:we-picker__card-close',
+      '3:we-picker__card 3:we-picker__card--checked 4:we-picker__card-placeholder 4:we-picker__card-title 4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title',
+      '4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title 4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title',
+      '4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title 4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title',
+      '4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title 4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title',
+      '4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title 4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title',
+      '4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title 4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title',
+      '4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title 4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title',
+      '4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title 4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title',
+      '4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title 4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title',
+      '4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title 4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title',
+      '4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title 4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title',
+      '4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title 4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title',
+      '4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title 4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title',
+      '4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title 4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title',
       '4:we-picker__card-check 3:we-picker__card 4:we-picker__card-placeholder 4:we-picker__card-title 4:we-picker__card-check 1:we-picker__modal-foot 2:we-picker__hint',
     ].join(' ').split(' ');
     const EXPECTED_HIDDEN = [
-      '0:we-picker__modal 1:we-picker__modal-head 2:we-picker__modal-head-left 3:we-vinyl 3:we-vinyl--playing 3:we-vinyl--sm 4:we-vinyl__cover 5:we-vinyl__empty 4:we-vinyl__hole',
-      '3:we-picker__modal-title 2:we-picker__btn 1:we-picker__modal-tabs 2:we-picker__btn 2:we-picker__tab 2:we-picker__btn 2:we-picker__tab 2:we-picker__tab--active 1:we-picker__modal-body',
-      '2:we-picker__row 3:we-picker__hint 3:we-picker__btn 2:we-picker__grid 3:we-picker__card 3:we-picker__card--hidden 4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title',
-      '4:we-picker__card-hide 1:we-picker__modal-foot 2:we-picker__hint',
+      '0:we-picker__modal 1:we-picker__modal-head 2:we-picker__modal-head-left 3:we-vinyl 3:we-vinyl--playing 3:we-vinyl--sm 4:we-vinyl__cover 5:we-vinyl__empty',
+      '4:we-vinyl__hole 3:we-picker__modal-title 2:we-picker__btn 1:we-picker__modal-tabs 2:we-picker__btn 2:we-picker__tab 2:we-picker__btn 2:we-picker__tab',
+      '2:we-picker__tab--active 1:we-picker__modal-body 2:we-picker__row 3:we-picker__hint 3:we-picker__btn 2:we-picker__grid 3:we-picker__card 3:we-picker__card--hidden',
+      '4:we-picker__card-placeholder 4:we-picker__card-type 4:we-picker__card-title 4:we-picker__card-hide 1:we-picker__modal-foot 2:we-picker__hint',
     ].join(' ').split(' ');
     const modalRoot = findByClass(tree, 'we-picker__modal');
     const seqNormal = modalClassSequence(tree);
+    if (process.env.WE_SEQ_DUMP) console.log('SEQ_NORMAL_JSON=' + JSON.stringify(seqNormal));
     // 绝对锚点（不读 golden）：否则"两边都空"也算相等。
-    assert.equal(seqNormal.length, 192, '绝对锚点：普通视图的 class 令牌数（空序列不得算通过）');
+    if (!process.env.WE_SEQ_DUMP) {
+      assert.equal(seqNormal.length, 206, '绝对锚点：普通视图的 class 令牌数（空序列不得算通过）');
       assert.ok(collectCards(modalRoot).length >= 25, '绝对锚点：模态框里的卡片数 ≥ 25（关闭卡 + 首窗 29 张）');
       assert.ok(classSequenceMatches(seqNormal, EXPECTED_NORMAL), '普通视图：模态框标记序列与下钻改版后逐字一致（golden 录自虚拟窗口形态）');
+    }
     // 负对照：把**变异输入**喂进**同一条判据**
     assert.ok(!classSequenceMatches(seqNormal.filter((_, i) => i !== 7), EXPECTED_NORMAL),
       '负对照：删掉一个类名 ⇒ 判据变假');
@@ -2962,20 +2973,39 @@ setTimeout(async () => {
     searchInput.props.onInput({ target: { value: '' } });
     tree = renderPicker();
 
-    // 类型筛选：持久化设置（走 setSetting），且真的换掉网格内容
-    const typeSel = findByProp(tree, 'aria-label', '类型');
-    assert.ok(typeSel && typeof typeSel.props.onChange === 'function', '类型筛选必须存在且可切换');
-    assert.ok(typeSel.children.some((o) => o && o.props && o.props.value === 'scene'), '类型筛选必须有「场景」档');
-    typeSel.props.onChange({ target: { value: 'scene' } });
-    tree = renderPicker();
-    assert.ok(onlyMatching(tree, 'Scene'), '类型=场景 ⇒ 网格只剩场景卡');
-    assert.equal(findByProp(tree, 'aria-label', '类型').props.value, 'scene', '类型筛选落到状态（重渲染后的值）');
+    // 类型筛选：多档勾选（v8 起 typeFilter 是勾选集合）+ 持久化设置（走 setSetting），
+    // 且真的换掉网格内容。UI 与分级共用 .we-picker__rating-check，按 value 区分档位。
+    const typeBoxes = (t) => {
+      const out = [];
+      (function walk(n) {
+        if (!n || typeof n !== 'object') return;
+        if (Array.isArray(n)) { n.forEach(walk); return; }
+        if (n.type === 'input' && n.props && n.props.className === 'we-picker__rating-check'
+          && ['video', 'web', 'image', 'scene'].indexOf(n.props.value) !== -1) out.push(n);
+        if (Array.isArray(n.children)) n.children.forEach(walk);
+      })(t);
+      return out;
+    };
+    const typeBoxOf = (t, tier) => typeBoxes(t).find((n) => n.props.value === tier) || null;
+    assert.equal(typeBoxes(tree).length, 4, '类型下拉必须有 4 个勾选框（视频/网页/图片/场景）');
+    assert.ok(typeBoxOf(tree, 'scene') && typeBoxOf(tree, 'scene').props.checked, '默认勾满四档（= 不限类型）');
+    for (const tier of ['video', 'web', 'image']) {
+      const box = typeBoxOf(tree, tier);
+      assert.ok(box && box.props.checked, '默认勾选 ' + tier);
+      box.props.onChange();
+      tree = renderPicker();
+    }
+    assert.ok(onlyMatching(tree, 'Scene'), '只勾「场景」⇒ 网格只剩场景卡');
     // 落盘是 200ms 去抖 ⇒ 读 localStorage 前必须先把在途的 persist 放掉（同 rotation 段的做法）
     for (const t of rotationTimers.filter((x) => !x.cleared && !x.fired && x.ms === 200)) { t.fired = true; t.fn(); }
-    assert.equal(persisted().typeFilter, 'scene', '类型筛选是持久化设置（setSetting 落盘）');
-    typeSel.props.onChange({ target: { value: 'all' } });
-    tree = renderPicker();
-    assert.equal(collectCards(tree).length, 30, '类型切回全部 ⇒ 网格恢复满窗（关闭卡 + 29）');
+    assert.deepEqual(persisted().typeFilter, ['scene'], '类型筛选是持久化设置（setSetting 落盘）');
+    for (const tier of ['video', 'web', 'image']) {
+      const box = typeBoxOf(tree, tier);
+      assert.ok(box && !box.props.checked, '取消勾选后 ' + tier + ' 为未勾');
+      box.props.onChange();
+      tree = renderPicker();
+    }
+    assert.equal(collectCards(tree).length, 30, '类型勾满四档 ⇒ 网格恢复满窗（关闭卡 + 29）');
 
     // 批量模式：进入/勾选/计数/退出不留痕
     assert.ok(clickPager(tree, '批量'), '批量按钮必须存在');
@@ -2989,7 +3019,8 @@ setTimeout(async () => {
     tree = renderPicker();
     assert.ok(textOf(findByClass(tree, 'we-picker__batch-bar')).includes('已选 1 张'), '点一张卡 ⇒ 计数变 1');
     const seqBatch = modalClassSequence(tree);
-    assert.ok(classSequenceMatches(seqBatch, EXPECTED_BATCH),
+    if (process.env.WE_SEQ_DUMP) console.log('SEQ_BATCH_JSON=' + JSON.stringify(seqBatch));
+    if (!process.env.WE_SEQ_DUMP) assert.ok(classSequenceMatches(seqBatch, EXPECTED_BATCH),
       '批量模式：模态框标记序列与下钻改版后逐字一致（多出批量条与勾选标记）');
     // 勾选标记是批量模式下卡片里的 `we-picker__card-check`（选中显示 ✓，未选为空字符串）
     const checkOf = (root, title) => {
@@ -3038,7 +3069,8 @@ setTimeout(async () => {
     assert.ok(hiddenCountMatches(textOf(tree), beforeHidden + 1),
       '隐藏页标题的计数与 hiddenIds 一致（当前 ' + (beforeHidden + 1) + '）');
     const seqHidden = modalClassSequence(tree);
-    assert.ok(classSequenceMatches(seqHidden, EXPECTED_HIDDEN),
+    if (process.env.WE_SEQ_DUMP) console.log('SEQ_HIDDEN_JSON=' + JSON.stringify(seqHidden));
+    if (!process.env.WE_SEQ_DUMP) assert.ok(classSequenceMatches(seqHidden, EXPECTED_HIDDEN),
       '隐藏页：模态框标记序列与下钻改版后逐字一致（头部行/问句行已移出网格）');
     // 负对照：把**变异输入**喂进同一条「计数一致」判据
     assert.ok(!hiddenCountMatches('已隐藏 7 张', 3) && hiddenCountMatches('已隐藏 3 张', 3),
@@ -4184,7 +4216,7 @@ setTimeout(async () => {
       const migratedV5 = sanitizeFromSchema({ settingsVersion: 5, glassColor: '#0d1524' }, 'host') || {};
       assert.deepEqual(migratedV5.glassColor, { light: '#0d1524', dark: '#0d1524' },
         'v5 老存档 ⇒ 迁移后玻璃色是一对');
-      assert.equal(migratedV5.settingsVersion, 7, '规范化后版本号盖成当前值');
+      assert.equal(migratedV5.settingsVersion, 8, '规范化后版本号盖成当前值');
       // 读容忍的**真实入口**：带当前版本的档**不过迁移** ⇒ 标量只能由 `readGlassColors` 自己认。
       // ⚠️ 来路（ADR-0011 D6 之后）：**手改的 config.json**（本机那份就是标量 + 旧版本号，绕过迁移直传）、
       //    **作废后仍留在盘上的用户层旧预设**、以及测试台架自造的输入。

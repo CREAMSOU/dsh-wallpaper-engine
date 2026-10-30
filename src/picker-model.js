@@ -22,7 +22,7 @@
  *     · `hiddenIds`     隐藏集合（`selection.hiddenIds`）；缺省视作空集合
  *     · `search`        搜索原文（缺省 / 空串 = 不过滤；内部 trim + 小写）
  *     · `ratingFilter`  内容分级档（`"all" | "everyone" | "pg13" | "mature" | "unrated"`）
- *     · `typeFilter`    类型档（`"all" | "video" | "web" | "image" | "scene"`）
+ *     · `typeFilter`    类型勾选集合（数组；字符串 `"all"` / 具体档仅旧档读兜底）
  *     · `page` / `hiddenPage` / `editorPage`  各列表的页号（可越界，内部 clamp）
  *   返回：
  *     · `query`          归一化后的查询串（`""` = 不过滤）—— 视图的"没有匹配「…」"空态
@@ -63,6 +63,8 @@ const PG13_RATING_PATTERN = /^(pg13|pg-13|pg ?13|questionable)$/i;
 // 合法分级档（规范顺序；与 lib/settings-schema.js 的 RATING_TIER_VALUES 同一张表，
 // 守卫 test/verify-picker-model.mjs 对账两处）。
 const RATING_TIERS = ['everyone', 'pg13', 'mature', 'unrated'];
+// 类型档的规范顺序（v8 起 typeFilter 也是勾选集合；顺序即消毒后的存档顺序）。
+const TYPE_TIERS = ['video', 'web', 'image', 'scene'];
 
 function isUploadedWallpaper(w) {
   return Boolean(w && w.id && w.id.indexOf("up-") === 0);
@@ -111,9 +113,22 @@ function matchesRatingFilter(w, allow) {
   return set.has(ratingOf(w));
 }
 
-function matchesTypeFilter(w, filter) {
-  if (filter === "all") return true;
-  return w.type === filter;
+// 类型档的集合视图：字符串只作旧档读兜底（'all' = 四档全勾、具体档 = 仅那一档），
+// 数组按白名单过滤；空集 / 非法 ⇒ null（fail-closed）。
+function typeAllowSet(allow) {
+  if (typeof allow === "string") {
+    if (allow === "all") return new Set(TYPE_TIERS);
+    return TYPE_TIERS.indexOf(allow) !== -1 ? new Set([allow]) : null;
+  }
+  if (!Array.isArray(allow)) return null;
+  const set = new Set(allow.filter((tier) => TYPE_TIERS.indexOf(tier) !== -1));
+  return set.size ? set : null;
+}
+
+function matchesTypeFilter(w, allow) {
+  const set = typeAllowSet(allow);
+  if (!set) return false; // 空集合 / 非法 ⇒ fail-closed
+  return set.has(w.type);
 }
 
 function isPlayableType(w) {

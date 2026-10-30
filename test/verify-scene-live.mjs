@@ -2803,17 +2803,17 @@ check('host 侧 /media-control 只收 POST + 动作走 mediaBackend.control（�
 // 瞬态 qpType + 两层交集空态兜底」整套退役：不再 setTransient("qpType")、不再有默认档
 // 行、空态不再有"没有交集/完整操作链"提示）。「图片」是后补的一档（上传的单文件图片
 // 壁纸）：判据按**同一份档位表**逐档核对，再加一条负对照 —— 少一档必须被判红。
-  const QP_TYPE_ROWS = [['all', '全部'], ['scene', '场景'], ['web', '网页'], ['video', '视频'], ['image', '图片']];
+  const QP_TYPE_ROWS = [['scene', '场景'], ['web', '网页'], ['video', '视频'], ['image', '图片']];
   const sideTypeFilterOk = (text) => text.includes('function qpTypes()')
     && QP_TYPE_ROWS.every(([id, label]) => text.includes('id: "' + id + '"')
       && (text.includes('label: weT("' + label + '")') || text.includes('label: weT("' + label + '", null,')))
-    && text.includes('w.type !== typeFilter');
-  check('侧栏列表类型筛选：五档齐全（含「图片」）+ 与设置页同键同步（setSetting typeFilter，单独档已退役）',
+    && text.includes('typeAllow.indexOf(w.type) === -1');
+  check('侧栏列表类型筛选：四档齐全（含「图片」）+ 与设置页同键同步（setSetting typeFilter，勾选集合）',
   // i18n（中文原文即键）之后：容器从文件顶层常量改成 `qpTypes()`（每次渲染现建，
   // 否则文案会冻在加载期），每档 label 各自走 `weT("…")` —— 判据只认"档位 id 仍绑着
   // 同一句原文"，不认包装形态（认形态的判据会在下一次改写法时静默失效）。
     sideTypeFilterOk(qpSrc)
-    && qpSrc.includes('setSetting("typeFilter", e.target.value)')
+    && qpSrc.includes('setSetting("typeFilter", next)')
     && !qpSrc.includes('setTransient("qpType"')
     && !qpSrc.includes('sel.qpType')
     && !src.includes('qpType: "all"')
@@ -3304,7 +3304,7 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
   //    渲染重建一份，函数 / 对象身份全变）。
   // ⚠️ 例外（**必须留组件内**，故意不进名单）：`group` / `candidates` 是读**可变** store 算出的
   //    派生值 —— 提到模块级会退化成"只在模块初始化时算一次"的冻结快照。下面那条负对照钉住它。
-  const PROMOTED_HANDLERS = ['onRefresh', 'onRatingFilterToggle', 'onTypeFilterChange',
+  const PROMOTED_HANDLERS = ['onRefresh', 'onRatingFilterToggle', 'onTypeFilterToggle',
     'onLayoutChange', 'onEdgeCompatChange', 'onGroupInterval', 'onArmDeleteGroup', 'onDeleteGroup',
     'onSwitchTransition', 'onSwitchTransitionDir', 'onSwitchTransitionSpeed',
     'onRopeVisibilityChange', 'onRopeFormChange', 'onRopeScaleChange',
