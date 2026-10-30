@@ -14,7 +14,7 @@
 | `compat-harness-live.mjs` | — |  |
 | `compat-harness-pages.mjs` | — |  |
 | `compat-harness-surfaces.mjs` | — |  |
-| `e2e-web-media-origin.mjs` | `lib/index.js` `packages/media-bridge/lib/provision.js` `src/panel-tabs-advanced.js` `src/panel-tabs-appearance.js` `src/panel-tabs-effects.js` `src/panel-tabs-mascot.js` `src/panel-tabs.js` `src/quick-panel.js` `src/styles-base.js` `src/styles-chrome.js` `src/styles-ext.js` `src/styles-panel.js` `src/styles-quick.js` `src/styles-settings.js` `src/styles-shell.js` `src/styles.js` |  |
+| `e2e-web-media-origin.mjs` | `lib/index.js` `packages/media-bridge/lib/index.js` `packages/media-bridge/lib/provision.js` `packages/media-bridge/src/wallpaper-current-section.js` `src/quick-panel.js` `src/styles-base.js` `src/styles-chrome.js` `src/styles-ext.js` `src/styles-panel.js` `src/styles-quick.js` `src/styles-settings.js` `src/styles-shell.js` `src/styles.js` |  |
 | `fontset-load-smoke.mjs` | — | ✅ |
 | `live-frame-async-identity-smoke.mjs` | — | ✅ |
 | `live-frame-backfill-smoke.mjs` | — | ✅ |
@@ -72,7 +72,7 @@
 | `verify-occlusion-client.mjs` | `src/api-client.js` `src/live-layer-diag.js` `src/live-layer-gate.js` `src/live-layer-pointer.js` `src/live-layer-underlay.js` `src/live-layer-watch.js` `src/live-layer.js` `src/occlusion.js` | ✅ |
 | `verify-occlusion-debounce.mjs` | `src/client.js` |  |
 | `verify-occlusion-hub.mjs` | `lib/index.js` `lib/json-response.js` `lib/occlusion/rects.js` `lib/occlusion/x11.js` `packages/media-bridge/lib/occlusion/index.js` `packages/media-bridge/lib/routes/occlusion.js` |  |
-| `verify-package-files.mjs` | `lib/http-body.js` `lib/index.js` `lib/pkg-read.js` | ✅ |
+| `verify-package-files.mjs` | `lib/http-body.js` `lib/index.js` `lib/pkg-read.js` `src/client.js` | ✅ |
 | `verify-package-publish.mjs` | `lib/index.js` `lib/pkg-read.js` `src/client.js` | ✅ |
 | `verify-pet-hotplug-client.mjs` | `packages/pet-link/src/official-pet.js` `packages/pet-link/src/pet-link.js` |  |
 | `verify-pet-hotplug-host.mjs` | `lib/subpackage-boot.js` `packages/pet-link/lib/index.js` `packages/pet-link/lib/official-provider.js` `packages/pet-link/lib/routes/official-pet.js` `packages/pet-link/src/official-pet.js` |  |
@@ -217,7 +217,7 @@
 | `packages/mascot-avatar/lib/routes/mascot.js` | 1 | `verify-contracts` |
 | `packages/media-bridge/lib/backend.js` | 3 | `verify-cache-dir` `verify-contracts` `verify-media-bridge` |
 | `packages/media-bridge/lib/client.media-bridge.js` | 8 | `live-frame-backfill-smoke` `verify-client-sync` `verify-client` `verify-picker-model` `verify-picker-props` `verify-picker-upload` `verify-playback-controls` `verify-transcode-state` |
-| `packages/media-bridge/lib/index.js` | 5 | `verify-contracts` `verify-scene-live` `verify-scene` `verify-token-domain` `verify-transcode-state` |
+| `packages/media-bridge/lib/index.js` | 6 | `e2e-web-media-origin` `verify-contracts` `verify-scene-live` `verify-scene` `verify-token-domain` `verify-transcode-state` |
 | `packages/media-bridge/lib/legacy.js` | 5 | `verify-cache-dir` `verify-child-kill` `verify-contracts` `verify-host-teardown` `verify-scene-live` |
 | `packages/media-bridge/lib/occlusion/index.js` | 2 | `verify-host-teardown` `verify-occlusion-hub` |
 | `packages/media-bridge/lib/provision.js` | 3 | `e2e-web-media-origin` `verify-media-bridge` `verify-scene-live` |
@@ -236,7 +236,7 @@
 | `packages/media-bridge/lib/supervisor.js` | 4 | `verify-contracts` `verify-host-teardown` `verify-media-bridge` `verify-scene-live` |
 | `packages/media-bridge/src/client.js` | 0 | **（无）** |
 | `packages/media-bridge/src/playback-rate-section.js` | 3 | `verify-client` `verify-fontset` `verify-scene-live` |
-| `packages/media-bridge/src/wallpaper-current-section.js` | 2 | `verify-client` `verify-scene-live` |
+| `packages/media-bridge/src/wallpaper-current-section.js` | 3 | `e2e-web-media-origin` `verify-client` `verify-scene-live` |
 | `packages/media-bridge/src/wallpaper-fit-section.js` | 3 | `verify-client` `verify-fontset` `verify-scene-live` |
 | `packages/media-bridge/src/wallpaper-rotation-section.js` | 3 | `verify-avatar-interval-and-rotation` `verify-client` `verify-scene-live` |
 | `packages/media-bridge/src/wallpaper-transition-section.js` | 2 | `verify-client` `verify-scene-live` |
@@ -263,7 +263,7 @@
 | `src/client-audio-playback.js` | 2 | `verify-layer-ownership` `verify-scene-live` |
 | `src/client-media-frame.js` | 1 | `verify-scene-live` |
 | `src/client-rotation.js` | 1 | `verify-scene-live` |
-| `src/client.js` | 30 | `verify-about` `verify-adapter` `verify-api-client` `verify-avatar-interval-and-rotation` `verify-client` `verify-component-fonts` `verify-contracts` `verify-extra-glass` `verify-fontset` `verify-glass-surfaces` `verify-i18n` `verify-layer-ownership` `verify-module-layout` `verify-notice-routing` `verify-occlusion-debounce` `verify-package-publish` `verify-pet-rope-entry` `verify-pet-sidebar-diag` `verify-pet-sidebar-rebound` `verify-picker-model` `verify-presets` `verify-scene-live` `verify-subpackage-client-half` `verify-subpackage-purity` `verify-subpackage-toggle-roundtrip` `verify-system-fonts` `verify-theme-follow` `verify-theme-layer` `verify-transcode-state` `verify-types` |
+| `src/client.js` | 31 | `verify-about` `verify-adapter` `verify-api-client` `verify-avatar-interval-and-rotation` `verify-client` `verify-component-fonts` `verify-contracts` `verify-extra-glass` `verify-fontset` `verify-glass-surfaces` `verify-i18n` `verify-layer-ownership` `verify-module-layout` `verify-notice-routing` `verify-occlusion-debounce` `verify-package-files` `verify-package-publish` `verify-pet-rope-entry` `verify-pet-sidebar-diag` `verify-pet-sidebar-rebound` `verify-picker-model` `verify-presets` `verify-scene-live` `verify-subpackage-client-half` `verify-subpackage-purity` `verify-subpackage-toggle-roundtrip` `verify-system-fonts` `verify-theme-follow` `verify-theme-layer` `verify-transcode-state` `verify-types` |
 | `src/effects.js` | 7 | `verify-adapter` `verify-client` `verify-component-fonts` `verify-glass-surfaces` `verify-scene-live` `verify-theme-layer` `verify-titlebar-anchor` |
 | `src/ext-avatar.js` | 2 | `verify-avatar-interval-and-rotation` `verify-scene-live` |
 | `src/extension-registry.js` | 3 | `verify-fontset` `verify-scene-live` `verify-subpackage-toggle-roundtrip` |
@@ -294,11 +294,11 @@
 | `src/module-reset.js` | 2 | `verify-fontset` `verify-scene-live` |
 | `src/nav-icon.js` | 2 | `verify-client` `verify-i18n` |
 | `src/occlusion.js` | 1 | `verify-occlusion-client` |
-| `src/panel-tabs-advanced.js` | 11 | `e2e-web-media-origin` `verify-about` `verify-adapter` `verify-client` `verify-contracts` `verify-fontset` `verify-glass-surfaces` `verify-scene-live` `verify-system-fonts` `verify-theme-follow` `verify-theme-layer` |
-| `src/panel-tabs-appearance.js` | 12 | `e2e-web-media-origin` `verify-about` `verify-adapter` `verify-client` `verify-contracts` `verify-fontset` `verify-glass-surfaces` `verify-scene-live` `verify-subpackage-toggle-roundtrip` `verify-system-fonts` `verify-theme-follow` `verify-theme-layer` |
-| `src/panel-tabs-effects.js` | 11 | `e2e-web-media-origin` `verify-about` `verify-adapter` `verify-client` `verify-contracts` `verify-fontset` `verify-glass-surfaces` `verify-scene-live` `verify-system-fonts` `verify-theme-follow` `verify-theme-layer` |
-| `src/panel-tabs-mascot.js` | 11 | `e2e-web-media-origin` `verify-about` `verify-adapter` `verify-client` `verify-contracts` `verify-fontset` `verify-glass-surfaces` `verify-scene-live` `verify-system-fonts` `verify-theme-follow` `verify-theme-layer` |
-| `src/panel-tabs.js` | 14 | `e2e-web-media-origin` `verify-about` `verify-adapter` `verify-api-client` `verify-client` `verify-component-visibility` `verify-contracts` `verify-fontset` `verify-glass-surfaces` `verify-scene-live` `verify-subpackage-toggle-roundtrip` `verify-system-fonts` `verify-theme-follow` `verify-theme-layer` |
+| `src/panel-tabs-advanced.js` | 10 | `verify-about` `verify-adapter` `verify-client` `verify-contracts` `verify-fontset` `verify-glass-surfaces` `verify-scene-live` `verify-system-fonts` `verify-theme-follow` `verify-theme-layer` |
+| `src/panel-tabs-appearance.js` | 11 | `verify-about` `verify-adapter` `verify-client` `verify-contracts` `verify-fontset` `verify-glass-surfaces` `verify-scene-live` `verify-subpackage-toggle-roundtrip` `verify-system-fonts` `verify-theme-follow` `verify-theme-layer` |
+| `src/panel-tabs-effects.js` | 10 | `verify-about` `verify-adapter` `verify-client` `verify-contracts` `verify-fontset` `verify-glass-surfaces` `verify-scene-live` `verify-system-fonts` `verify-theme-follow` `verify-theme-layer` |
+| `src/panel-tabs-mascot.js` | 10 | `verify-about` `verify-adapter` `verify-client` `verify-contracts` `verify-fontset` `verify-glass-surfaces` `verify-scene-live` `verify-system-fonts` `verify-theme-follow` `verify-theme-layer` |
+| `src/panel-tabs.js` | 13 | `verify-about` `verify-adapter` `verify-api-client` `verify-client` `verify-component-visibility` `verify-contracts` `verify-fontset` `verify-glass-surfaces` `verify-scene-live` `verify-subpackage-toggle-roundtrip` `verify-system-fonts` `verify-theme-follow` `verify-theme-layer` |
 | `src/persistence.js` | 4 | `verify-adapter` `verify-client` `verify-presets` `verify-settings-namespaces` |
 | `src/picker-modal.js` | 4 | `verify-client` `verify-fontset` `verify-picker-model` `verify-scene-live` |
 | `src/picker-model.js` | 1 | `verify-picker-model` |
