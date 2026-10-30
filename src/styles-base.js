@@ -241,6 +241,21 @@ const CSS_BASE = `
     background: transparent !important;
   }
 
+  /* 右栏「全屏」= 内容面覆盖整个工作区：底层对话列**不应存在**（设计口径：不可见，
+     不是靠模糊/半透明压住）。宿主自己不给全屏面板加不透明底，也不隐藏对话列；本插件
+     的装饰叶是 z-index:-1 的固定层、只采样壁纸层 ⇒ 全屏面板若只靠 12%~ 的着色底
+     （低「玻璃保真度」下就是这个值），对话文字会直接透出来与侧栏文字叠印 ——
+     #150 修的是层级（面板 z=40 压过会话 z=1/7），修不了「底下还有东西」。
+     锚点：宿主 slot 渲染器给每个出口盖 data-slot="<slotKey>"；对话列的容器
+     data-slot="main.conversation" 承载 hero + 输入卡 + 对话流（client-ui-conversation）。
+     全屏面板展开时（data-sidebar-right-open）整列 visibility:hidden —— 保留布局
+     （不 unmount、不触发滚动恢复/焦点副作用），只是不画。收起 / push 态选择器
+     不匹配，逐字节不变。与本插件开关无关：玻璃行开着时面板半透、关着时面板兜底
+     底也可能缺失，两态都靠这条保证「面板下方没有对话信息」。 */
+  body:has([data-sidebar-right-panel="fullscreen"][data-sidebar-right-open]) [data-slot="main.conversation"] {
+    visibility: hidden !important;
+  }
+
 
 
   /* ── Light-scheme text contrast boost ──────────────────────────────────────

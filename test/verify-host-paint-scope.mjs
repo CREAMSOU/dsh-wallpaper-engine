@@ -236,5 +236,38 @@ console.log('INFO | H2 其它被上色的宿主容器（需各自核对"关闭�
     `宿主规则 ${hostBodies.length} 条 · 种回滤镜及z围栏均被拒绝`);
 }
 
+// ── H5：右栏全屏时底层对话列必须不可见（设计口径是「不可见」，不是模糊/半透明）──────
+// 宿主全屏面板 `[data-sidebar-right-panel="fullscreen"]` 覆盖整个工作区，但宿主**不**给
+// 面板加不透明底、也**不**隐藏底下的对话列；本插件的装饰叶是 z-index:-1 的固定层、只采样
+// 壁纸层 ⇒ 面板只剩自己那层 12%~ 的着色底时（低「玻璃保真度」下就是这个值），对话文字会
+// 透出来与侧栏文字叠印。判据：对话列容器 `[data-slot="main.conversation"]` 在「全屏 + 展开」
+// 时必须 `visibility: hidden !important`，且该规则不依赖本插件门控属性（玻璃行关掉也要成立）、
+// 收起/push 态不得命中。两条负对照：删掉规则 / 把 fullscreen 改成 push 都必须判红。
+{
+  const SCOPE = /body:has\(\[data-sidebar-right-panel="fullscreen"\]\[data-sidebar-right-open\]\)/;
+  const ruleRe = /([^{}]*\[data-slot="main\.conversation"\][^{}]*)\{([^}]*)\}/g;
+  const collect = (css) => {
+    const out = [];
+    let m;
+    ruleRe.lastIndex = 0;
+    while ((m = ruleRe.exec(css))) {
+      const sel = NORM(m[1]);
+      if (!SCOPE.test(sel)) continue;
+      if (/data-we-glass-page/.test(sel)) continue; // 与本插件开关无关
+      if (!/visibility\s*:\s*hidden\s*!important/.test(m[2])) continue;
+      out.push({ sel, raw: m[0] });
+    }
+    return out;
+  };
+  const found = collect(CSS);
+  const stripped = found.length === 1 ? collect(CSS.replace(found[0].raw, '')) : [];
+  const asPush = found.length === 1
+    ? collect(CSS.replace(found[0].raw, found[0].raw.replace('"fullscreen"', '"push"')))
+    : [];
+  check('H5 右栏全屏时底层对话列不可见（visibility:hidden，收起/push 态不受影响）',
+    found.length === 1 && stripped.length === 0 && asPush.length === 0,
+    `命中 ${found.length} 条 · 负对照 删规则后抓 ${stripped.length}/1 · 改成 push 后抓 ${asPush.length}/1`);
+}
+
 console.log(failed === 0 ? '\nverify-host-paint-scope: OK' : `\n${failed} CHECK(S) FAILED`);
 process.exit(failed === 0 ? 0 : 1);
