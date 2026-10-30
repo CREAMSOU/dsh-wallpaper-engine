@@ -25,7 +25,7 @@
 | 6 | `/settings` | lib/routes/settings.js:158 | 箭头 | disposers base ctx mediaOriginApi readSettings isBetterSidebarLoaded …(+3) | 21 |
 | 7 | `/cache-dir` | lib/routes/cache-dir.js:47 | 箭头 | disposers base CONTROL_JSON_MAX_BYTES normalizeUserDir cacheBaseDir setCacheDir …(+1) | 1 |
 | 8 | `/cache-dir/browse` | lib/routes/cache-dir.js:115 | 箭头 | disposers base normalizeUserDir | 1 |
-| 9 | `/rope-art` | lib/routes/rope-art.js:35 | 箭头 | disposers base serveFile | 3 |
+| 9 | `/rope-art` | lib/routes/rope-art.js:35 | 箭头 | disposers base serveFile | 4 |
 | 10 | `/star-count` | packages/about-notice/lib/routes/github-stars.js:109 | async 箭头 | disposers base repoSlug log http | 2 |
 | 11 | `/about-qr` | packages/about-notice/lib/routes/about-qr.js:69 | 箭头 | disposers base aboutDir serveFile | 3 |
 | 12 | `/fontsets` | packages/fonts/lib/routes/fontsets.js:255 | async 箭头 | disposers base readFontSetId | 4 |

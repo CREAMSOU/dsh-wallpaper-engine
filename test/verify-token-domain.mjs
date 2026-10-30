@@ -287,12 +287,12 @@ check('这 9 族在 `lib/routes/` 里零残留', stillInMain.length === 0, still
   check('门面 applyView 的键集恰好 = 服务面 `apply` 的 15 键，且全部来自同一次会话', v.length === 0, v.join('；'));
 }
 
-// ⑥ 路由账：总条目 46（上游 1.4.0 新增 1 条 + glass 子包状态路由 1 条），这 9 族贡献 21 条，全部挂在包内
+// ⑥ 路由账：总条目 47（上游 1.4.0 新增 1 条 + glass 子包状态路由 1 条 + rope-art 1 条），这 9 族贡献 21 条，全部挂在包内
 {
   const idx = buildIndex();
   const total = idx.routes.length;
   const owned = idx.routes.filter((r) => TOKEN_FAMILY_FILES.includes(r.src));
-  check('路由索引总条目 = 46（上游 1.4.0 与 glass 状态路由各 1 条后；9 族仍只换模块不换路径集合）', total === 46, '实测 ' + total + ' 条');
+  check('路由索引总条目 = 47（上游 1.4.0、glass 状态路由、rope-art 各 1 条后；9 族仍只换模块不换路径集合）', total === 47, '实测 ' + total + ' 条');
   check('9 族的 21 条路由全部挂在包内（索引 src = packages/…）', owned.length === 21, '实测 ' + owned.length + ' 条');
 }
 

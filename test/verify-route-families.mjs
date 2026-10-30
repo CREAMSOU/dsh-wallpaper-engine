@@ -37,7 +37,7 @@ import { buildIndex } from './tools/host-route-index.mjs';
 
 /** 触发线：同一族达到这么多条 ⇒ 必须裁决（见文件头）。 */
 const FAMILY_TRIGGER = 3;
-/** 覆盖面地板：路由条数少于它说明枚举退化了（实测 46 条）。 */
+/** 覆盖面地板：路由条数少于它说明枚举退化了（实测 47 条）。 */
 const ROUTE_FLOOR = 40;
 /** 归族：与 `analyze-host-apply.mjs` 的 ② 组逐字相同的规则。 */
 const familyOf = (path) => (path === '(动态路径)' ? '(动态)' : (path.split('/').filter(Boolean)[0] || '/'));
