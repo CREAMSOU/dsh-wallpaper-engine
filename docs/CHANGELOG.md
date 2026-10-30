@@ -33,6 +33,8 @@
 
 - **内容分级改为累积上限（行为变更）：PG13 放行全年龄，成人放行全部三档，未分级独立成档**：旧实现是精确等值（选「PG13」只剩 PG13 条目、切档等于把轻档整片清掉）。用户口径 2026-10-30：分级系统存在的意义是「保证不该出现的地方刷不出成人内容」，所以分档必须是**上限**而不是等值 —— 现在 `all` 放行一切、`everyone` 仅 Everyone/G（含按 Everyone 处理的无标注自上传）、`pg13` = Everyone + PG13、`mature` = Everyone + PG13 + Mature、`unrated` 只认未分级（不并进成人档）；未知档位 fail-closed（判不匹配），免得拼错的键把成人内容放出来。判定仍是 `src/picker-model.js` 的 `matchesRatingFilter` 单点，可播放网格 / 轮播候选 / 「下一张」/ 正在播放的闸门自动继承。收窄档位把当前壁纸挡掉时**立即换台**到该档内第一张可播候选（轮换关闭、轮换在场但候选为空都覆盖），一张都没有才停播并显示原因（用户口径：「换得了就换，换不了才提示」）。选择器与快捷面板的分级下拉改成累积口径文案（全年龄 · 仅 G / PG13 · 含全年龄 / 成人 · Mature / R），括号里的 n 同步为累计数，与实际能点的张数一致。守卫同步：`test/verify-picker-model.mjs` 的拟合用例与谓词判据改为累积正/负对照（PG13 档放行 Everyone、成人档放行 PG13、PG13 档不放行成人、未分级不与成人互相放行、未知档 fail-closed），`test/verify-playback-controls.mjs` 的 E 段重写为「累积不丢轻档 → 播成人上传 → 收窄到全年龄自动换台 → 收窄到未分级无候选才提示 → 放宽后重新可选可播」。
 
+- **列表类型档退出轮播成员与「下一张」（只见效于显示，行为变更）**：轮播候选（`groupWallpapers`）、轮播提交校验（`commitRotationSwitch` 的 `valid`）以及轮播关闭时「下一张」的池改用 `isRotationEligible`（可播放 ∧ 分级上限，**不读类型档**），与播放闸门 `keepPlayingWallpaper` 同源；`revalidateSelection` 里「仅被类型档排除」的换台豁免（`typeOnlyExcluded`）随之退役。理由：issue #294 的产品口径把「类型档」定为**只筛选择器网格的显示** —— 切类型档既不该把正在播的壁纸踢下台（上一笔已保证），也不该改变轮播成员与「下一张」。守卫：`test/verify-scene-live.mjs` 的闸门判据改为钉「播放闸门与轮播候选都不读类型档」（`typeOnlyExcluded` 必须绝迹）并加变异负对照（把候选改回读类型档必须判红）；`test/verify-picker-model.mjs` 新增 `isRotationEligible` 的正/负判据、形状判据（只收两个入参）与导出面同步。
+
 ### v1.4.0（2026-10-22 · npm 已发布）
 
 > 首个按**八包发布集**形态发布的版本：主包 + 七个子包同版本、同批上架；主包把七个子包声明为

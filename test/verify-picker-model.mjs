@@ -145,7 +145,7 @@ function inlinedSection(bundle, file, markers = SECTION_MARKERS) {
 const code = readFileSync(process.env.DSH_MUT_LIB || new URL('../lib/client.js', import.meta.url), 'utf8');
 
 const MODEL_API_NAMES = '{ ratingOf, matchesRatingFilter, matchesTypeFilter, isPlayableType,'
-  + ' isRotatableWallpaper, keepPlayingWallpaper, isHiddenWallpaper, isUploadedWallpaper,'
+  + ' isRotatableWallpaper, keepPlayingWallpaper, isRotationEligible, isHiddenWallpaper, isUploadedWallpaper,'
   + ' isDirWallpaper, playableWallpapers, hiddenWallpapers, pageSlice, pickerModel,'
   + ' PICKER_PAGE_SIZE }';
 /** 该模块的完整导出清单（与 `src/picker-model.js` 末尾的 `export { … }` 逐字相同）。
@@ -158,7 +158,7 @@ const MODEL_API_NAMES = '{ ratingOf, matchesRatingFilter, matchesTypeFilter, isP
  *    判据形状不变（导出名集合必须与钉住的清单逐字相等，
  *    多一枚少一枚都判红）。 */
 const MODEL_EXPORTS = ['ratingOf', 'matchesRatingFilter', 'matchesTypeFilter', 'isPlayableType',
-  'isRotatableWallpaper', 'keepPlayingWallpaper', 'isHiddenWallpaper', 'isUploadedWallpaper',
+  'isRotatableWallpaper', 'keepPlayingWallpaper', 'isRotationEligible', 'isHiddenWallpaper', 'isUploadedWallpaper',
   'isDirWallpaper', 'playableWallpapers', 'pageSlice', 'pickerModel',
   'PICKER_PAGE_SIZE'];
 
@@ -615,6 +615,17 @@ console.log('\n3. 直调判定：六个谓词 + 两个过滤助手（负对照�
     !callsTo(M.matchesRatingFilter, [W[0], 'unrated'], true));
   check('负对照：未知档位 fail-closed（不放行任何人）',
     !callsTo(M.matchesRatingFilter, [W[0], 'pg-18'], true));
+  // 轮播成员 / 「下一张」的入选判据（用户拍板 2026-10-30 / issue #294）：只认「内容安全 ∧
+  // 可播放」，**不认类型档**；与 keepPlayingWallpaper 同源（二级封装，单一真源）。
+  check('isRotationEligible：内容安全 ∧ 可播放 ⇒ true',
+    callsTo(M.isRotationEligible, [W[0], 'mature'], true));
+  check('负对照：被收窄的分级上限挡掉（PG13 在 everyone 档）⇒ false',
+    callsTo(M.isRotationEligible, [W[1], 'everyone'], false));
+  check('负对照：不可播放类型 ⇒ false（不是只看分级）',
+    callsTo(M.isRotationEligible, [W[7], 'all'], false));
+  check('负对照：null ⇒ false', callsTo(M.isRotationEligible, [null, 'all'], false));
+  check('isRotationEligible 只收两个入参（类型档不得入内）',
+    M.isRotationEligible.length === 2);
   check('matchesTypeFilter：类型一致 ⇒ true', callsTo(M.matchesTypeFilter, [W[0], 'video'], true));
   check('负对照：换成别的类型档 ⇒ 不是 true',
     !callsTo(M.matchesTypeFilter, [W[0], 'web'], true));

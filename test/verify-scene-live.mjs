@@ -2826,20 +2826,25 @@ check('host 侧 /media-control 只收 POST + 动作走 mediaBackend.control（�
   // ↑ 本段与"三键退役"共用同一个 `{ … }` 块（原先那条 check 的收尾 `}` 就在这里）——
   //   不要再包一层 `{}`：块会多开一层，整个文件在 EOF 报 "Unexpected end of input"。
 }
-// 用户口径：设置页切「类型」不得把**正在应用**的壁纸干掉 ⇒ 类型档只筛列表与轮播
-// 候选、不入播放闸门（keepPlayingWallpaper：分级拦播放，类型档没有入参）；轮播在场
-// 时「仅被类型档排除」也不换台（typeOnlyExcluded）。分级闸门照旧干掉并解释 —— 那
-// 一半钉在 verify-playback-controls E 段，这里钉类型档这一半。
+// 用户口径（2026-10-30 / issue #294）：设置页切「类型」不得把**正在应用**的壁纸干掉，
+// 也不得改变轮播成员与「下一张」⇒ 类型档只筛选择器网格的显示：
+//   · 播放闸门 keepPlayingWallpaper 只收分级档（类型档没有入参）；
+//   · 轮播候选 / 「下一张」走 isRotationEligible（可播放 ∧ 分级上限，同样不读类型档），
+//     所以 revalidateSelection 里不再需要「仅被类型档排除」的换台豁免（typeOnlyExcluded
+//     已退役）。分级闸门照旧干掉并解释 —— 那一半钉在 verify-playback-controls E 段。
 {
   const gateKeepsPlaying = (clientText, prepText) =>
     clientText.includes('const keepCurrent = keepPlayingWallpaper(cur, selection.contentRatingFilter)')
-      && clientText.includes('const typeOnlyExcluded = keepCurrent')
+      && !clientText.includes('typeOnlyExcluded')
+      && clientText.includes('isRotationEligible(w, selection.contentRatingFilter)')
       && prepText.includes('if (!w || !keepPlayingWallpaper(w, selection.contentRatingFilter))');
-  check('类型档不入播放闸门：revalidate 丢弃走 keepPlayingWallpaper + 换台豁免 typeOnlyExcluded',
+  check('类型档只筛显示：播放闸门与轮播候选都不读类型档（typeOnlyExcluded 已退役）',
     gateKeepsPlaying(src, prepSrc));
-  // 负对照：把闸面换回「读类型档」的旧形态（变异输入），同一条判据必须判否。
-  check('negative control: 闸门改回读类型档的形态会被同一条判据点出',
-    !gateKeepsPlaying(src, 'if (!w || !isRotatableWallpaper(w, selection.contentRatingFilter, selection.typeFilter))'));
+  // 负对照：把轮播候选换回「读类型档」的旧形态（变异输入），同一条判据必须判否。
+  check('negative control: 轮播候选改回读类型档的形态会被同一条判据点出',
+    !gateKeepsPlaying(src.split('isRotationEligible(w, selection.contentRatingFilter)')
+      .join('isRotatableWallpaper(w, selection.contentRatingFilter, selection.typeFilter)'), prepSrc)
+      && gateKeepsPlaying(src, prepSrc));
 }
 // 场景/网页实时渲染**默认开** —— 这是用户可见的默认值，三处一起钉：DEFAULTS 的值、
 // KINDS 的类型（boolTrue = 缺键读作开）、以及面板/活层的判据形态（`!== false`，

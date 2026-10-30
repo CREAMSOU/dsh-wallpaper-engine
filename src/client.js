@@ -972,8 +972,8 @@ function scheduleSceneVideoResync() {
 // `selection` 显式传入，模型自己不读任何模块级状态。
 
 // 选择被拒 / 被丢弃时的可读原因（`""` = 没有可解释的原因，正常应用）：壁纸层不渲染、
-// 播放按钮因 !sel.url 变灰时，卡片上至少给出原因。类型档不在原因表里：它只筛列表与
-// 轮播候选、不拦播放（keepPlayingWallpaper）。
+// 播放按钮因 !sel.url 变灰时，卡片上至少给出原因。类型档不在原因表里：它只筛选择器网格
+// 的显示，不拦播放、也不影响轮播与「下一张」（keepPlayingWallpaper / isRotationEligible）。
 function selectionBlockedNote(w) {
   if (!w) return weT("当前壁纸已不在列表里（可能已被移除或隐藏）");
   if (!isPlayableType(w)) return weT("这张壁纸没有可播放的媒体文件");
@@ -987,11 +987,20 @@ function playableInventory() {
   );
 }
 
+// 「下一张」在轮播关闭时的池：与轮播候选同一份入选判据（内容安全 ∧ 可播放，不读类型档），
+// 免得「类型档只筛显示」这条口径在轮播关闭的分支里漏掉一处。
+function rotationPoolAll() {
+  return selection.inventory.wallpapers.filter((w) =>
+    isRotationEligible(w, selection.contentRatingFilter)
+    && !isHiddenWallpaper(w.id, selection.hiddenIds));
+}
+
 // Re-validate the active selection against the current inventory + filters.
 // Called after a refresh AND after changing the rating/type filter. 丢弃闸门是
-// keepPlayingWallpaper：分级是内容闸门（拦播放，档位是**累积上限**），类型档只筛列表与
-// 轮播候选 —— 切类型档不得把正在应用的壁纸干掉。轮播在场时拿不到候选就换下一张；当前
-// 壁纸被收窄的分级档挡掉时**立即换台**（用户口径 2026-10-30：「换得了就换，换不了才提示」）。
+// keepPlayingWallpaper：分级是内容闸门（拦播放，档位是**累积上限**）；类型档只筛选择器
+// 网格的**显示**，既不得把正在应用的壁纸干掉，也不得改变轮播成员与「下一张」（用户口径
+// 2026-10-30 / issue #294）。轮播在场时拿不到候选就换下一张；当前壁纸被收窄的分级档挡掉
+// 时**立即换台**（用户口径 2026-10-30：「换得了就换，换不了才提示」）。
 function revalidateSelection() {
   // 被过滤条件丢弃的选择要留下原因：先取下来，applySelection("") 会清掉
   // blockedNote，故在其之后写回 —— 否则用户改一次过滤条件，壁纸就无声变空白。
@@ -1005,13 +1014,9 @@ function revalidateSelection() {
     droppedNote = selectionBlockedNote(cur);
     setSetting("id", "");
   }
-  // 「仅被类型档排除」= 还能播、没被隐藏、确实属于当前轮播列表，只是候选表按类型
-  // 筛掉了它。这一档不换台（下一次轮换 tick 自然按候选走）；隐藏 / 不在列表 / 被
-  // 分级拦这些真原因照旧换台。
-  const typeOnlyExcluded = keepCurrent && Boolean(selection.id)
-    && !isHiddenWallpaper(selection.id, selection.hiddenIds)
-    && Boolean(activeRotationGroup()) && activeRotationGroup().wallpaperIds.indexOf(selection.id) >= 0;
-  if (selection.rotationEnabled && selection.id && !typeOnlyExcluded
+  // 轮播在场时：当前壁纸不在候选里就换下一张。候选判据（isRotationEligible：可播放 ∧
+  // 分级上限）不含类型档 ⇒ 切类型档既不会把人踢下台，也不会改变轮播成员与「下一张」。
+  if (selection.rotationEnabled && selection.id
     && !rotationCandidates().some((w) => w.id === selection.id)) {
     const first = rotationCandidates()[0];
     setSetting("id", first ? first.id : "");
@@ -1058,7 +1063,7 @@ function groupWallpapers(group) {
   return group.wallpaperIds
     .map((id) => byId.get(id))
     .filter((w) => w
-      && isRotatableWallpaper(w, selection.contentRatingFilter, selection.typeFilter)
+      && isRotationEligible(w, selection.contentRatingFilter)
       && !isHiddenWallpaper(w.id, selection.hiddenIds));
 }
 
@@ -1280,7 +1285,7 @@ function commitRotationSwitch(prep) {
   prep.staged = null;
   const w = wallpaperById().get(prep.id);
   const valid = selection.rotationEnabled && selection.id === prep.fromId
-    && w && isRotatableWallpaper(w, selection.contentRatingFilter, selection.typeFilter)
+    && w && isRotationEligible(w, selection.contentRatingFilter)
     && !isHiddenWallpaper(w.id, selection.hiddenIds);
   liveLog("rotation-commit", "wid=" + prep.id + " from=" + prep.fromId + " kind=" + (prep.kind || "-")
     + " valid=" + valid + " " + liveStateBrief());
@@ -3423,7 +3428,7 @@ function onToggleRotation() {
 // 「下一张」（快捷面板）：轮播开着按活动列表推进、关着按可播放网格推进；
 // 锚点是【实际显示】的那张（与轮换同一锚点判定，避免 A→B→A 乒乓）。
 function onNextWallpaper() {
-  const list = selection.rotationEnabled ? rotationCandidates() : playableInventory();
+  const list = selection.rotationEnabled ? rotationCandidates() : rotationPoolAll();
   if (list.length < 2) return;
   const anchor = rotationAnchorWallpaper();
   const anchorId = anchor ? anchor.id : selection.id;

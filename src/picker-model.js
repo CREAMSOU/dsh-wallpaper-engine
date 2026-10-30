@@ -132,6 +132,14 @@ function keepPlayingWallpaper(w, ratingFilter) {
   return Boolean(w) && isPlayableType(w) && matchesRatingFilter(w, ratingFilter);
 }
 
+// 轮播成员 / 「下一张」的入选判据（用户口径 2026-10-30）：只认「内容安全 ∧ 可播放」，
+// **不认列表的类型档** —— 类型档只筛选择器网格的显示（issue #294：切类型档不得改变
+// 轮播成员，也不得改变「下一张」的池）。与 keepPlayingWallpaper 共用同一份判定，
+// 免得轮播候选与播放闸门各长一个真源。
+function isRotationEligible(w, ratingFilter) {
+  return keepPlayingWallpaper(w, ratingFilter);
+}
+
 function isHiddenWallpaper(id, hiddenIds) {
   return Boolean(id) && hiddenIds.includes(id);
 }
@@ -204,6 +212,7 @@ export {
   isPlayableType,
   isRotatableWallpaper,
   keepPlayingWallpaper,
+  isRotationEligible,
   isHiddenWallpaper,
   PICKER_PAGE_SIZE,
   pageSlice,
