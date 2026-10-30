@@ -117,26 +117,201 @@ ensureGlassCss();
 let glassRowDisabled = false;
 let glassRowProbeBusy = false;
 
+/**
+ * 行开关不会重载页面：右栏的模糊由 `[data-we-surface-plate]` 的 backdrop-filter 承载，
+ * 删除 / 回注样式表后 Chromium 可能沿用旧的滤镜纹理（右栏大面最明显，表现为一层
+ * “损坏滤镜”，整页刷新才恢复）。这里对**插件自己的装饰叶**做两帧合成微推（与主包
+ * nudgeWallpaperRepaint 同一手法）：will-change + translateZ 只维持两帧，最终样式不变。
+ *
+ * ⚠️ 绝不能把宿主右栏面板写进这个集合：`weSurfaceGeometry()` 从 target 自身开始检查
+ * 静态 transform / will-change，哪怕两帧的 `translateZ(0)` 也会把 safeRoot 判死；
+ * 更糟的是旧实现每次调用都重新捕获“原值”，多个补同步定时点重叠时会把上一步的
+ * 临时 `translateZ(0)` 当成原值恢复，永久留下内联 transform ⇒ 关插件→开右栏→
+ * 开插件后右栏退回 `--we-panel-color` 纯色，切走再切回仍纯色，只有整页刷新才恢复。
+ * 这里推 `[data-sidebar-right-panel][data-sidebar-right-open]`（宿主可见载体）与
+ * `[data-we-surface-plate]` / `[data-we-surface-root]`（本插件装饰叶），但宿主载体
+ * 只在**合成微推的两帧内**带 `data-we-nudge` 标记；`weSurfaceGeometry()` 只对
+ * “target 自身 + data-we-nudge”豁免静态 transform / will-change，其余祖先一律照旧。
+ * 这样既保留修“损坏滤镜”所需的合成层重建，又不会让微推把 safeRoot 判死。
+ * 单例会话合并重叠调用：原值只捕获一次，最后一次清理统一恢复。
+ */
+let glassNudgeSession = null;
+let glassRightNudgePending = false;
+let glassRightNudgeWatch = null;
+let glassRightNudgeWatchTimer = 0;
+
+/**
+ * 行开关发生在右栏**关闭**状态时，启用瞬间没有可微推的宿主面板；等用户稍后打开右栏，
+ * 如果不补一次合成层重建，仍可能看到旧滤镜纹理（“关闭又开启、未刷新”的偏色形态）。
+ * 这里用短命 MutationObserver 等第一次可见 open 面板，补一次微推后立刻自拆；3s 探测
+ * 再兜一层底，避免观察器被隐藏页/长会话拖住。
+ */
+function nudgePendingRightPanel() {
+  if (!glassRightNudgePending || glassRowDisabled) return false;
+  try {
+    if (!document.querySelector('[data-sidebar-right-panel][data-sidebar-right-open]')) return false;
+    glassRightNudgePending = false;
+    stopPendingRightNudgeWatch();
+    nudgeGlassPlateLayers();
+    return true;
+  } catch { return false; }
+}
+
+function stopPendingRightNudgeWatch() {
+  try { if (glassRightNudgeWatch) glassRightNudgeWatch.disconnect(); } catch { /* ignore */ }
+  glassRightNudgeWatch = null;
+  if (glassRightNudgeWatchTimer) { clearTimeout(glassRightNudgeWatchTimer); glassRightNudgeWatchTimer = 0; }
+}
+
+function watchPendingRightPanel() {
+  if (!glassRightNudgePending || glassRightNudgeWatch || typeof MutationObserver === 'undefined') return;
+  if (nudgePendingRightPanel()) return;
+  try {
+    glassRightNudgeWatch = new MutationObserver(() => { nudgePendingRightPanel(); });
+    glassRightNudgeWatch.observe(document.documentElement, {
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['data-sidebar-right-open', 'hidden'],
+    });
+    // 兜底：15s 后拆观察器；之后若才开右栏，由 3s 探测的 nudgePendingRightPanel 兜。
+    glassRightNudgeWatchTimer = setTimeout(() => {
+      glassRightNudgeWatchTimer = 0;
+      if (glassRightNudgePending) stopPendingRightNudgeWatch();
+    }, 15000);
+  } catch { /* 没有 MutationObserver 时交给探测路径 */ }
+}
+
+/** 上一轮微推的清理若因页面隐藏 / 帧调度丢失，先按“我们自己的临时形态”还原，绝不把它
+ *  当成宿主原值保存下来（否则宿主面板会永久停留在合成层，玻璃纹理可能持续发花）。 */
+function clearStaleGlassNudge() {
+  try {
+    for (const el of document.querySelectorAll('[data-we-nudge]')) {
+      el.removeAttribute('data-we-nudge');
+      if (el.style.transform === 'translateZ(0)' && el.style.willChange === 'transform') {
+        el.style.removeProperty('transform');
+        el.style.removeProperty('will-change');
+      }
+    }
+  } catch { /* ignore */ }
+}
+
+function nudgeGlassPlateLayers() {
+  try {
+    if (typeof document === 'undefined' || !document) return;
+    // 先把旧实例/旧轮次留下的孤儿装饰根收掉，避免一次微推把 9 层 plate 一起推成
+    // “饱和度/对比度爆表”；prune 是幂等的。
+    if (typeof pruneGlassSurfaces === 'function') pruneGlassSurfaces();
+    const nodes = document.querySelectorAll(
+      '[data-sidebar-right-panel][data-sidebar-right-open], [data-we-surface-plate], [data-we-surface-root]');
+    if (!nodes.length) return;
+    if (glassNudgeSession === null) {
+      clearStaleGlassNudge();
+      glassNudgeSession = { before: new Map(), token: 0 };
+    }
+    const session = glassNudgeSession;
+    for (const el of nodes) {
+      if (!session.before.has(el)) {
+        session.before.set(el, {
+          transform: el.style.transform,
+          willChange: el.style.willChange,
+          nudge: el.hasAttribute('data-we-nudge'),
+        });
+      }
+      el.setAttribute('data-we-nudge', 'on');
+      el.style.setProperty('will-change', 'transform');
+      el.style.setProperty('transform', 'translateZ(0)');
+    }
+    try { void document.body.getBoundingClientRect(); } catch { /* ignore */ }
+    const token = ++session.token;
+    let fallback = 0;
+    const clear = () => {
+      if (glassNudgeSession !== session || session.token !== token) return;
+      if (fallback) clearTimeout(fallback);
+      glassNudgeSession = null;
+      for (const [el, prev] of session.before) {
+        try {
+          if (prev.willChange) el.style.setProperty('will-change', prev.willChange);
+          else el.style.removeProperty('will-change');
+          if (prev.transform) el.style.setProperty('transform', prev.transform);
+          else el.style.removeProperty('transform');
+          if (!prev.nudge) el.removeAttribute('data-we-nudge');
+        } catch { /* ignore */ }
+      }
+    };
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => requestAnimationFrame(clear));
+    // 双 rAF 在标签页隐藏/节流时可能迟迟不跑；兜底超时保证合成提示不会常驻。
+    fallback = setTimeout(clear, 160);
+  } catch { /* 合成微推失败不影响开关本身 */ }
+}
+
+let glassSurfaceResyncToken = 0;
+
+/**
+ * 行开关不重载页面：右栏可能在停用期间被打开/重排，回注样式时表面管理器量到的
+ * 面板集合/几何可能还停在原生布局。启用后按几个时间点再对齐表面（幂等），
+ * 保证“关插件→开右栏→开插件”这类顺序也能把右栏认领回玻璃面。
+ */
+function resyncGlassSurfacesAfterRowToggle() {
+  const token = ++glassSurfaceResyncToken;
+  for (const ms of [0, 120, 320, 700]) {
+    setTimeout(() => {
+      if (token !== glassSurfaceResyncToken || glassRowDisabled) return;
+      try {
+        if (typeof syncGlassSurfaces === 'function') syncGlassSurfaces(selection);
+        nudgeGlassPlateLayers();
+        nudgePendingRightPanel();
+      } catch { /* 下一时间点/下一轮探测重试 */ }
+    }, ms);
+  }
+}
+
 function applyGlassRowState(disabled) {
   if (disabled === glassRowDisabled) return;
-  glassRowDisabled = disabled;
+  // ⚠️ 不要提前写状态：一旦 apply/dispose 中途抛错（宿主右栏正在重排、表面管理器
+  // 拿不到几何等），下面的 catch 会把错误吞掉；提前写状态会让后续 3s 探测直接
+  // early-return、永不重试 —— 表现就是“开关后右栏一层坏滤镜，刷新才恢复”。
+  // 成功走完再提交状态，失败保持原状态，下一轮探测会重新执行整段。
   try {
     if (disabled) {
       // 撤样式表 + 跑行为层的 dispose（门控属性 / --we-* 变量 / 额外补雾化标签成对收走）
       // ⇒ 宿主立即回到原生外观；sync 在停用期间是空操作，不会再写任何东西。
+      glassRightNudgePending = false;
+      stopPendingRightNudgeWatch();
       const tag = document.querySelector('style[data-plugin-css="dsh-wallpaper-engine/glass"]');
+      glassSurfaceResyncToken += 1;
       if (tag) tag.remove();
       disposeGlassLayer();
+      try { if (typeof disposeGlassSurfaces === 'function') disposeGlassSurfaces(); } catch { /* 已由 disposeGlassLayer 兜底 */ }
+      nudgeGlassPlateLayers();
+      if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => {
+        if (glassRowDisabled) nudgeGlassPlateLayers();
+      });
     } else {
+      // 行开关不重载页面：启用前强制丢弃上一轮表面状态（可能残留旧装饰根/标记，
+      // 或右栏是在停用期间才挂载的），再从干净状态重建一次。
+      try { if (typeof disposeGlassSurfaces === 'function') disposeGlassSurfaces(); } catch { /* ignore */ }
       ensureGlassCss();
       applyGlassLayer();
+      glassRightNudgePending = true;
+      nudgeGlassPlateLayers();
+      nudgePendingRightPanel();
+      watchPendingRightPanel();
+      resyncGlassSurfacesAfterRowToggle();
+      if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => {
+        if (glassRowDisabled) return;
+        try { applyGlassLayer(); nudgeGlassPlateLayers(); nudgePendingRightPanel(); } catch { /* 下一轮探测仍会重试 */ }
+      });
     }
-  } catch { /* 状态切换失败不抛出轮询外层：下一轮探测会再对时。 */ }
+    glassRowDisabled = disabled;
+  } catch { /* 状态切换失败不抛出轮询外层：状态未提交，下一轮探测会重跑。 */ }
 }
 
 async function probeGlassRowState() {
   if (glassRowProbeBusy || typeof document === 'undefined') return;
   if (document.visibilityState === 'hidden') return; // 页面不可见时暂停轮询
+  // 每轮探测都 prune 一次：HMR / 行重挂后的旧模块实例可能绕过本实例的清理路径，
+  // 只留下自己的装饰根；多层同几何 plate 的 backdrop-filter 会叠加成偏色。
+  try { if (typeof pruneGlassSurfaces === 'function') pruneGlassSurfaces(); } catch { /* 下一轮重试 */ }
   glassRowProbeBusy = true;
   try {
     const res = await fetch(apiUrl('/glass-row-state'), { cache: 'no-store', signal: AbortSignal.timeout(2500) });
@@ -144,6 +319,21 @@ async function probeGlassRowState() {
       let enabled = true;
       try { enabled = (await res.json()).enabled === true; } catch { /* 应答体异常按启用处理 */ }
       applyGlassRowState(!enabled);
+      // 行开关不重载页面：若右栏是在停用期间才打开的，表面管理器可能还没收到
+      // 对应 mutation（或首个几何不成立）。每轮探测对“可见但未认领”的右栏补一次
+      // 对齐，避免用户必须刷新页面才能看到玻璃。
+      if (!glassRowDisabled) {
+        try {
+          const right = document.querySelector('[data-sidebar-right-panel][data-sidebar-right-open]');
+          // marker 在但装饰根/plate 不在 ⇒ 别的实例把根 prune 掉了，必须重新 sync
+          // 让当前实例重建（refresh 会作废指向断开节点的 plate）。
+          const missingLayers = !document.querySelector('[data-we-surface-root]')
+            || !document.querySelector('[data-we-surface-plate="right-sidebar"]');
+          if (right && (!right.hasAttribute('data-we-surface-runtime') || missingLayers)
+              && typeof syncGlassSurfaces === 'function') syncGlassSurfaces(selection);
+          nudgePendingRightPanel();
+        } catch { /* 下一轮探测重试 */ }
+      }
     } else if (res.status === 404) {
       applyGlassRowState(true); // 路由消失 = 行停用（宿主 prune 了本行 fiber）
     }
@@ -153,6 +343,19 @@ async function probeGlassRowState() {
 }
 probeGlassRowState();
 setInterval(probeGlassRowState, 3000);
+// 整包「关闭 → 再开启」时宿主可能直接重新求值本 bundle（不一定走 applyGlassRowState
+// 的 disabled→enabled 分支）；首帧补一次与行开关同款的合成层重建，覆盖这条路径。
+if (typeof requestAnimationFrame === 'function') {
+  requestAnimationFrame(() => {
+    if (glassRowDisabled || typeof document === 'undefined') return;
+    try {
+      glassRightNudgePending = true;
+      nudgeGlassPlateLayers();
+      nudgePendingRightPanel();
+      watchPendingRightPanel();
+    } catch { /* ignore */ }
+  });
+}
 if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') probeGlassRowState();

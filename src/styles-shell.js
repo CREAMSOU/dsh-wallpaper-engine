@@ -28,10 +28,11 @@ const CSS_SHELL = `
      让两种模式观感一致；壳层关闭壁纸时原生不透明底照旧。
      门控到 [data-we-adapter^="desktop-"]：壳层属性 + 适配目标两腿都成立才画，
      浏览器形态即使页面带着同名属性也不吃这条。 */
-  /* ADR-0016 第四刀勘误：这条让位也改挂 data-we-glass-page——停玻璃行时左栏回原生实色
-     （否则原生左栏被清成透明洞）。 */
-  body[data-we-adapter^="desktop-"][data-we-wallpaper][data-we-glass-page][data-dsh-desktop-mode="extended"] .dshDesktopSidebarSurface,
-  body[data-we-adapter^="desktop-"][data-we-wallpaper][data-we-glass-page][data-dsh-desktop-mode="advanced"] .dshDesktopSidebarSurface {
+  /* 产品口径（2026-10-29 修订）：左栏让位只挂壁纸门——插件/玻璃行关闭时左栏主体保持透明；
+     玻璃行开启且左栏玻璃开关关闭时同样是透明洞，打开才由玻璃配方接管。
+     门控到 [data-we-adapter^="desktop-"]：壳层属性 + 适配目标两腿都成立才画。 */
+  body[data-we-adapter^="desktop-"][data-we-wallpaper][data-dsh-desktop-mode="extended"] .dshDesktopSidebarSurface,
+  body[data-we-adapter^="desktop-"][data-we-wallpaper][data-dsh-desktop-mode="advanced"] .dshDesktopSidebarSurface {
     /* !important 必需：宿主的模式门控规则在层叠里赢过本表的非 important 声明
        （实测 var 被压回 #232324），important 才能让 fill 变量真正翻转。 */
     --dsw-specific-sidebar-fill: transparent !important;

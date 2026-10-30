@@ -287,19 +287,19 @@ assert.ok(wallpaperBlock && wallpaperBlock.includes('--dsw-alias-bg-base: transp
 // 宿主把合成后的令牌以**内联样式**写在 <body> 上。普通作者声明输给内联声明 ⇒ 页面基色 /
 // 侧栏填充保持不透明，壁纸层被盖死（现场：DS Bot 模式下壁纸完全不可见）。作者
 // !important 声明按层叠规则压过内联普通声明 ⇒ 壁纸在场期间这些令牌归本插件。
-// ADR-0016 第四刀把「基色」与「侧栏填充」拆到两个门（壁纸门 / 壁纸+玻璃门，浅深各一），
-// 因此 !important 必须四块都在；只压壁纸门两块 ⇒ 玻璃门里那块仍输给内联值。
+// 侧栏填充只挂壁纸门（产品口径 2026-10-29 修订：插件/玻璃行关闭时侧栏主体透明），
+// 浅深两块各写一次；!important 仍必须保留以压过宿主的内联主题令牌。
 const bgLetThrough = (block) => /--dsw-alias-bg-base:\s*transparent\s*!important/.test(block || '');
 const fillLetThrough = (block) => /--dsw-specific-sidebar-fill:\s*transparent\s*!important/.test(block || '');
 const darkWallpaperBlock = blockBodyOf('body[data-ds-dark-theme][data-we-wallpaper] {');
-const lightFillBlock = blockBodyOf('body[data-we-wallpaper][data-we-glass-page] {');
-const darkFillBlock = blockBodyOf('body[data-ds-dark-theme][data-we-wallpaper][data-we-glass-page] {');
 assert.ok(bgLetThrough(wallpaperBlock) && bgLetThrough(darkWallpaperBlock),
   'both wallpaper let-through blocks must beat inline token overrides (DS Bot Bot mode writes theme tokens inline on <body>)');
-assert.ok(fillLetThrough(lightFillBlock) && fillLetThrough(darkFillBlock),
-  'both glass-gated sidebar-fill blocks must beat inline token overrides too');
+assert.ok(fillLetThrough(wallpaperBlock) && fillLetThrough(darkWallpaperBlock),
+  'sidebar-fill must be let through by the wallpaper gate alone (works with the glass row off)');
+assert.ok(!code.includes('body[data-we-wallpaper][data-we-glass-page] {'),
+  'sidebar-fill must not be re-gated on the glass row (plugin off must stay transparent)');
 assert.ok(!bgLetThrough(wallpaperBlock.replaceAll('!important', ''))
-  && !fillLetThrough(lightFillBlock.replaceAll('!important', '')),
+  && !fillLetThrough(wallpaperBlock.replaceAll('!important', '')),
   'negative control: the inline-override assertion must fail when !important is stripped');
 assert.ok(/setAttribute\("data-we-glass-page", "on"\)/.test(writeFace)
   && /removeAttribute\("data-we-glass-page"\)/.test(writeFace),

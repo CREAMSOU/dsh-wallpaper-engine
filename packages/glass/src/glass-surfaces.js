@@ -30,6 +30,9 @@ function weResolveSurface(id, selection, facts) {
 
 let weSurfaceRuntime = null;
 const WE_SURFACE_MARKER = "data-we-surface-runtime";
+// 不随模块实例重置的页面级登记：HMR / 行重挂后的新实例靠它找到并拆掉旧实例
+// 的观察者与装饰根，避免同一 target 被多份 backdrop-filter 同时认领。
+const WE_SURFACE_RUNTIME_KEY = "__dshWallpaperGlassSurfaceRuntime";
 
 function weSurfaceOwnNode(node) {
   const el = node && (node.nodeType === 1 ? node : node.parentElement);
@@ -58,6 +61,10 @@ function weSurfaceUnmark(record) {
 function weSurfaceGeometry(target, id, owned) {
   const win = target.ownerDocument.defaultView;
   const style = win.getComputedStyle(target), rect = target.getBoundingClientRect();
+  // 合成微推（client.js nudgeGlassPlateLayers）会在宿主右栏面板上做两帧
+  // translateZ(0)/will-change；这两帧内只对 target 自身豁免，否则 safeRoot 被自家
+  // 微推判死，行切换后右栏退回纯色。data-we-nudge 由微推会话成对写入/摘除，不常驻。
+  const nudged = typeof target.hasAttribute === "function" && target.hasAttribute("data-we-nudge");
   const visible = target.isConnected && rect.width > 0 && rect.height > 0
     && style.display !== "none" && style.visibility === "visible" && Number(style.opacity) > 0;
   const nativeBlur = [style.backdropFilter, style.webkitBackdropFilter].some(v => v && v !== "none");
@@ -107,10 +114,11 @@ function weSurfaceGeometry(target, id, owned) {
         || (a.effect && typeof a.effect.getKeyframes === "function"
             && a.effect.getKeyframes().some((k) => k.transform !== undefined));
     });
-    if (Number(cs.opacity) < 1 || (cs.transform !== "none" && !transformMotion) || cs.perspective !== "none"
+    const ownNudge = nudged && el === target;
+    if (Number(cs.opacity) < 1 || (cs.transform !== "none" && !transformMotion && !ownNudge) || cs.perspective !== "none"
       || cs.filter !== "none" || (cs.backdropFilter && cs.backdropFilter !== "none")
       || cs.isolation === "isolate" || cs.mixBlendMode !== "normal" || cs.contain !== "none"
-      || /transform|filter|opacity|perspective|contain/.test(cs.willChange)
+      || (!ownNudge && /transform|filter|opacity|perspective|contain/.test(cs.willChange))
       // 根平移（哈气/抖动）同时作用于宿主与装饰叶，weSurfaceRefresh 会换算到叶本地坐标，
       // 因此根自身不算"静态 transform"；其余元素上的静态 transform 仍一律不安全。
       || [el === root ? "none" : cs.translate, cs.rotate, cs.scale].some(v => v && v !== "none")
@@ -154,11 +162,16 @@ function weSurfaceCandidates(state) {
   //    所以 DOM 里常年有多份 [data-sidebar-right-panel]，但**真正参与布局的只有当前会话那份**。
   //    旧判据数的是 NodeList 长度 ⇒ 用户只要开过第二个会话的右栏，接管资格就永远为假，
   //    右侧栏整块退回原生不透明底（"我的右侧侧边栏玻璃效果被改没了"）。
-  //    判据改成"**在布局里的**面板恰好一份"：hidden 子树里的兄弟面板不参与竞争。
+  //    判据改成"在布局里的面板中，**展开的**恰好一份"：hidden 子树的兄弟不参与，
+  //    可见但未展开的其他面板（fullscreen/push 或旧会话残留）也不否定当前展开的那份。
   const rightLive = [...right].filter((panel) => !panel.closest("[hidden]") && panel.getClientRects().length > 0);
+  // 宿主可能同时保留**不止一份在布局里的**面板（未隐藏的旧会话 / fullscreen 与 push 并存），
+  // 但真正展开的只有一份：判据看「open 的面板恰好一份」，不要被另一份可见但收起的面板否掉
+  // （旧写法数 rightLive.length===1 会整块退回原生纯色）。
+  const rightOpen = rightLive.filter((panel) => panel.hasAttribute("data-sidebar-right-open"));
   for (const target of right) {
-    const sole = rightLive.length === 1 && rightLive[0] === target;
-    add(target, "right-sidebar", sole && state.selection.sidebarGlass === true && target.hasAttribute("data-sidebar-right-open"));
+    const sole = rightOpen.length === 1 && rightOpen[0] === target;
+    add(target, "right-sidebar", sole && state.selection.sidebarGlass === true);
   }
   for (const target of doc.querySelectorAll('[role="dialog"]:has([data-slot="settings.section"])'))
     add(target, "settings-window", doc.body.hasAttribute("data-we-glass-window"));
@@ -215,6 +228,12 @@ function weSurfaceModalState(state) {
 function weSurfaceRefresh(state) {
   if (state !== weSurfaceRuntime || state.doc.hidden) return;
   if (!state.doc.body.hasAttribute("data-we-glass-page")) { disposeGlassSurfaces(); return; }
+  // 装饰根可能被另一份模块实例的 prune/清理摘掉；记录表里的 plate 还会指向断开的
+  // 旧节点，必须把 root+plate 一起作废，下面才会重建（marker 保留即可重新挂）。
+  if (state.root && !state.root.isConnected) {
+    state.root = null;
+    for (const record of state.records.values()) record.plate = null;
+  }
   weSurfaceModalState(state);
   const entries = weSurfaceCandidates(state), win = state.win;
   for (const [target, record] of state.records) {
@@ -297,6 +316,36 @@ function weSurfaceRefresh(state) {
   } else {
     state.followFrames = 0;
   }
+  // 每次 refresh 都收口：旧实例/旧轮次留下的根与 plate 一律只留当前 state.root
+  // 那一份。多层同几何 plate 的 backdrop-filter 会叠加 saturate/brightness/contrast，
+  // 观感就是“右栏对应位置壁纸对比度/饱和度异常”。
+  pruneGlassSurfaces();
+}
+
+/** 只保留当前 state.root 及其 plate；顺手清掉上一版微推泄漏的、没有 data-we-nudge
+ *  归属的 translateZ(0)+will-change 内联样式（否则 safeRoot 会被永远判死）。 */
+function pruneGlassSurfaces() {
+  if (typeof document === "undefined" || !document.body) return;
+  // keep 必须取**页面级登记**里的 owner：HMR/行重挂后的旧实例也被调用方（探测/微推）
+  // 调进 prune，它的模块变量 weSurfaceRuntime 可能是 null；若按模块变量算 keep，
+  // 旧实例会把当前实例的装饰根当孤儿删掉，留下“有 marker 但没有 plate”的纯色右栏。
+  const shared = document[WE_SURFACE_RUNTIME_KEY];
+  const owner = shared && shared.doc === document ? shared : weSurfaceRuntime;
+  const keep = owner && owner.root && owner.root.isConnected ? owner.root : null;
+  for (const node of document.querySelectorAll("[data-we-surface-root]")) {
+    if (node !== keep) node.remove();
+  }
+  for (const plate of document.querySelectorAll("[data-we-surface-plate]")) {
+    if (keep === null || !keep.contains(plate)) plate.remove();
+  }
+  for (const el of document.querySelectorAll("[data-sidebar-right-panel]")) {
+    if (el.hasAttribute("data-we-nudge")) continue;
+    const style = el.style;
+    if (/^translateZ\(0(?:px)?\)$/i.test(style.transform) && style.willChange === "transform") {
+      style.removeProperty("transform");
+      style.removeProperty("will-change");
+    }
+  }
 }
 
 function syncGlassSurfaces(selection) {
@@ -305,20 +354,42 @@ function syncGlassSurfaces(selection) {
   // 缺少可验证的几何能力就保留原生，不走定时轮询。
   if (!win.ResizeObserver || !win.MutationObserver || !win.requestAnimationFrame) return;
   if (!document.body.hasAttribute("data-we-glass-page")) { disposeGlassSurfaces(); return; }
+  pruneGlassSurfaces();
+  // 同一页面可能因为 HMR / 行重挂而出现**多份本模块实例**：每份都有自己的
+  // weSurfaceRuntime。仅靠模块内变量清不掉其他实例的根，backdrop-filter 会一层层
+  // 叠加（实测 9 个同几何右栏 plate ⇒ 饱和度/对比度爆表）。共享 document 上的
+  // 运行时登记 + 每轮 prune 是跨实例的唯一收口。
+  const shared = document[WE_SURFACE_RUNTIME_KEY];
+  if (shared !== undefined && shared !== weSurfaceRuntime) {
+    if (shared && shared.doc === document) {
+      try { disposeSurfaceState(shared); } catch { /* 下一轮 prune 兜底 */ }
+    } else {
+      try { delete document[WE_SURFACE_RUNTIME_KEY]; } catch { /* ignore */ }
+    }
+  }
   let state = weSurfaceRuntime;
   if (state && state.doc !== document) { disposeGlassSurfaces(); state = null; }
   if (!state) {
+    // 行级开关不会重载页面：上个实例/上一轮状态若留下装饰根或运行标记，先清掉，
+    // 否则新一轮会叠出第二层 backdrop-filter 底板（右栏最明显，刷新才恢复）。
+    for (const node of document.querySelectorAll('[data-we-surface-root]')) node.remove();
+    for (const node of document.querySelectorAll('[data-we-surface-runtime]')) node.removeAttribute('data-we-surface-runtime');
+    for (const node of document.querySelectorAll('[data-we-layout-runtime]')) node.removeAttribute('data-we-layout-runtime');
     state = { doc: document, win, selection, selectors: [], records: new Map(), observed: new Set(), root: null, frame: null, moving: false, followFrames: 0, listeners: [] };
     weSurfaceRuntime = state;
+    try { document[WE_SURFACE_RUNTIME_KEY] = state; } catch { /* ignore */ }
     state.schedule = () => {
       if (state !== weSurfaceRuntime || state.doc.hidden || state.frame !== null) return;
       state.frame = win.requestAnimationFrame(() => { state.frame = null; weSurfaceRefresh(state); });
     };
     state.resize = new win.ResizeObserver(state.schedule);
     state.mutations = new win.MutationObserver(changes => {
-      const selectors = ['div:has(> [data-slot="sidebar"])', '[data-sidebar-right-panel]', '[data-we-surface]', '[data-we-surface-layout]', '[data-slot="settings.section"]', '[role="dialog"]', '[aria-modal]', 'dialog', '[role="alertdialog"]', '.cm-editor', '.xterm', ...state.selectors].join(",");
-      const relevant = node => node && node.nodeType === 1 && !weSurfaceOwnNode(node)
-        && (node.matches(selectors) || node.querySelector(selectors));
+      const selectors = ['div:has(> [data-slot="sidebar"])', '[data-sidebar-right-panel]', '[data-we-surface]', '[data-we-surface-layout]', '[data-we-surface-root]', '[data-slot="settings.section"]', '[role="dialog"]', '[aria-modal]', 'dialog', '[role="alertdialog"]', '.cm-editor', '.xterm', ...state.selectors].join(",");
+      // 装饰根即使是本插件节点也要能触发刷新：另一份模块实例刚插进来的孤儿根
+      // 必须被 prune 掉，否则多层 backdrop-filter 会叠加成“滤镜爆表”。
+      const relevant = node => node && node.nodeType === 1
+        && (node.matches('[data-we-surface-root]') || (!weSurfaceOwnNode(node)
+          && (node.matches(selectors) || node.querySelector(selectors))));
       for (const change of changes) {
         if (weSurfaceOwnNode(change.target)) continue;
         if (change.type === "childList") {
@@ -358,14 +429,35 @@ function syncGlassSurfaces(selection) {
 
 function disposeGlassSurfaces() {
   const state = weSurfaceRuntime;
+  if (state) {
+    weSurfaceRuntime = null;
+    disposeSurfaceState(state);
+  }
+  // state 缺失也要兜底扫一遍：HMR/行重挂可能留下另一份实例的根与标记，
+  // 不扫掉就会在下次启用时叠成多层滤镜。
+  if (typeof document !== "undefined" && document.body) {
+    for (const node of document.querySelectorAll("[data-we-surface-root]")) node.remove();
+    for (const node of document.querySelectorAll(`[${WE_SURFACE_MARKER}]`)) node.removeAttribute(WE_SURFACE_MARKER);
+    for (const node of document.querySelectorAll("[data-we-layout-runtime]")) node.removeAttribute("data-we-layout-runtime");
+    try { delete document[WE_SURFACE_RUNTIME_KEY]; } catch { /* ignore */ }
+  }
+}
+
+function disposeSurfaceState(state) {
   if (!state) return;
-  weSurfaceRuntime = null;
-  if (state.frame !== null) state.win.cancelAnimationFrame(state.frame);
-  state.mutations.disconnect(); state.resize.disconnect();
+  try { if (state.doc[WE_SURFACE_RUNTIME_KEY] === state) delete state.doc[WE_SURFACE_RUNTIME_KEY]; } catch { /* ignore */ }
+  if (state.frame !== null && state.win) state.win.cancelAnimationFrame(state.frame);
+  try { state.mutations.disconnect(); } catch { /* ignore */ }
+  try { state.resize.disconnect(); } catch { /* ignore */ }
   if (state.modalOwned) state.doc.body.removeAttribute("data-we-modal-blocked");
   for (const stop of state.listeners) stop();
   for (const record of state.records.values()) weSurfaceUnmark(record);
   if (state.root) state.root.remove();
+  // 兜底：记录表与 DOM 万一不同步（行级开关不重载页面，旧实例可能先被清空状态），
+  // 仍要把运行标记与装饰根全部摘掉；否则回注样式后会多出一层旧滤镜。
+  for (const node of state.doc.querySelectorAll('[data-we-surface-root]')) node.remove();
+  for (const node of state.doc.querySelectorAll(`[${WE_SURFACE_MARKER}]`)) node.removeAttribute(WE_SURFACE_MARKER);
+  for (const node of state.doc.querySelectorAll('[data-we-layout-runtime]')) node.removeAttribute('data-we-layout-runtime');
   state.records.clear(); state.observed.clear();
 }
 
@@ -374,4 +466,4 @@ function weGlassSurfaceStatus() {
   return weSurfaceRuntime ? [...weSurfaceRuntime.records.values()].map(({ id, mode, reason }) => ({ id, mode, reason })) : [];
 }
 
-export { weResolveSurface, syncGlassSurfaces, disposeGlassSurfaces, weGlassSurfaceStatus };
+export { weResolveSurface, syncGlassSurfaces, disposeGlassSurfaces, pruneGlassSurfaces, weGlassSurfaceStatus };

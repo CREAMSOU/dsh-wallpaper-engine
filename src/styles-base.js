@@ -183,8 +183,8 @@ const CSS_BASE = `
      all columns share the same wallpaper+scrim background. 页面基色让位**只属于壁纸**：
      壁纸层挂在 body 的 z-index:-1 上，页面基色必须让开才看得见；无壁纸时保持宿主原色。
      ⚠️ 侧栏填充的让位**只属于玻璃**（ADR-0016 第四刀勘误）：玻璃的侧栏配方随玻璃行走后，
-     若让位仍无跟随，停玻璃行 ⇒ 侧栏失去配方又失去原生填充 = 全透明洞。改挂 data-we-glass-page
-     （玻璃行启用即挂）⇒ 玻璃开 = 现状逐字节；玻璃停 = 侧栏回宿主原生实色，壁纸只在对话区透出。
+     产品口径（2026-10-29 修订）：侧栏填充只挂壁纸门——插件/玻璃行关闭时侧栏主体透明，
+     壁纸从侧栏透出；玻璃行开启且左栏玻璃开关关闭时同样是透明洞，打开才由玻璃配方接管。
      ⚠️ !important 是**跨插件契约**，不是防御性写法：DSH 的主题 API 允许插件用
      ctx.theme.overrideTokens 给宿主上色，而宿主把合成后的令牌以**内联样式**写在
      <body> 上（DS Bot 的 Bot 模式就是这么做的）。内联声明在普通作者声明里压过一切，
@@ -192,18 +192,14 @@ const CSS_BASE = `
      （现场症状：DS Bot 模式下壁纸完全不可见）。作者 !important 声明按层叠规则压过
      内联普通声明，因此壁纸在场期间页面背景令牌归本插件；壁纸退场后这些块不匹配，
      内联值原样生效 —— 单向接管，不读不写对方任何状态。
-     ⚠️ 门拆分后**四块各管一枚令牌**（基色挂壁纸门、侧栏填充挂玻璃门，浅深各一），
-     !important 必须四块都写：只补壁纸门那两块 ⇒ 玻璃门里那两块仍输给内联值。 */
+     ⚠️ 基色与侧栏填充都只挂壁纸门（浅深各一）；侧栏填充不再要求玻璃行开启。
+     !important 必须都写：只补基色 ⇒ 侧栏填充仍输给内联值。 */
   body[data-we-wallpaper] {
     --dsw-alias-bg-base: transparent !important;
-  }
-  body[data-we-wallpaper][data-we-glass-page] {
     --dsw-specific-sidebar-fill: transparent !important;
   }
   body[data-ds-dark-theme][data-we-wallpaper] {
     --dsw-alias-bg-base: transparent !important;
-  }
-  body[data-ds-dark-theme][data-we-wallpaper][data-we-glass-page] {
     --dsw-specific-sidebar-fill: transparent !important;
   }
 
