@@ -341,25 +341,44 @@ async function probeGlassRowState() {
   } catch { /* 探测失败保持现状：不许因为一次网络抖动翻转观感。 */ }
   finally { glassRowProbeBusy = false; }
 }
-probeGlassRowState();
-setInterval(probeGlassRowState, 3000);
-// 整包「关闭 → 再开启」时宿主可能直接重新求值本 bundle（不一定走 applyGlassRowState
-// 的 disabled→enabled 分支）；首帧补一次与行开关同款的合成层重建，覆盖这条路径。
-if (typeof requestAnimationFrame === 'function') {
-  requestAnimationFrame(() => {
-    if (glassRowDisabled || typeof document === 'undefined') return;
-    try {
-      glassRightNudgePending = true;
-      nudgeGlassPlateLayers();
-      nudgePendingRightPanel();
-      watchPendingRightPanel();
-    } catch { /* ignore */ }
-  });
-}
-if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') probeGlassRowState();
-  });
+/**
+ * 探测 / 轮询 / 首帧补建的安装点。**必须在三处跨包登记之后调用**（见文件末尾）。
+ * 整包「关闭 → 再开启」时宿主可能直接重新求值本 bundle；若先装轮询再登记，重求值会
+ * 先撞主包的面板节重复注册守卫（src/extension-registry.js:139，“同一份 bundle 求值两次”）
+ * 抛错，而多出来的 3s 探测与 visibilitychange 监听已经装上了 ⇒ 每重求值一次就多一路轮询。
+ * 先登记后安装：抛错发生在安装之前，页面按原样保留本实例，定时器/监听不重复；
+ * globalThis 哨兵再兜一层（万一两次求值都走完登记，也只保留一路）。
+ * 哨兵与既有惯例一致：挂在 globalThis 上、带 try/catch（见 src/live-layer-pointer.js 的
+ * __weFrameBytes、src/client.js 的 __weComponentVisible）。
+ */
+function startGlassRowPolling() {
+  try {
+    const g = typeof globalThis === 'object' && globalThis ? globalThis : null;
+    if (g) {
+      if (g.__weGlassRowPollingStarted) return;
+      g.__weGlassRowPollingStarted = true;
+    }
+  } catch { /* 取不到 globalThis 时退回普通安装 */ }
+  probeGlassRowState();
+  setInterval(probeGlassRowState, 3000);
+  // 整包「关闭 → 再开启」时宿主可能直接重新求值本 bundle（不一定走 applyGlassRowState
+  // 的 disabled→enabled 分支）；首帧补一次与行开关同款的合成层重建，覆盖这条路径。
+  if (typeof requestAnimationFrame === 'function') {
+    requestAnimationFrame(() => {
+      if (glassRowDisabled || typeof document === 'undefined') return;
+      try {
+        glassRightNudgePending = true;
+        nudgeGlassPlateLayers();
+        nudgePendingRightPanel();
+        watchPendingRightPanel();
+      } catch { /* ignore */ }
+    });
+  }
+  if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') probeGlassRowState();
+    });
+  }
 }
 
 registerPanelSection('appearance', 'glass', {
@@ -387,3 +406,10 @@ registerLayerHooks('glass', {
 // 送回主包槽位（缺席 = 空列表，缺的是状态不是页面）。迟到登记的兜底：本包同一次求值里的
 // registerLayerHooks 已触发注册表 listener ⇒ 主包 emit() 重画，状态自然补上。
 registerGlassStatus({ status: () => (glassRowDisabled ? [] : weGlassSurfaceStatus()) });
+
+/* ===== 行状态机安装点：三处跨包登记都成功之后才装探测/轮询 ===== */
+
+// 顺序即语义：本文件上面的 registerPanelSection / registerLayerHooks / registerGlassStatus
+// 在「同一份 bundle 被求值两次」时会由主包注册表抛错（src/extension-registry.js:139/:194）。
+// 抛错时旧实例仍继续服务（视觉最终一致），且这次求值没有装上任何定时器/监听 ⇒ 不泄漏。
+startGlassRowPolling();
