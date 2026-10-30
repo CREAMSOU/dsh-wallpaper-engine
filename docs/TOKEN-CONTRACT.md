@@ -65,8 +65,8 @@
 | `--dsw-alias-button-floating-fill` | 3 | 玻璃(3) | packages/glass/src/glass-css.js:163, packages/glass/src/glass-css.js:259, packages/glass/src/glass-css.js:725 |  |
 | `--dsw-alias-button-floating-hover` | 1 | 玻璃(1) | packages/glass/src/glass-css.js:726 |  |
 | `--dsw-alias-button-ghost-active-fill` | 2 | 玻璃(2) | packages/glass/src/glass-css.js:166, packages/glass/src/glass-css.js:262 |  |
-| `--dsw-alias-button-info-fill` | 1 | UI 配色(1) | src/styles-base.js:320 |  |
-| `--dsw-alias-button-info-hover` | 1 | UI 配色(1) | src/styles-base.js:321 |  |
+| `--dsw-alias-button-info-fill` | 1 | UI 配色(1) | src/styles-base.js:325 |  |
+| `--dsw-alias-button-info-hover` | 1 | UI 配色(1) | src/styles-base.js:326 |  |
 | `--dsw-alias-button-primary-dimmed` | 1 | 玻璃(1) | packages/glass/src/glass-css.js:1431 |  |
 | `--dsw-alias-button-primary-fill` | 1 | 玻璃(1) | packages/glass/src/glass-css.js:1429 |  |
 | `--dsw-alias-button-primary-hover` | 1 | 玻璃(1) | packages/glass/src/glass-css.js:1430 |  |
@@ -75,16 +75,16 @@
 | `--dsw-alias-interactive-bg-hover` | 6 | 玻璃(6) | packages/glass/src/glass-css.js:724, packages/glass/src/glass-css.js:962, packages/glass/src/glass-css.js:997, packages/glass/src/glass-css.js:1146, packages/glass/src/glass-css.js:1184, packages/glass/src/glass-css.js:1420 |  |
 | `--dsw-alias-interactive-bg-hover-accent` | 3 | 玻璃(3) | packages/glass/src/glass-css.js:963, packages/glass/src/glass-css.js:1147, packages/glass/src/glass-css.js:1421 |  |
 | `--dsw-alias-interactive-bg-hover-solid` | 2 | 玻璃(2) | packages/glass/src/glass-css.js:175, packages/glass/src/glass-css.js:271 |  |
-| `--dsw-alias-label-caption` | 1 | 玻璃(1) | src/styles-base.js:255 |  |
-| `--dsw-alias-label-deep-diving` | 2 | UI 配色(2) | src/styles-base.js:292, src/styles-base.js:307 |  |
-| `--dsw-alias-label-deep-diving-shimmer` | 2 | UI 配色(2) | src/styles-base.js:294, src/styles-base.js:308 |  |
-| `--dsw-alias-label-dimmed` | 1 | 玻璃(1) | src/styles-base.js:256 |  |
-| `--dsw-alias-label-primary` | 1 | 玻璃(1) | src/styles-base.js:251 | 正文灰阶（壁纸激活时压暗提对比） |
-| `--dsw-alias-label-primary-dimmed` | 1 | 玻璃(1) | src/styles-base.js:252 |  |
+| `--dsw-alias-label-caption` | 1 | 玻璃(1) | src/styles-base.js:260 |  |
+| `--dsw-alias-label-deep-diving` | 2 | UI 配色(2) | src/styles-base.js:297, src/styles-base.js:312 |  |
+| `--dsw-alias-label-deep-diving-shimmer` | 2 | UI 配色(2) | src/styles-base.js:299, src/styles-base.js:313 |  |
+| `--dsw-alias-label-dimmed` | 1 | 玻璃(1) | src/styles-base.js:261 |  |
+| `--dsw-alias-label-primary` | 1 | 玻璃(1) | src/styles-base.js:256 | 正文灰阶（壁纸激活时压暗提对比） |
+| `--dsw-alias-label-primary-dimmed` | 1 | 玻璃(1) | src/styles-base.js:257 |  |
 | `--dsw-alias-label-primary-foreground` | 1 | 玻璃(1) | packages/glass/src/glass-css.js:1438 |  |
-| `--dsw-alias-label-secondary` | 1 | 玻璃(1) | src/styles-base.js:253 | 次要文字灰阶 |
-| `--dsw-alias-label-tertiary` | 1 | 玻璃(1) | src/styles-base.js:254 |  |
-| `--dsw-alias-link` | 3 | UI 配色(3) | src/styles-base.js:291, src/styles-base.js:306, src/styles-base.js:326 |  |
+| `--dsw-alias-label-secondary` | 1 | 玻璃(1) | src/styles-base.js:258 | 次要文字灰阶 |
+| `--dsw-alias-label-tertiary` | 1 | 玻璃(1) | src/styles-base.js:259 |  |
+| `--dsw-alias-link` | 3 | UI 配色(3) | src/styles-base.js:296, src/styles-base.js:311, src/styles-base.js:331 |  |
 | `--dsw-alias-markdown-citation` | 4 | 玻璃(2) + 无门控(2) | packages/glass/src/glass-css.js:178, packages/glass/src/glass-css.js:274, packages/glass/src/glass-css.js:899, packages/glass/src/glass-css.js:913 |  |
 | `--dsw-alias-markdown-code-block` | 6 | 玻璃(4) + 无门控(2) | packages/glass/src/glass-css.js:196, packages/glass/src/glass-css.js:284, packages/glass/src/glass-css.js:759, packages/glass/src/glass-css.js:893, packages/glass/src/glass-css.js:907, packages/glass/src/glass-css.js:1535 | markdown 代码块底 |
 | `--dsw-alias-markdown-code-block-banner` | 6 | 玻璃(4) + 无门控(2) | packages/glass/src/glass-css.js:199, packages/glass/src/glass-css.js:287, packages/glass/src/glass-css.js:760, packages/glass/src/glass-css.js:894, packages/glass/src/glass-css.js:908, packages/glass/src/glass-css.js:1536 | markdown 代码条幅底 |
@@ -97,7 +97,7 @@
 | `--dsw-alias-scrollbar-bg-l2` | 2 | 玻璃(2) | packages/glass/src/glass-css.js:443, packages/glass/src/glass-css.js:454 |  |
 | `--dsw-alias-scrollbar-hover-l1` | 2 | 玻璃(2) | packages/glass/src/glass-css.js:444, packages/glass/src/glass-css.js:455 |  |
 | `--dsw-alias-scrollbar-hover-l2` | 2 | 玻璃(2) | packages/glass/src/glass-css.js:445, packages/glass/src/glass-css.js:456 |  |
-| `--dsw-alias-state-business-primary` | 5 | 玻璃(3) + UI 配色(2) | src/styles-base.js:295, src/styles-base.js:309, packages/glass/src/glass-css.js:964, packages/glass/src/glass-css.js:1148, packages/glass/src/glass-css.js:1432 |  |
+| `--dsw-alias-state-business-primary` | 5 | 玻璃(3) + UI 配色(2) | src/styles-base.js:300, src/styles-base.js:314, packages/glass/src/glass-css.js:964, packages/glass/src/glass-css.js:1148, packages/glass/src/glass-css.js:1432 |  |
 | `--dsw-alias-turn-trigger-bg` | 3 | 玻璃(3) | packages/glass/src/glass-css.js:547, packages/glass/src/glass-css.js:557, packages/glass/src/glass-css.js:1694 |  |
 | `--dsw-alias-turn-trigger-bg-hover` | 3 | 玻璃(3) | packages/glass/src/glass-css.js:550, packages/glass/src/glass-css.js:560, packages/glass/src/glass-css.js:1695 |  |
 | `--dsw-mask-blur` | 1 | 玻璃(1) | packages/glass/src/glass-css.js:429 |  |

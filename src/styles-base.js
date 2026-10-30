@@ -217,19 +217,24 @@ const CSS_BASE = `
      sidebar-fill 恢复不透明，AppFrame 底会整片盖住 body 上 z-index:-2 的壁纸层
      （现场：关「液态玻璃」行后壁纸消失、音乐等其它插件不受影响）。
      [data-shell-overlay] 是 layout 包写在 AppFrame 直接子节点上的稳定锚点；
-     只清 AppFrame 本体，不动 sidebar-fill token ⇒ 左栏 / 顶栏仍按原生实色绘制。 */
+     这里只清 AppFrame **本体**的底、不碰任何令牌 —— 侧栏填充的让位由上面那组
+     body[data-we-wallpaper] 规则负责（壁纸在场即 transparent，与玻璃行无关）⇒
+     壁纸态下左栏 / 顶栏是透明洞、透出壁纸，不是原生实色；本规则只补「壳容器
+     不读我们清过的令牌、只认自己刷的底」这一层。 */
   body[data-we-wallpaper] :has(> [data-shell-overlay]) {
     background: transparent !important;
   }
 
   /* Windows 桌面壳的 AppFrame 在 [data-windows-titlebar] 下把整块 frame 底刷成
      --dsw-specific-sidebar-fill（宿主 AppFrame.module.css 的实现事实）。壁纸在场时
-     该 token 只在玻璃行开启时被清成 transparent（ADR-0016 停行还原口径）⇒ 停玻璃行
-     后 frame 底恢复不透明，中栏虽读到 bg-base=transparent，父级 frame 底仍盖住
-     body 上 z-index:-2 的壁纸层（现场：关「液态玻璃」行后壁纸整片消失、音乐不受影响；
-     重开玻璃行即恢复）。
-     这里只清 desktop 形态的壳容器、不清 --dsw-specific-sidebar-fill token ⇒ 左栏 /
-     顶栏仍按原生 fill 绘制（「除内容区壁纸外全部原生」），玻璃行开启时叠加不变。 */
+     该 token 已由上面的壁纸门规则统一清成 transparent（产品口径 2026-10-29：壁纸在场
+     即让位，与玻璃行无关），但壳容器会把自己那一层 frame 底**单独刷一遍**、不保证读
+     我们清过的令牌 ⇒ 停玻璃行后 frame 底仍可能不透明，中栏虽读到 bg-base=transparent，
+     父级 frame 底却盖住 body 上 z-index:-2 的壁纸层（现场：关「液态玻璃」行后壁纸
+     整片消失、音乐不受影响；重开玻璃行即恢复）。
+     这里只清 desktop 形态的壳容器、不改 --dsw-specific-sidebar-fill token ——
+     壁纸态下左栏 / 顶栏是透明洞（透出壁纸），文字 / 边框 / 其余原生样式仍按宿主主题；
+     玻璃行开启时叠加不变。 */
   body[data-we-adapter^="desktop-"][data-we-wallpaper] > #root,
   body[data-we-adapter^="desktop-"][data-we-wallpaper] > #root > [class*="_frame"]:not([data-we-surface-preserve]),
   body[data-we-adapter^="desktop-"][data-we-wallpaper] > #root > [class*="_frame"]:not([data-we-surface-preserve]) > [class*="_root"]:not([data-we-surface-preserve]) {
