@@ -368,13 +368,14 @@ const CSS_QUICK = `  /* ── Rope dock: chibi pull-cord + glass repo drawer �
      控件字号与框高不一致；宽度仍各自不同（摘要字数不同）。
      ⚠️ 模板字符串里禁止出现裸反引号（会把 CSS 模板提前终止；verify-glass-surfaces 有判据）。 */
   .we-qp__rating-menu { margin-left: auto; max-width: 210px; }
-  /* 两个下拉共用同一套面板密度（字号 / 高度 / 内距 / 圆角）—— 之前只有分级按钮
-     带了 we-qp__rating-btn 覆盖，类型按钮落回设置页的 30px / 12px，于是同排两个
-     控件字号与框高不一致；宽度仍各自不同（摘要字数不同）。 */
+  /* 宽度按用户口径收到原来的 ~60%（2026-10-31）：108px→70px、96px→54px；同时把内距
+     与图标间距压紧，「内容分级」四字（11px×4=44px）在 70px 里仍能完整显示（已算：
+     10px 内距 ×2 + 44 + 4 间距 + 9 图标 + 2 边框 = 69px ≤ 70px），不触发省略号。 */
   .we-qp__rating-btn,
-  .we-qp__type-btn { height: 26px; padding: 0 8px; font-size: 11px; border-radius: 7px; }
-  .we-qp__rating-btn { width: 108px; }
-  .we-qp__type-btn { width: 96px; }
+  .we-qp__type-btn { height: 26px; padding: 0 5px; gap: 4px; font-size: 11px; border-radius: 7px; }
+  .we-qp__rating-btn { width: 70px; }
+  .we-qp__type-btn { width: 54px; }
+  .we-qp__viewbar .we-picker__rating-caret { font-size: 9px; }
   .we-qp__viewbar .we-qp__type-menu { flex: none; }
   /* 列表 / 卡片：标签式切换 —— 复用 .we-tabs 的滑动胶囊做激活指示，但去掉分段底与
      描边（用户口径：不要默认背景）；页签收成内容宽（两枚都是两字，等宽成立，
