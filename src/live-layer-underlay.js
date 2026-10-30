@@ -18,6 +18,13 @@
 // 额外发起任何网络请求或解码；全程 try/catch：跨源污染、无 2d 上下文、元素还没数据一律静默
 // 放弃并保持作者配色那条腿，绝不抛。
 const UNDERLAY_SAMPLE_DELAY_MS = 6000;   // 首帧后的复采：视频常有黑场淡入，首帧不足以代表画面
+// 视频首采延后到空闲：从 `<video>` 的 64×64 画布做 getImageData 实测会触发一次
+// **103ms** 的视频纹理回读（trace 2026-10-30 的 loadeddata 长任务来源）—— 兜底色只是
+// "像素没上屏时垫一层代表色"，晚一拍算出来不影响功能，绝不能阻塞首帧呈现。
+const UNDERLAY_IDLE_TIMEOUT_MS = 800;
+let underlaySampleTask = 0;            // requestIdleCallback 句柄或 setTimeout id
+let underlaySampleTaskKind = "";       // "idle" | "timeout"
+
 let underlayScheme = "";       // 作者 / 面板配色（"rgb(r, g, b)"；"" = 没有）
 let underlaySampled = "";      // 画面取样结果（"rgb(r, g, b)"；"" = 还没采到）
 let underlaySampledFor = "";   // 取样结果属于哪张壁纸（换壁纸即作废）
@@ -70,6 +77,7 @@ function clearUnderlayColor() {
   underlaySampledFor = "";
   underlayWritten = "";
   scrubUnderlayResample();
+  cancelUnderlaySampleTask();
   if (typeof document === "undefined" || !document || !document.documentElement) return;
   try { document.documentElement.style.removeProperty("--we-wallpaper-underlay"); } catch { /* ignore */ }
 }
@@ -80,6 +88,46 @@ function scrubUnderlayResample() {
   underlayResampleTimer = 0;
 }
 
+/** 取消失闲首采（换壁纸 / 清空时别让上一张的取样再跑）。 */
+function cancelUnderlaySampleTask() {
+  if (!underlaySampleTask) return;
+  try {
+    if (underlaySampleTaskKind === "idle" && typeof window !== "undefined" && typeof window.cancelIdleCallback === "function") {
+      window.cancelIdleCallback(underlaySampleTask);
+    } else if (underlaySampleTaskKind === "timeout" && typeof window !== "undefined" && window.clearTimeout) {
+      window.clearTimeout(underlaySampleTask);
+    }
+  } catch { /* ignore */ }
+  underlaySampleTask = 0;
+  underlaySampleTaskKind = "";
+}
+
+/**
+ * 把视频首采排到空闲（优先 requestIdleCallback；没有就退到下一拍 setTimeout）。
+ * 只对 VIDEO 用：图片 / canvas 叶子的取样是毫秒级，没有延后的必要。
+ */
+function scheduleUnderlaySampleTask(run) {
+  if (typeof window === "undefined") { run(); return; }
+  cancelUnderlaySampleTask();
+  try {
+    if (typeof window.requestIdleCallback === "function") {
+      underlaySampleTaskKind = "idle";
+      underlaySampleTask = window.requestIdleCallback(() => {
+        underlaySampleTask = 0;
+        underlaySampleTaskKind = "";
+        run();
+      }, { timeout: UNDERLAY_IDLE_TIMEOUT_MS });
+      return;
+    }
+  } catch { /* 落到 setTimeout */ }
+  underlaySampleTaskKind = "timeout";
+  underlaySampleTask = window.setTimeout(() => {
+    underlaySampleTask = 0;
+    underlaySampleTaskKind = "";
+    run();
+  }, 64);
+}
+
 /** 从层里的媒体叶子采一次占比最大色（画不出来就说"没有"，不改任何既有值）。 */
 function sampleUnderlayOnce(el, wid) {
   try {
@@ -88,7 +136,9 @@ function sampleUnderlayOnce(el, wid) {
     if (!probe || typeof probe.getContext !== "function") return false;
     probe.width = THEME_FOLLOW_SAMPLE_PX;
     probe.height = THEME_FOLLOW_SAMPLE_PX;
-    const g = probe.getContext("2d");
+    // willReadFrequently：一次性读回也走 CPU 画布，绕开视频纹理回读的慢路径
+    // （trace 里 64×64 的 getImageData 实测 103ms）。
+    const g = probe.getContext("2d", { willReadFrequently: true });
     if (!g) return false;
     g.drawImage(el, 0, 0, THEME_FOLLOW_SAMPLE_PX, THEME_FOLLOW_SAMPLE_PX);
     const px = g.getImageData(0, 0, THEME_FOLLOW_SAMPLE_PX, THEME_FOLLOW_SAMPLE_PX).data;
@@ -114,6 +164,7 @@ function scheduleUnderlaySample(node) {
     if (underlaySampledFor !== wid) {           // 换壁纸：上一张的取样结果作废
       underlaySampledFor = wid;
       underlaySampled = "";
+      cancelUnderlaySampleTask();
       scrubUnderlayResample();
       writeUnderlayColor(weT("换壁纸"));
     }
@@ -129,17 +180,23 @@ function scheduleUnderlaySample(node) {
       || (kind === "VIDEO" && Number(el.readyState) >= 2 && Number(el.videoWidth) > 0)
       || (kind === "IMG" && el.complete && Number(el.naturalWidth) > 0);
     const take = (again) => {
-      try {
-        if (String(selection.id || "") !== wid) return;   // 期间换过壁纸
-        if (!sampleUnderlayOnce(el, wid)) return;
-        if (!again) {
-          scrubUnderlayResample();
-          underlayResampleTimer = window.setTimeout(() => {
-            underlayResampleTimer = 0;
-            try { if (String(selection.id || "") === wid) sampleUnderlayOnce(el, wid); } catch { /* ignore */ }
-          }, UNDERLAY_SAMPLE_DELAY_MS);
-        }
-      } catch { /* ignore */ }
+      const run = () => {
+        try {
+          if (String(selection.id || "") !== wid) return;   // 期间换过壁纸
+          if (!sampleUnderlayOnce(el, wid)) return;
+          if (!again) {
+            scrubUnderlayResample();
+            underlayResampleTimer = window.setTimeout(() => {
+              underlayResampleTimer = 0;
+              try { if (String(selection.id || "") === wid) sampleUnderlayOnce(el, wid); } catch { /* ignore */ }
+            }, UNDERLAY_SAMPLE_DELAY_MS);
+          }
+        } catch { /* ignore */ }
+      };
+      // VIDEO 的首采走空闲：同步执行会在 `loadeddata` 里卡住首帧呈现（实测 106ms 长任务）。
+      // IMG / CANVAS 的取样是毫秒级，直接做，不改变"垫底色先出来"的时序。
+      if (!again && kind === "VIDEO") scheduleUnderlaySampleTask(run);
+      else run();
     };
     if (ready) take(false);
     else if (typeof el.addEventListener === "function") {

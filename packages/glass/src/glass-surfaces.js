@@ -239,16 +239,30 @@ function weSurfaceRefresh(state) {
   for (const [target, record] of state.records) {
     if (!entries.has(target)) { weSurfaceUnmark(record); state.records.delete(target); }
   }
-  const observed = new Set();
-  let moving = false;
+  // ── 读/写分相 ───────────────────────────────────────────────────────────
+  // `weSurfaceGeometry` 每轮要沿祖先链做 getComputedStyle + 对目标 getBoundingClientRect；
+  // 原来紧跟着在同一个循环里写 marker / plate 样式 ⇒ 下一轮读又被自己的写强制布局。
+  // trace 2026-10-30：启动期 6 次 sync 的几何测量全是这种「读—写—读」抖动。
+  // 先把失配记录摘掉、把所有 target 的几何一次读完（本段不做任何 DOM 写），
+  // 写完的循环再统一写 —— 读阶段不会被自己的写打断。
+  for (const [target, entry] of entries) {
+    const record = state.records.get(target);
+    if (record && record.id !== entry.id) { weSurfaceUnmark(record); state.records.delete(target); }
+  }
+  const factsByTarget = new Map();
   for (const [target, entry] of entries) {
     let record = state.records.get(target);
-    if (record && record.id !== entry.id) { weSurfaceUnmark(record); record = null; }
     if (!record) {
       record = { ...entry, before: target.getAttribute(WE_SURFACE_MARKER), marked: false, plate: null };
       state.records.set(target, record);
     }
-    const facts = weSurfaceGeometry(target, entry.id, record.marked);
+    factsByTarget.set(target, weSurfaceGeometry(target, entry.id, record.marked));
+  }
+  const observed = new Set();
+  let moving = false;
+  for (const [target, entry] of entries) {
+    const record = state.records.get(target);
+    const facts = factsByTarget.get(target);
     if (facts.moving) moving = true;
     facts.enabled = entry.enabled;
     facts.software = state.doc.body.hasAttribute("data-we-glass-fallback")

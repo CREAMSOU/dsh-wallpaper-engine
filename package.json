@@ -93,6 +93,7 @@
     "lib/types/index.d.ts",
     "lib/types/client.d.ts",
     "cordis.patch.yml",
+    "assets/rope/",
     "assets/readme/hero-light.png",
     "assets/readme/hero-dark.png",
     "assets/readme/key-lang-zh-light.png",

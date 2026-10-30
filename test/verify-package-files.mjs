@@ -184,6 +184,29 @@ async function main() {
       'required=' + required.length + ' absent=[' + absent.join(', ') + '] unlisted=[' + unlisted.join(', ') + ']');
   }
 
+  // ── P3b: 客户端声明的 /rope-art/*.png 与发布 allowlist 双射 ────────────────
+  // 这些图 2026-10-30 起从 bundle 内联改为宿主路由直出：少一张随包发布，
+  // 构建和现有守卫都不会红，安装后只是某个立绘 404。判据从**客户端声明**出发
+  // （而不是硬编码文件名），这样新增角色时漏加 assets/rope 也会被抓住。
+  {
+    const clientSrc = readFileSync(join(ROOT, 'src/client.js'), 'utf8');
+    const declared = [...clientSrc.matchAll(
+      /const ROPE_IMG_[A-Z0-9_]+ = BASE \+ ["']\/rope-art\/([a-z0-9_-]+\.png)["'];/g,
+    )].map((m) => m[1]);
+    const ropePngs = walkFiles(join(ROOT, 'assets/rope'))
+      .filter((rel) => /\.png$/.test(rel))
+      .map((rel) => rel.split('/').pop());
+    const missingOnDisk = declared.filter((name) => !ropePngs.includes(name));
+    const uncoveredPngs = ropePngs.filter((name) => !files.some((e) => coveredBy('assets/rope/' + name, e)));
+    const strayPngs = ropePngs.filter((name) => !declared.includes(name));
+    check('P3b /rope-art declarations ↔ assets/rope/*.png ↔ `files` allowlist (no missing/stray PNG)',
+      declared.length > 0 && missingOnDisk.length === 0 && uncoveredPngs.length === 0 && strayPngs.length === 0,
+      'declared=' + declared.length + ' onDisk=' + ropePngs.length
+        + ' missingOnDisk=[' + missingOnDisk.join(', ') + ']'
+        + ' uncovered=[' + uncoveredPngs.join(', ') + ']'
+        + ' stray=[' + strayPngs.join(', ') + ']');
+  }
+
   // ── P6: 每个 lib/ 运行时模块都能被解析（语法 / 早期错误；`lib/` 里还有 .swift/LICENSE/.html，不参与）─────────────────────────
   // 为什么要 `node --check`：`export { parsePkg }` 而 parsePkg 未定义这种**再导出**错误让
   // 模块根本加载不起来，而没有任何守卫 import 它时整条链仍是绿的。只解析、不执行

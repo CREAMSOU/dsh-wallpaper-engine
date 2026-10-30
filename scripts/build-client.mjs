@@ -30,7 +30,7 @@
  * Usage:  node scripts/build-client.mjs
  */
 
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -785,82 +785,86 @@ function readInlinedPrelude(modules, baseDir, bodySrc, label = '') {
 }
 
 /**
- * 立绘（rope art）载荷的**构建期注入**。
+ * 立绘（rope art）载荷的**外置**与构建期对账（2026-10-30 启动性能）。
  *
- * ## 为什么字节不写在 src/client.js 里
- * 10 张立绘原本是 10 条单行 base64 常量内联在 `src/client.js`（2,369,676 字符 data URI /
- * 1,777,009 字节 PNG）—— 全仓最大的一处内聚污染：正文被 2.3MB 字面量切成两半，diff 任何一次
- * 编辑都要拖着这几百万字符走，而**运行时根本不解析这些字节**（它们是纯 data URI，原样交给
- * `<img src>`，见 `ROPE_FORMS` / `ropeArtOf`）。
- * 现在字节住 `assets/rope/<name>.png`（源资产归档在 `assets/mascot/`），源码只留
- * `const ROPE_IMG_<NAME> = "data:image/png;base64,__ROPE_ART_<NAME>__";`，由这里拼回产物。
+ * ## 为什么不再内联
+ * 10 张立绘以前在构建期以 base64 注入主产物：2,369,676 字符 = 4.2MB bundle 的 56%，
+ * 而渲染主线程实测下载 178ms、`v8.compile` 25ms（DevTools trace 2026-10-30）。立绘不是
+ * 启动必需数据 —— 桌面只画**当前形态**一张，其余只在吉祥物面板里出现。现在字节仍住
+ * `assets/rope/<name>.png`（随 npm 包发布），由宿主只读路由
+ * `/wallpaper-engine/rope-art/<name>.png` 按需直出，客户端只拿 URL（`ROPE_IMG_*`）。
  *
- * ## 等价性
- * 注入是**逐字符替换**：占位符回填后必须与拆分前的 `lib/client.js` **逐字节相同**
- * （sha256 不变 —— 这一刀的等价性证据就是"产物字节零差异"，比任何单测都硬）。
- * 替换不改行数 ⇒ 正文行号映射（`codeStart`）不受影响。
+ * ## 本函数只剩对账（任一不成立都 exit 1）
+ * 1. 声明形态必须逐字是 `const ROPE_IMG_<NAME> = BASE + "/rope-art/<name>.png";`；
+ * 2. `const ROPE_IMG_` 声明数 == 命中的形态数（有人改回内联 base64 / 改错形态 → 红）；
+ * 3. 声明名与文件名一致（`ROPE_IMG_WHALE` ↔ `whale.png`；改名必须两边一起改）；
+ * 4. 每个声明都有对应文件，且文件是 PNG（magic 校验；路由按 .png 出 content-type）；
+ * 5. `assets/rope/*.png` 里的每一张都被某个声明用到（改名只改一边会留下孤儿文件 → 红）；
+ * 6. 正文里不得残留旧的 `__ROPE_ART_` 占位符（防止半迁移状态把图挂掉）。
  *
- * ## 断言（任一不成立都 exit 1，绝不让占位符漏进产物）
- * 1. 声明名与占位符名一致（`ROPE_IMG_WHALE` ↔ `__ROPE_ART_WHALE__` —— 对不上就是笔误）；
- * 2. 每个占位符在正文里**恰好命中一次**（写重/写漏都当场红）；
- * 3. `const ROPE_IMG_` 声明数 == 实际注入数（有人把某行改成内联 base64 或改了名 → 红）；
- * 4. 载荷必须是 PNG（magic 校验；换成别的格式会让 data URI 的 mime 说谎）；
- * 5. 替换后正文里**不再残留** `__ROPE_ART_`（占位符进产物 = 图挂掉，宁可构建失败）。
+ * 图片字节本身不改：外置是"搬位置"，不是重编码。
  */
-function injectRopeArt(text) {
-  // 声明写在函数体内：本脚本的调用点在文件上半部，模块级 `const` 会在调用时踩 TDZ
-  // （实测 `ReferenceError: Cannot access 'ROPE_DECL_RE' before initialization`）。
+function checkRopeArtDeclarations(text) {
   const dir = resolve(root, 'assets', 'rope');
-  const declRe = /^const (ROPE_IMG_([A-Z0-9_]+)) = "data:image\/png;base64,__ROPE_ART_([A-Z0-9_]+)__";$/gm;
+  const declRe = /^const (ROPE_IMG_([A-Z0-9_]+)) = BASE \+ "\/rope-art\/([a-z0-9]+)\.png";$/gm;
   const hits = [...text.matchAll(declRe)];
   const declared = (text.match(/^const ROPE_IMG_/gm) || []).length;
   if (!hits.length) {
-    console.error('[build-client] src/client.js 里一个立绘占位符都没有：载荷应写成'
-      + ' `const ROPE_IMG_<NAME> = "data:image/png;base64,__ROPE_ART_<NAME>__";`'
-      + '（字节在 assets/rope/<name>.png，见该目录 README）');
+    console.error('[build-client] src/client.js 里一个立绘声明都没有：应写成'
+      + ' `const ROPE_IMG_<NAME> = BASE + "/rope-art/<name>.png";`（字节在 assets/rope/，见该目录 README）');
     process.exit(1);
   }
-  let out = text;
+  if (declared !== hits.length) {
+    console.error(`[build-client] src/client.js 里 const ROPE_IMG_ 声明有 ${declared} 条，`
+      + `符合外置形态的只有 ${hits.length} 条 —— 有一条被改回内联 base64 或写坏了`);
+    process.exit(1);
+  }
+  const names = new Set();
   for (const m of hits) {
-    const [, decl, declName, phName] = m;
-    if (declName !== phName) {
-      console.error(`[build-client] src/client.js 的 ${decl} 与占位符 __ROPE_ART_${phName}__ 名字不一致`
-        + '（文件名 = 占位符名的小写形式，改名必须同时动源码与 assets/rope/）');
+    const [, decl, declName, fileStem] = m;
+    const want = declName.toLowerCase();
+    if (fileStem !== want) {
+      console.error(`[build-client] ${decl} 指向 rope-art/${fileStem}.png，但声明名要求 ${want}.png`
+        + '（文件名 = 声明名的小写形式，改名必须同时动源码与 assets/rope/）');
       process.exit(1);
     }
-    const ph = `__ROPE_ART_${phName}__`;
-    const anchor = `const ${decl} = "data:image/png;base64,${ph}";`;
-    if (text.split(anchor).length !== 2) {
-      console.error(`[build-client] 占位符 ${ph} 在正文里不是恰好命中一次 —— `
-        + '写重或写漏都会让注入结果不可预测');
+    if (names.has(want)) {
+      console.error(`[build-client] 立绘声明重复：${want}（同一张图被声明两次）`);
       process.exit(1);
     }
-    const asset = resolve(dir, `${phName.toLowerCase()}.png`);
+    names.add(want);
+    const asset = resolve(dir, `${want}.png`);
     let bytes;
     try {
       bytes = readFileSync(asset);
     } catch {
-      console.error(`[build-client] 找不到立绘载荷 ${asset} —— 占位符 ${ph} 没有对应文件`);
+      console.error(`[build-client] 找不到立绘载荷 ${asset} —— 声明 ${decl} 没有对应文件`);
       process.exit(1);
     }
     if (bytes.subarray(0, 8).toString('hex') !== '89504e470d0a1a0a') {
-      console.error(`[build-client] ${asset} 不是 PNG（magic 不符）—— data URI 声明的是 image/png，`
+      console.error(`[build-client] ${asset} 不是 PNG（magic 不符）—— 路由按 .png 出 content-type，`
         + '载荷就必须真是 PNG');
       process.exit(1);
     }
-    out = out.replace(anchor, `const ${decl} = "data:image/png;base64,${bytes.toString('base64')}";`);
   }
-  if (declared !== hits.length) {
-    console.error(`[build-client] src/client.js 里 const ROPE_IMG_ 声明有 ${declared} 条，`
-      + `符合占位符形态的只有 ${hits.length} 条 —— 有一条既没内联字节也没占位符`
-      + '（构建期注入是唯一真源，不要手写 base64）');
+  let files = [];
+  try {
+    files = readdirSync(dir).filter((name) => name.toLowerCase().endsWith('.png')).map((name) => name.slice(0, -4));
+  } catch {
+    console.error(`[build-client] 读不到立绘目录 ${dir}`);
     process.exit(1);
   }
-  if (/__ROPE_ART_[A-Z0-9_]+__/.test(out)) {
-    console.error('[build-client] 注入后仍残留 __ROPE_ART_ 占位符 —— 漏了文件或名字对不上');
+  const orphans = files.filter((name) => !names.has(name));
+  if (orphans.length) {
+    console.error('[build-client] assets/rope/ 里有没被任何 ROPE_IMG_ 声明用到的孤儿文件：'
+      + orphans.map((n) => n + '.png').join(', ') + '（改名只改了一边？）');
     process.exit(1);
   }
-  return out;
+  if (/__ROPE_ART_[A-Z0-9_]+__/.test(text)) {
+    console.error('[build-client] 正文里残留旧的 __ROPE_ART_ 占位符 —— 半迁移状态会让立绘挂掉');
+    process.exit(1);
+  }
+  return text;
 }
 
 /**
@@ -964,7 +968,8 @@ function assembleBundle({ id: bundleId, prelude, bodySrc, hostPackage = null, bo
 function buildMainBundle() {
   const source = readNormalized(resolve(root, 'src', 'client.js'));
   const { body: rawBody, codeStart: lineOffset } = stripHeader(source);
-  const bodySrc = injectRopeArt(rawBody.replace(/\n+$/, ''));
+  const bodySrc = rawBody.replace(/\n+$/, '');
+  checkRopeArtDeclarations(bodySrc);
   const prelude = readInlinedPrelude(INLINE_MODULES, root, bodySrc);
   // 这两条必须在拼产物**之前**跑：撞名/重复声明的失败后果在语法解析层完全看不见，
   // 因此不能指望 `new Script(...)` 兜住（见 assertNoShadowedScopeDecls 的注释）。

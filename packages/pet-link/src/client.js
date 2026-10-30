@@ -7,12 +7,21 @@ for (const key of PET_LINK_HOST_REQUIRED) {
 }
 const { weT, apiUrl, apiFetch, wallSidebarOpen, wallSidebarClose, wallSidebarToggle, registerPetLink } = host;
 let petLinkContext = null;
+// 启动时主包与子包各 warmup 一次，`fetchTargets` 会被并发调用两次（trace 2026-10-30：
+// `/pet-link/official` 559ms 与 571ms 两条在飞请求，host 侧白做一遍）。
+// 只合并**在飞**请求；落地后下一次仍重新探测（官方环境可能热插拔）。
+let officialTargetsInflight = null;
 const petLink = createOfficialPetPerformer({
   translate: weT,
   getContext: () => petLinkContext,
   async fetchTargets() {
-    const response = await apiFetch(apiUrl('/pet-link/official'));
-    return response.data || { ok: false, reason: response.error || 'transport-error' };
+    if (officialTargetsInflight) return officialTargetsInflight;
+    const run = (async () => {
+      const response = await apiFetch(apiUrl('/pet-link/official'));
+      return response.data || { ok: false, reason: response.error || 'transport-error' };
+    })();
+    officialTargetsInflight = run;
+    try { return await run; } finally { if (officialTargetsInflight === run) officialTargetsInflight = null; }
   },
   async request(payload) {
     const response = await apiFetch(apiUrl('/pet-link/official'), {

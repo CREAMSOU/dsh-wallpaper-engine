@@ -667,6 +667,14 @@ setTimeout(async () => {
     console.log('--we-wallpaper-underlay:', JSON.stringify(rootProps['--we-wallpaper-underlay']));
     assert.equal(rootProps['--we-wallpaper-underlay'], 'rgb(18, 52, 86)',
       '作者配色必须在壁纸激活期间落到根元素（画布兜底色）');
+    // 2026-10-30 启动性能：video 首采必须空闲调度（trace 里同步 getImageData 是 106ms 长任务），
+    // 且 2D 上下文带 willReadFrequently；同时立绘必须是外置 URL（主产物不再带 base64）。
+    // 行为侧这里没有 video stub，按产物源码钉住这三条回归。
+    assert.ok(/if \(!again && kind === "VIDEO"\) scheduleUnderlaySampleTask\(run\);/.test(code)
+      && /probe\.getContext\("2d", \{ willReadFrequently: true \}\)/.test(code),
+      '视频兜底色首采必须走空闲调度 + willReadFrequently（启动性能 trace 2026-10-30）');
+    assert.ok(code.includes('"/rope-art/whale.png"') && !code.includes('__ROPE_ART_'),
+      '立绘必须外置为 URL（主产物不再携带 2.37MB base64；见 assets/rope/README.md）');
   }
 
   // ── 可见性恢复：一次性复合成微推 ────────────────────────────────────────────

@@ -825,13 +825,34 @@ function hostFailureReason(res) {
   return (data && data.error) || weT("宿主返回 {status}", { status: res.status });
 }
 let inventorySeq = 0;
+/**
+ * 启动预取：`/inventory` 与设置无关，启动链却把它排在 settings → fontsets → fontsets/<id>
+ * 之后（见 apply 末尾的链）。apply 一开始就发出这一次请求，等链走到 inventory 时通常已经回来
+ * （trace 2026-10-30：inventory 请求 971→1036ms，纯串行浪费）。
+ * 只预取一次；`loadInventory` 消费后清空，手动刷新 / 轮播补拉仍走自己的请求。
+ *
+ * **预取只加速成功路径**：`apiFetch` 不抛错，网络瞬断会以 `{ ok:false, status:0 }` 的
+ * 已兑现 promise 留在这里。若启动链直接消费这份失败结果，原本排在 settings/fontset 之后
+ * （那时宿主通常已就绪）的那次请求就永远不发了 —— 启动反而更坏。所以消费前先看 `ok`：
+ * 预取没成功就照旧发一次自己的请求。
+ */
+let inventoryBootPrefetch = null;
+function prefetchInventoryOnce() {
+  if (inventoryBootPrefetch) return inventoryBootPrefetch;
+  try { inventoryBootPrefetch = apiJson(INVENTORY_URL); } catch { inventoryBootPrefetch = null; }
+  return inventoryBootPrefetch;
+}
 async function loadInventory() {
   const seq = ++inventorySeq;
   setTransient("loading", true);
   emit();
   let next;
+  const prefetched = inventoryBootPrefetch;
+  inventoryBootPrefetch = null;
   try {
-    const res = await apiJson(INVENTORY_URL);
+    let pre = null;
+    try { pre = prefetched ? await prefetched : null; } catch { pre = null; }
+    const res = pre && pre.ok ? pre : await apiJson(INVENTORY_URL);
     // 两种失败（宿主不可达 / 非 2xx）由 hostFailureReason 统一翻译，面板那一行据此显示。
     if (!res.ok) throw new Error(hostFailureReason(res));
     const data = res.data || {};
@@ -4767,24 +4788,31 @@ function WallpaperPickerSection() {
 // downscaled to 384×576, transparent) — a second selectable mascot form. Taller
 // portrait (aspect 2:3) than the chibi, so its base box below differs; the <img>
 // still fills .we-rope__art with object-fit: contain.
-const ROPE_IMG_WHALE = "data:image/png;base64,__ROPE_ART_WHALE__";
+//
+// 2026-10-30 启动性能：这 10 张 PNG 以前在构建期以 base64 内联进主产物，合计
+// 2,369,676 字符 = 4.2MB bundle 的 56%（trace：主产物下载 178ms / compile 25ms）。
+// 立绘不是启动必需的数据 —— 桌面只画**当前形态**一张，其余只在吉祥物面板里出现。
+// 现在字节仍住 `assets/rope/`（随 npm 包发布），由宿主 `/wallpaper-engine/rope-art/<name>.png`
+// 按需直出；客户端只拿 URL。`scripts/build-client.mjs` 保留"声明 ↔ 文件"的对账（防漏/改名），
+// 但不再把字节拼进 bundle。
+const ROPE_IMG_WHALE = BASE + "/rope-art/whale.png";
 // Third rope artwork: Phoebe Jiubi — the blonde chibi gripping the rope (source 1254×1254,
 // downscaled to 384×384, transparent) — square 1:1 like the chibi proportions; the
 // drawn rope runs in from the top edge, same convention as the maid artwork.
-const ROPE_IMG_PHOEBE = "data:image/png;base64,__ROPE_ART_PHOEBE__";
+const ROPE_IMG_PHOEBE = BASE + "/rope-art/phoebe.png";
 // ── 八只「模型娘」（用户提供）──────────────────────────────────────
 // 每个模型一张竖版立绘（源图 2048×2048，四周 20–28% 是透明留白 ⇒ **先裁到 alpha 紧致
-// 包围盒再缩放**，否则等于白存那些像素）。统一缩放到**高 384**、转 base64 内联 ——
+// 包围盒再缩放**，否则等于白存那些像素）。统一缩放到**高 384**、PNG 载荷。
 // 与「Deepseek_Pro」同档（她也 384），显示盒 64 宽时约 4.8× 余量，ropeScale 放大也不糊。
-// 源资产归档在 assets/mascot/（不进 npm 包），流程见那里的 README。
-const ROPE_IMG_CLAUDE = "data:image/png;base64,__ROPE_ART_CLAUDE__";
-const ROPE_IMG_DEEPSEEK = "data:image/png;base64,__ROPE_ART_DEEPSEEK__";
-const ROPE_IMG_GEMINI = "data:image/png;base64,__ROPE_ART_GEMINI__";
-const ROPE_IMG_GPT = "data:image/png;base64,__ROPE_ART_GPT__";
-const ROPE_IMG_GLM = "data:image/png;base64,__ROPE_ART_GLM__";
-const ROPE_IMG_GROK = "data:image/png;base64,__ROPE_ART_GROK__";
-const ROPE_IMG_KIMI = "data:image/png;base64,__ROPE_ART_KIMI__";
-const ROPE_IMG_QWEN = "data:image/png;base64,__ROPE_ART_QWEN__";
+// 源资产归档在 assets/mascot/，运行时载荷在 assets/rope/（随包发布），流程见那里的 README。
+const ROPE_IMG_CLAUDE = BASE + "/rope-art/claude.png";
+const ROPE_IMG_DEEPSEEK = BASE + "/rope-art/deepseek.png";
+const ROPE_IMG_GEMINI = BASE + "/rope-art/gemini.png";
+const ROPE_IMG_GPT = BASE + "/rope-art/gpt.png";
+const ROPE_IMG_GLM = BASE + "/rope-art/glm.png";
+const ROPE_IMG_GROK = BASE + "/rope-art/grok.png";
+const ROPE_IMG_KIMI = BASE + "/rope-art/kimi.png";
+const ROPE_IMG_QWEN = BASE + "/rope-art/qwen.png";
 
 
 // Rope forms: artwork + a display label + a base box size (before the user
@@ -5869,6 +5897,13 @@ function apply(ctx) {
   //    语言取词；服务通常已在（dsh-web-app 的 base bundle 自带），轮询只是兜底。
   if (ctx.effect) ctx.effect(() => weI18nAttach(ctx) || undefined);
 
+  // 0b. 启动预取：inventory / 字体集清单与设置无关，启动链却要等 settings 之后才发。
+  //     在这里先发出去，链走到它们时通常已经回来（只预取一次；失败不影响启动链）。
+  try {
+    prefetchInventoryOnce();
+    prefetchFontSetList();
+  } catch { /* 预取失败走原路径（启动链各步自己会发请求） */ }
+
   // 1. Mount the behind-body wallpaper + scrim layers and keep them in sync
   //    with the selection store. ctx.effect gives fiber-lifetime cleanup.
   if (ctx.effect) {
@@ -6303,6 +6338,10 @@ function apply(ctx) {
   // 选择器永久停在「扫描 Wallpaper Engine…」，一次性提示也不收敛（用户只能靠刷新或禁用插件自救）。
   // 各步内部已各自消化可预期的失败（宿主不可达 / 存储被拒 / 坏 JSON），这一条兜的是"没预料到的那次抛"。
   loadPersisted().then(loadFontSet).then(loadInventory).then(loadGlassPresets).catch((err) => {
+    // 链断在任何一步都可能留下没被消费的启动预取；它们属于**这一次**启动链，
+    // 不能留到用户后来的手动刷新 / 切字体集时冒充新响应（陈旧库存/清单）。
+    inventoryBootPrefetch = null;
+    try { cancelFontSetListPrefetch(); } catch { /* 模块未内联时也不许二次抛 */ }
     try { reportClientDiag("boot-chain-failed", String((err && err.message) || err)); } catch { /* 诊断本身不许再抛 */ }
   });
 }
