@@ -43,8 +43,15 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
-        "typeFilter": "all",
+        "contentRatingFilter": [
+          "everyone"
+        ],
+        "typeFilter": [
+          "video",
+          "web",
+          "image",
+          "scene"
+        ],
         "pickerLayout": "fixed",
         "edgeCompat": true,
         "accent": "#4f8cff",
@@ -62,7 +69,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 8,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -194,8 +201,15 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
-        "typeFilter": "all",
+        "contentRatingFilter": [
+          "everyone"
+        ],
+        "typeFilter": [
+          "video",
+          "web",
+          "image",
+          "scene"
+        ],
         "pickerLayout": "fixed",
         "edgeCompat": true,
         "accent": "#4f8cff",
@@ -213,7 +227,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 8,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -345,8 +359,15 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
-        "typeFilter": "all",
+        "contentRatingFilter": [
+          "everyone"
+        ],
+        "typeFilter": [
+          "video",
+          "web",
+          "image",
+          "scene"
+        ],
         "pickerLayout": "fixed",
         "edgeCompat": true,
         "accent": "#4f8cff",
@@ -372,7 +393,7 @@
           "thinkingTrigger": "inherit",
           "floaters": "inherit"
         },
-        "settingsVersion": 6,
+        "settingsVersion": 8,
         "settingsWindowTransparency": 100,
         "settingsWindowBlur": 60,
         "conversationColor": "#ffffff",
@@ -512,8 +533,15 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
-        "typeFilter": "all",
+        "contentRatingFilter": [
+          "everyone"
+        ],
+        "typeFilter": [
+          "video",
+          "web",
+          "image",
+          "scene"
+        ],
         "pickerLayout": "fixed",
         "edgeCompat": true,
         "accent": "#4f8cff",
@@ -539,7 +567,7 @@
           "thinkingTrigger": "inherit",
           "floaters": "inherit"
         },
-        "settingsVersion": 6,
+        "settingsVersion": 8,
         "settingsWindowTransparency": 100,
         "settingsWindowBlur": 60,
         "conversationColor": "#ffffff",
@@ -679,8 +707,15 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
-        "typeFilter": "all",
+        "contentRatingFilter": [
+          "everyone"
+        ],
+        "typeFilter": [
+          "video",
+          "web",
+          "image",
+          "scene"
+        ],
         "pickerLayout": "fixed",
         "edgeCompat": true,
         "accent": "#4f8cff",
@@ -706,7 +741,7 @@
           "thinkingTrigger": "inherit",
           "floaters": "inherit"
         },
-        "settingsVersion": 6,
+        "settingsVersion": 8,
         "settingsWindowTransparency": 100,
         "settingsWindowBlur": 60,
         "conversationColor": "#ffffff",
@@ -850,8 +885,15 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
-        "typeFilter": "all",
+        "contentRatingFilter": [
+          "everyone"
+        ],
+        "typeFilter": [
+          "video",
+          "web",
+          "image",
+          "scene"
+        ],
         "pickerLayout": "fixed",
         "edgeCompat": true,
         "accent": "#4f8cff",
@@ -869,7 +911,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 8,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -1001,8 +1043,15 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
-        "typeFilter": "all",
+        "contentRatingFilter": [
+          "everyone"
+        ],
+        "typeFilter": [
+          "video",
+          "web",
+          "image",
+          "scene"
+        ],
         "pickerLayout": "fixed",
         "edgeCompat": true,
         "accent": "#4f8cff",
@@ -1020,7 +1069,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 8,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -1213,8 +1262,15 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
-        "typeFilter": "all",
+        "contentRatingFilter": [
+          "everyone"
+        ],
+        "typeFilter": [
+          "video",
+          "web",
+          "image",
+          "scene"
+        ],
         "pickerLayout": "fixed",
         "edgeCompat": true,
         "accent": "#4f8cff",
@@ -1232,7 +1288,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 8,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -1364,8 +1420,15 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
-        "typeFilter": "all",
+        "contentRatingFilter": [
+          "everyone"
+        ],
+        "typeFilter": [
+          "video",
+          "web",
+          "image",
+          "scene"
+        ],
         "pickerLayout": "fixed",
         "edgeCompat": true,
         "accent": "#4f8cff",
@@ -1383,7 +1446,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 8,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -1621,8 +1684,15 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
-        "typeFilter": "all",
+        "contentRatingFilter": [
+          "everyone"
+        ],
+        "typeFilter": [
+          "video",
+          "web",
+          "image",
+          "scene"
+        ],
         "pickerLayout": "fixed",
         "edgeCompat": true,
         "accent": "#4f8cff",
@@ -1640,7 +1710,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 8,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -1772,8 +1842,15 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
-        "typeFilter": "all",
+        "contentRatingFilter": [
+          "everyone"
+        ],
+        "typeFilter": [
+          "video",
+          "web",
+          "image",
+          "scene"
+        ],
         "pickerLayout": "fixed",
         "edgeCompat": true,
         "accent": "#4f8cff",
@@ -1791,7 +1868,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 8,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -1928,8 +2005,15 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
-        "typeFilter": "all",
+        "contentRatingFilter": [
+          "everyone"
+        ],
+        "typeFilter": [
+          "video",
+          "web",
+          "image",
+          "scene"
+        ],
         "pickerLayout": "fixed",
         "edgeCompat": true,
         "accent": "#4f8cff",
@@ -1947,7 +2031,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 8,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -2079,8 +2163,15 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
-        "typeFilter": "all",
+        "contentRatingFilter": [
+          "everyone"
+        ],
+        "typeFilter": [
+          "video",
+          "web",
+          "image",
+          "scene"
+        ],
         "pickerLayout": "fixed",
         "edgeCompat": true,
         "accent": "#4f8cff",
@@ -2098,7 +2189,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 8,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -2249,8 +2340,15 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
-        "typeFilter": "all",
+        "contentRatingFilter": [
+          "everyone"
+        ],
+        "typeFilter": [
+          "video",
+          "web",
+          "image",
+          "scene"
+        ],
         "pickerLayout": "fixed",
         "edgeCompat": true,
         "accent": "#4f8cff",
@@ -2268,7 +2366,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 8,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -2400,8 +2498,15 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
-        "typeFilter": "all",
+        "contentRatingFilter": [
+          "everyone"
+        ],
+        "typeFilter": [
+          "video",
+          "web",
+          "image",
+          "scene"
+        ],
         "pickerLayout": "fixed",
         "edgeCompat": true,
         "accent": "#4f8cff",
@@ -2419,7 +2524,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 8,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -2570,8 +2675,15 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
-        "typeFilter": "all",
+        "contentRatingFilter": [
+          "everyone"
+        ],
+        "typeFilter": [
+          "video",
+          "web",
+          "image",
+          "scene"
+        ],
         "pickerLayout": "fixed",
         "edgeCompat": true,
         "accent": "#4f8cff",
@@ -2589,7 +2701,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 8,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -2721,8 +2833,15 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
-        "typeFilter": "all",
+        "contentRatingFilter": [
+          "everyone"
+        ],
+        "typeFilter": [
+          "video",
+          "web",
+          "image",
+          "scene"
+        ],
         "pickerLayout": "fixed",
         "edgeCompat": true,
         "accent": "#4f8cff",
@@ -2740,7 +2859,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 8,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -2878,8 +2997,15 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
-        "typeFilter": "all",
+        "contentRatingFilter": [
+          "everyone"
+        ],
+        "typeFilter": [
+          "video",
+          "web",
+          "image",
+          "scene"
+        ],
         "pickerLayout": "fixed",
         "edgeCompat": true,
         "accent": "#4f8cff",
@@ -2897,7 +3023,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 8,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -3029,8 +3155,15 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
-        "typeFilter": "all",
+        "contentRatingFilter": [
+          "everyone"
+        ],
+        "typeFilter": [
+          "video",
+          "web",
+          "image",
+          "scene"
+        ],
         "pickerLayout": "fixed",
         "edgeCompat": true,
         "accent": "#4f8cff",
@@ -3048,7 +3181,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 8,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -3191,8 +3324,15 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
-        "typeFilter": "all",
+        "contentRatingFilter": [
+          "everyone"
+        ],
+        "typeFilter": [
+          "video",
+          "web",
+          "image",
+          "scene"
+        ],
         "pickerLayout": "fixed",
         "edgeCompat": true,
         "accent": "#4f8cff",
@@ -3210,7 +3350,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 8,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -3342,8 +3482,15 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
-        "typeFilter": "all",
+        "contentRatingFilter": [
+          "everyone"
+        ],
+        "typeFilter": [
+          "video",
+          "web",
+          "image",
+          "scene"
+        ],
         "pickerLayout": "fixed",
         "edgeCompat": true,
         "accent": "#4f8cff",
@@ -3361,7 +3508,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 8,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -3501,8 +3648,15 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
-        "typeFilter": "all",
+        "contentRatingFilter": [
+          "everyone"
+        ],
+        "typeFilter": [
+          "video",
+          "web",
+          "image",
+          "scene"
+        ],
         "pickerLayout": "fixed",
         "edgeCompat": true,
         "accent": "#4f8cff",
@@ -3520,7 +3674,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 8,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -3652,8 +3806,15 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
-        "typeFilter": "all",
+        "contentRatingFilter": [
+          "everyone"
+        ],
+        "typeFilter": [
+          "video",
+          "web",
+          "image",
+          "scene"
+        ],
         "pickerLayout": "fixed",
         "edgeCompat": true,
         "accent": "#4f8cff",
@@ -3671,7 +3832,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 8,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -3818,8 +3979,15 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
-        "typeFilter": "all",
+        "contentRatingFilter": [
+          "everyone"
+        ],
+        "typeFilter": [
+          "video",
+          "web",
+          "image",
+          "scene"
+        ],
         "pickerLayout": "fixed",
         "edgeCompat": true,
         "accent": "#4f8cff",
@@ -3837,7 +4005,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 8,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -3969,8 +4137,15 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
-        "typeFilter": "all",
+        "contentRatingFilter": [
+          "everyone"
+        ],
+        "typeFilter": [
+          "video",
+          "web",
+          "image",
+          "scene"
+        ],
         "pickerLayout": "fixed",
         "edgeCompat": true,
         "accent": "#4f8cff",
@@ -3988,7 +4163,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 8,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -4192,8 +4367,15 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
-        "typeFilter": "all",
+        "contentRatingFilter": [
+          "everyone"
+        ],
+        "typeFilter": [
+          "video",
+          "web",
+          "image",
+          "scene"
+        ],
         "pickerLayout": "fixed",
         "edgeCompat": true,
         "accent": "#4f8cff",
@@ -4211,7 +4393,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 8,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -4372,8 +4554,15 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
-        "typeFilter": "all",
+        "contentRatingFilter": [
+          "everyone"
+        ],
+        "typeFilter": [
+          "video",
+          "web",
+          "image",
+          "scene"
+        ],
         "pickerLayout": "fixed",
         "edgeCompat": true,
         "accent": "#4f8cff",
@@ -4391,7 +4580,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 8,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -4531,8 +4720,15 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
-        "typeFilter": "all",
+        "contentRatingFilter": [
+          "everyone"
+        ],
+        "typeFilter": [
+          "video",
+          "web",
+          "image",
+          "scene"
+        ],
         "pickerLayout": "fixed",
         "edgeCompat": true,
         "accent": "#4f8cff",
@@ -4550,7 +4746,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 8,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -4682,8 +4878,15 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
-        "typeFilter": "all",
+        "contentRatingFilter": [
+          "everyone"
+        ],
+        "typeFilter": [
+          "video",
+          "web",
+          "image",
+          "scene"
+        ],
         "pickerLayout": "fixed",
         "edgeCompat": true,
         "accent": "#4f8cff",
@@ -4701,7 +4904,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 8,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -4837,8 +5040,15 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
-        "typeFilter": "all",
+        "contentRatingFilter": [
+          "everyone"
+        ],
+        "typeFilter": [
+          "video",
+          "web",
+          "image",
+          "scene"
+        ],
         "pickerLayout": "fixed",
         "edgeCompat": true,
         "accent": "#4f8cff",
@@ -4856,7 +5066,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 8,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -4988,8 +5198,15 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
-        "typeFilter": "all",
+        "contentRatingFilter": [
+          "everyone"
+        ],
+        "typeFilter": [
+          "video",
+          "web",
+          "image",
+          "scene"
+        ],
         "pickerLayout": "fixed",
         "edgeCompat": true,
         "accent": "#4f8cff",
@@ -5007,7 +5224,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 8,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -5144,8 +5361,15 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
-        "typeFilter": "all",
+        "contentRatingFilter": [
+          "everyone"
+        ],
+        "typeFilter": [
+          "video",
+          "web",
+          "image",
+          "scene"
+        ],
         "pickerLayout": "fixed",
         "edgeCompat": true,
         "accent": "#4f8cff",
@@ -5163,7 +5387,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 8,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",
@@ -5295,8 +5519,15 @@
         "pauseOnBattery": false,
         "flip": false,
         "objectFit": "cover",
-        "contentRatingFilter": "everyone",
-        "typeFilter": "all",
+        "contentRatingFilter": [
+          "everyone"
+        ],
+        "typeFilter": [
+          "video",
+          "web",
+          "image",
+          "scene"
+        ],
         "pickerLayout": "fixed",
         "edgeCompat": true,
         "accent": "#4f8cff",
@@ -5314,7 +5545,7 @@
         "titlebarGlass": false,
         "thinkingGlass": false,
         "thinkingNative": false,
-        "settingsVersion": 6,
+        "settingsVersion": 8,
         "glassMode": {
           "sidebar": "inherit",
           "sidebarContent": "inherit",

@@ -353,16 +353,30 @@ const CSS_QUICK = `  /* ── Rope dock: chibi pull-cord + glass repo drawer �
   .we-qp__group { flex: 1; min-width: 0; }
   .we-qp__search { width: 100%; box-sizing: border-box; }
   .we-qp__list { display: flex; flex-direction: column; gap: 2px; }
-  /* 视图切换：搜索 + 分级筛选 + 类型筛选 + 列表/卡片，**确定性两行**。一行排下不可行 ——
-     最窄官方右栏里第四个控件在结构上放不下（分级最短也要 ~70px，搜索框会被挤到不可用），
-     而依赖 flex-wrap 假想尺寸的折行在中间宽度会碎出"只有页签折下去"的行。故搜索框独占
-     首行（**封顶 300px**：用户口径，太长的搜索框没用还占地方；basis 钉 100% 强制换行），
-     分级/类型/视图三个控件右对齐成第二行（分级 select 的 margin-left:auto 恰是第二行首项，
-     把整组推到右侧）。 */
+  /* 视图切换：搜索 + 分级勾选 + 类型筛选 + 列表/卡片，**确定性两行**。一行排下不可行 ——
+     最窄官方右栏里第四个控件在结构上放不下，而依赖 flex-wrap 假想尺寸的折行在中间宽度会
+     碎出"只有页签折下去"的行。故搜索框独占首行（**封顶 300px**：用户口径，太长的搜索框
+     没用还占地方；basis 钉 100% 强制换行），分级下拉/类型/视图三个控件右对齐成第二行
+     （分级下拉的 margin-left:auto 恰是第二行首项，把它推到右侧）。 */
   .we-qp__viewbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .we-qp__viewbar .we-qp__search { flex: 1 1 100%; min-width: 0; max-width: 300px; width: auto; }
-  .we-qp__viewbar .we-qp__rating { flex: none; max-width: 110px; margin-left: auto; }
-  .we-qp__viewbar .we-qp__type { flex: none; max-width: 84px; }
+  /* 内容分级：下拉 + 多档勾选（与壁纸选择器同款设计；用户口径 2026-10-30 ——
+     四枚胶囊在快捷面板里同样观感差）。候选框的限宽/省略在 .we-picker__rating-*
+     里统一定义，这里只把按钮尺寸收进本面板的密度。 */
+  /* 两个下拉共用同一套面板密度（字号 / 高度 / 内距 / 圆角）—— 之前只有分级按钮
+     带了 we-qp__rating-btn 覆盖，类型按钮落回设置页的 30px / 12px，于是同排两个
+     控件字号与框高不一致；宽度仍各自不同（摘要字数不同）。
+     ⚠️ 模板字符串里禁止出现裸反引号（会把 CSS 模板提前终止；verify-glass-surfaces 有判据）。 */
+  .we-qp__rating-menu { margin-left: auto; max-width: 210px; }
+  /* 宽度按用户口径收到原来的 ~60%（2026-10-31）：108px→70px、96px→54px；同时把内距
+     与图标间距压紧，「内容分级」四字（11px×4=44px）在 70px 里仍能完整显示（已算：
+     10px 内距 ×2 + 44 + 4 间距 + 9 图标 + 2 边框 = 69px ≤ 70px），不触发省略号。 */
+  .we-qp__rating-btn,
+  .we-qp__type-btn { height: 26px; padding: 0 5px; gap: 4px; font-size: 11px; border-radius: 7px; }
+  .we-qp__rating-btn { width: 70px; }
+  .we-qp__type-btn { width: 54px; }
+  .we-qp__viewbar .we-picker__rating-caret { font-size: 9px; }
+  .we-qp__viewbar .we-qp__type-menu { flex: none; }
   /* 列表 / 卡片：标签式切换 —— 复用 .we-tabs 的滑动胶囊做激活指示，但去掉分段底与
      描边（用户口径：不要默认背景）；页签收成内容宽（两枚都是两字，等宽成立，
      胶囊 (100%-6px)/2 的等分算式与 3px 内衬原样沿用）。 */

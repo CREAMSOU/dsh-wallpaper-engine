@@ -87,7 +87,7 @@
 | `verify-pet-sidebar-rebound.mjs` | `src/client.js` `src/sidebar-right.js` |  |
 | `verify-pet-tuner-browser.mjs` | `packages/pet-link/lib/prepared.js` `packages/pet-link/src/pet-link-tuner.js` `packages/pet-link/src/pet-link.js` |  |
 | `verify-pet-tuner.mjs` | `packages/pet-link/src/pet-link-tuner.js` `packages/pet-link/src/pet-link.js` |  |
-| `verify-picker-model.mjs` | `src/client.js` `src/picker-modal.js` `src/picker-model.js` | ✅ |
+| `verify-picker-model.mjs` | `lib/settings-schema.js` `src/client.js` `src/picker-modal.js` `src/picker-model.js` | ✅ |
 | `verify-picker-props.mjs` | — | ✅ |
 | `verify-picker-upload.mjs` | — | ✅ |
 | `verify-playback-controls.mjs` | — | ✅ |
@@ -174,7 +174,7 @@
 | `lib/routes/settings.js` | 2 | `verify-scene` `verify-settings-namespaces` |
 | `lib/scene-manifest.js` | 2 | `verify-scene-probe` `verify-scene` |
 | `lib/serve.js` | 3 | `verify-avatar-interval-and-rotation` `verify-logging` `verify-scene-live` |
-| `lib/settings-schema.js` | 16 | `verify-adapter` `verify-avatar-interval-and-rotation` `verify-client` `verify-component-fonts` `verify-contracts` `verify-extra-glass` `verify-fontset` `verify-glass-compat` `verify-glass-surfaces` `verify-module-layout` `verify-presets` `verify-scene-live` `verify-settings-namespaces` `verify-system-fonts` `verify-theme-follow` `verify-theme-layer` |
+| `lib/settings-schema.js` | 17 | `verify-adapter` `verify-avatar-interval-and-rotation` `verify-client` `verify-component-fonts` `verify-contracts` `verify-extra-glass` `verify-fontset` `verify-glass-compat` `verify-glass-surfaces` `verify-module-layout` `verify-picker-model` `verify-presets` `verify-scene-live` `verify-settings-namespaces` `verify-system-fonts` `verify-theme-follow` `verify-theme-layer` |
 | `lib/shim-seed.js` | 2 | `verify-lazy-engine-dir` `verify-scene-live` |
 | `lib/startup-sweep.js` | 1 | `verify-scene-live` |
 | `lib/steam-discovery.js` | 2 | `verify-steam-discovery` `verify-we-install-probe` |
