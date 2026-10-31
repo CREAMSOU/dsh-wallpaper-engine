@@ -22,7 +22,7 @@
  *     · `hiddenIds`     隐藏集合（`selection.hiddenIds`）；缺省视作空集合
  *     · `search`        搜索原文（缺省 / 空串 = 不过滤；内部 trim + 小写）
  *     · `ratingFilter`  内容分级档（`"all" | "everyone" | "pg13" | "mature" | "unrated"`）
- *     · `typeFilter`    类型档（`"all" | "video" | "web" | "image" | "scene"`）
+ *     · `typeFilter`    类型勾选集合（数组；字符串 `"all"` / 具体档仅旧档读兜底）
  *     · `page` / `hiddenPage` / `editorPage`  各列表的页号（可越界，内部 clamp）
  *   返回：
  *     · `query`          归一化后的查询串（`""` = 不过滤）—— 视图的"没有匹配「…」"空态
@@ -51,8 +51,20 @@
 // ── 内容分级：复刻 Wallpaper Engine 自己的分类（project.json `contentrating`）────
 // "Everyone" (G) / "PG13" / "Mature" (R)；没有该字段的项目算「未分级」。匹配大小写
 // 不敏感并接受常见拼写，好让别的本地副本行为一致。
+//
+// 过滤档是**勾选集合**（用户口径 2026-10-30，像 WE 本身的多档勾选）：勾上的档才允许
+// 出现在列表、轮播与播放里，组合完全自由（含"只勾成人"这种纯 R18 用法）。
+//   · 空集合 / 非数组 / 认不得的值一律 fail-closed（判不匹配）—— 免得脏档把成人内容放出来；
+//   · 旧的单档枚举只作为**读兜底**（旧预设、手改 config 不走迁移那一层），映射成等价集合：
+//     'all' ⇒ 四档全勾，'everyone'/'pg13'/'mature' ⇒ 它及其更低的档，'unrated' ⇒ 仅未分级。
 const ADULT_RATING_PATTERN = /^(mature|adult|adultonly|18\+|r18)$/i;
 const PG13_RATING_PATTERN = /^(pg13|pg-13|pg ?13|questionable)$/i;
+
+// 合法分级档（规范顺序；与 lib/settings-schema.js 的 RATING_TIER_VALUES 同一张表，
+// 守卫 test/verify-picker-model.mjs 对账两处）。
+const RATING_TIERS = ['everyone', 'pg13', 'mature', 'unrated'];
+// 类型档的规范顺序（v8 起 typeFilter 也是勾选集合；顺序即消毒后的存档顺序）。
+const TYPE_TIERS = ['video', 'web', 'image', 'scene'];
 
 function isUploadedWallpaper(w) {
   return Boolean(w && w.id && w.id.indexOf("up-") === 0);
@@ -81,14 +93,42 @@ function ratingOf(w) {
   return "unrated";
 }
 
-function matchesRatingFilter(w, filter) {
-  if (filter === "all") return true;
-  return ratingOf(w) === filter;
+// 勾选集合 → 允许档的集合。非数组 / 空 / 全垃圾 ⇒ null（调用方 fail-closed）。
+// 字符串只在这里做**旧档读兜底**：写入路径永远是数组（设置 v7 + 迁移）。
+function ratingAllowSet(allow) {
+  if (typeof allow === "string") {
+    if (allow === "all") return new Set(RATING_TIERS);
+    const legacy = { everyone: ["everyone"], pg13: ["everyone", "pg13"], mature: ["everyone", "pg13", "mature"], unrated: ["unrated"] };
+    const mapped = legacy[allow];
+    return mapped ? new Set(mapped) : null;
+  }
+  if (!Array.isArray(allow)) return null;
+  const set = new Set(allow.filter((tier) => RATING_TIERS.indexOf(tier) !== -1));
+  return set.size ? set : null;
 }
 
-function matchesTypeFilter(w, filter) {
-  if (filter === "all") return true;
-  return w.type === filter;
+function matchesRatingFilter(w, allow) {
+  const set = ratingAllowSet(allow);
+  if (!set) return false; // 空集合 / 非法 ⇒ fail-closed
+  return set.has(ratingOf(w));
+}
+
+// 类型档的集合视图：字符串只作旧档读兜底（'all' = 四档全勾、具体档 = 仅那一档），
+// 数组按白名单过滤；空集 / 非法 ⇒ null（fail-closed）。
+function typeAllowSet(allow) {
+  if (typeof allow === "string") {
+    if (allow === "all") return new Set(TYPE_TIERS);
+    return TYPE_TIERS.indexOf(allow) !== -1 ? new Set([allow]) : null;
+  }
+  if (!Array.isArray(allow)) return null;
+  const set = new Set(allow.filter((tier) => TYPE_TIERS.indexOf(tier) !== -1));
+  return set.size ? set : null;
+}
+
+function matchesTypeFilter(w, allow) {
+  const set = typeAllowSet(allow);
+  if (!set) return false; // 空集合 / 非法 ⇒ fail-closed
+  return set.has(w.type);
 }
 
 function isPlayableType(w) {
@@ -110,6 +150,14 @@ function isRotatableWallpaper(w, ratingFilter, typeFilter) {
 // 同一个 `typeFilter`**）；把类型档写进播放闸门就会出现「一切过滤档，正在播的壁纸被干掉」。
 function keepPlayingWallpaper(w, ratingFilter) {
   return Boolean(w) && isPlayableType(w) && matchesRatingFilter(w, ratingFilter);
+}
+
+// 轮播成员 / 「下一张」的入选判据（用户口径 2026-10-30）：只认「内容安全 ∧ 可播放」，
+// **不认列表的类型档** —— 类型档只筛选择器网格的显示（issue #294：切类型档不得改变
+// 轮播成员，也不得改变「下一张」的池）。与 keepPlayingWallpaper 共用同一份判定，
+// 免得轮播候选与播放闸门各长一个真源。
+function isRotationEligible(w, ratingFilter) {
+  return keepPlayingWallpaper(w, ratingFilter);
 }
 
 function isHiddenWallpaper(id, hiddenIds) {
@@ -184,6 +232,7 @@ export {
   isPlayableType,
   isRotatableWallpaper,
   keepPlayingWallpaper,
+  isRotationEligible,
   isHiddenWallpaper,
   PICKER_PAGE_SIZE,
   pageSlice,

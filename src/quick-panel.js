@@ -129,8 +129,9 @@
   // 面板的类型筛选档（全部 / 场景 / 网页 / 视频 / 图片）：**与设置页同一个键**
   // `typeFilter`（用户口径：类型变动两处同步，不做单独的档；持久化 ⇒ 同时管设置页列表与轮播候选）。
   function qpTypes() {
+    // v8 起类型是**勾选集合**（与设置页共用同一个键 `typeFilter`）：面板这里不再有
+    // 独立的「全部」档 —— 「不限类型」就是勾满这四个。
     return [
-      { id: "all", label: weT("全部") },
       { id: "scene", label: weT("场景") },
       { id: "web", label: weT("网页") },
       { id: "video", label: weT("视频") },
@@ -142,13 +143,14 @@
     const hit = qpTypes().find((t) => t.id === id);
     return hit ? hit.label : String(id || "");
   }
-  // 面板的内容分级筛选档（**紧凑纯文字**，与类型档同一风格；值域与设置页
+  /** 类型档的规范顺序（消毒与落盘都用它；与 settings-schema 的 TYPE_TIER_VALUES 同序）。 */
+  const QP_TYPE_TIERS = ["scene", "web", "video", "image"];
+  // 面板的内容分级勾选档（**紧凑纯文字**，与类型档同一风格；值域与设置页
   // contentRatingFilter 是同一套 id）。**与设置页同一个键** —— 分级闸门本就长在
-  // playableInventory 上（两级过滤的第一级），所以这里必须有控件：否则设置页切了档，
-  // 面板列表会跟着缩、却没有任何地方能解释或改回来。
+  // playableInventory 上（两级过滤的第一级），所以这里必须有控件：否则设置页改了勾选，
+  // 面板列表会跟着缩、却没有任何地方能解释或改回来。多档勾选、自由组合（v7 起是数组）。
   function qpRatings() {
     return [
-      { id: "all", label: weT("全部") },
       { id: "everyone", label: weT("全年龄") },
       // PG13 是纯 ASCII：i18n 的调用点扫描器只认含 CJK 的字符串字面量，包 weT 会让
       // 词表键变成"看不见调用点"的孤儿 —— 本就无需翻译，裸字面量是正解。
@@ -156,11 +158,6 @@
       { id: "mature", label: weT("成人") },
       { id: "unrated", label: weT("未分级") },
     ];
-  }
-  /** 分级档 id → 面板文案（空态提示用；值域与设置页的 contentRatingFilter 同一套 id）。 */
-  function qpRatingLabelOf(id) {
-    const hit = qpRatings().find((r) => r.id === id);
-    return hit ? hit.label : String(id || "");
   }
   // ── 三档页签（壁纸 / 外观 / 播放）──────────────────────────────────────────
   // 位置在「轮播」之下：当前壁纸与轮播在三档页签下都显示（调外观 / 播放参数时想换一张
@@ -532,7 +529,8 @@
       );
   }
 
-  function qpRenderViewBar(sel, view, typeFilter, ratingFilter, switchView) {
+  function qpRenderViewBar(sel, view, typeAllow, ratingAllow, switchView) {
+    const ratingOn = new Set(Array.isArray(ratingAllow) ? ratingAllow : []);
     return React.createElement("div", { className: "we-qp__viewbar" },
       React.createElement("input", {
         className: "we-picker__text we-qp__search", type: "text",
@@ -541,30 +539,68 @@
         "aria-label": weT("搜索壁纸标题"),
         onInput: (e) => { setTransient("qpSearch", e.target.value); emit(); },
       }),
-      // 内容分级筛选：与设置页**同一个键**（contentRatingFilter，typeFilter
-      // 同款治理）—— 这里改，设置页列表与轮播候选同步生效；设置页改，
-      // 这边同步显示。分级是**内容闸门**（拦播放，不只筛列表），改档立刻
-      // 决定哪些壁纸能点。
-      React.createElement("select", {
-        className: "we-picker__select we-qp__rating",
-        value: ratingFilter,
-        onChange: (e) => { setSetting("contentRatingFilter", e.target.value); emit(); },
+      // 内容分级：下拉 + 多档勾选（与壁纸选择器同款设计，用户口径 2026-10-30：
+      // 四枚胶囊在快捷面板里同样观感差）。键仍是 contentRatingFilter（typeFilter
+      // 同款治理）—— 这里改，设置页列表与轮播候选同步生效；设置页改，这边同步显示。
+      // 分级是**内容闸门**（拦播放，不只筛列表），勾选集合立刻决定哪些壁纸能点。
+      React.createElement("details", { className: "we-qp__rating-menu we-picker__rating-menu" },
+      React.createElement("summary", {
+        className: "we-qp__rating-btn we-picker__rating-btn",
         "aria-label": weT("内容分级"),
-        title: weT("对应 Wallpaper Engine 的内容分级（project.json contentrating）"),
+        title: weT("对应 Wallpaper Engine 的内容分级（project.json contentrating）；多档勾选、自由组合：勾上的档才允许出现在列表、轮播与播放里"),
       },
-      ...qpRatings().map((r) => React.createElement("option", { key: r.id, value: r.id }, r.label)),
+      React.createElement("span", { className: "we-picker__rating-text" }, weT("内容分级")),
+      React.createElement("span", { className: "we-picker__rating-caret", "aria-hidden": "true" }, "▾"),
       ),
-      // 类型筛选：与设置页「类型」**同一个键**（typeFilter；不再单独存 qpType）——
-      // 这里改，设置页列表与轮播候选同步生效；
-      // 设置页改，这边同步显示。两处都只筛「列表」，不拦正在应用的壁纸。
-      React.createElement("select", {
-        className: "we-picker__select we-qp__type",
-        value: typeFilter,
-        onChange: (e) => { setSetting("typeFilter", e.target.value); emit(); },
-        "aria-label": weT("类型筛选"),
-        title: weT("按类型筛选壁纸列表（与设置页同一档）"),
+      React.createElement("div", { className: "we-picker__rating-list" },
+      qpRatings().map((r) => React.createElement("label", {
+        key: r.id,
+        className: "we-picker__rating-toggle" + (ratingOn.has(r.id) ? " we-picker__rating-toggle--on" : ""),
       },
-      ...qpTypes().map((t) => React.createElement("option", { key: t.id, value: t.id }, t.label)),
+      React.createElement("input", {
+        type: "checkbox", className: "we-picker__rating-check",
+        value: r.id,
+        checked: ratingOn.has(r.id),
+        onChange: () => onRatingFilterToggle(r.id, !ratingOn.has(r.id)),
+        "aria-label": weT("内容分级（{name}）", { name: r.label }),
+      }),
+      React.createElement("span", null, r.label),
+      )),
+      ),
+      ),
+      // 类型筛选：与设置页「类型」**同一个键**（typeFilter；v8 起是勾选集合）——
+      // 这里改，设置页列表同步生效；两处都只筛「列表」，不拦正在应用的壁纸。
+      // 形态与内容分级同款：下拉 + 多档勾选（用户口径 2026-10-30）。
+      React.createElement("details", { className: "we-qp__type-menu we-picker__type-menu" },
+      React.createElement("summary", {
+        className: "we-qp__type-btn we-picker__type-btn",
+        "aria-label": weT("类型"),
+        title: weT("按类型筛选壁纸列表（勾选集合，与设置页同一份；只筛列表与「下一张」候选）"),
+      },
+      React.createElement("span", { className: "we-picker__rating-text" }, weT("类型")),
+      React.createElement("span", { className: "we-picker__rating-caret", "aria-hidden": "true" }, "▾"),
+      ),
+      React.createElement("div", { className: "we-picker__rating-list" },
+      qpTypes().map((t) => React.createElement("label", {
+        key: t.id,
+        className: "we-picker__rating-toggle" + (typeAllow.indexOf(t.id) !== -1 ? " we-picker__rating-toggle--on" : ""),
+      },
+      React.createElement("input", {
+        type: "checkbox", className: "we-picker__rating-check",
+        value: t.id,
+        checked: typeAllow.indexOf(t.id) !== -1,
+        onChange: () => {
+          const on = typeAllow.indexOf(t.id) === -1;
+          const next = QP_TYPE_TIERS.filter((id) => (id === t.id ? on : typeAllow.indexOf(id) !== -1));
+          if (!next.length) return;
+          setSetting("typeFilter", next);
+          emit();
+        },
+        "aria-label": weT("类型（{name}）", { name: t.label }),
+      }),
+      React.createElement("span", null, t.label),
+      )),
+      ),
       ),
       // 列表 / 卡片：标签式切换（滑动胶囊做激活指示、无分段底 —— 样式见
       // .we-qp__viewtabs），偏好记 localStorage（QP_VIEW_KEY），两个壳共用一份。
@@ -597,7 +633,7 @@
     );
   }
 
-  function qpRenderList(listRef, rows, view, cardsView, vTopH, vBtmH, q, ratingFilter, typeFilter, sel) {
+  function qpRenderList(listRef, rows, view, cardsView, vTopH, vBtmH, q, ratingAllow, typeAllow, sel) {
     return React.createElement("div", {
       ref: listRef,
       className: "we-qp__list" + (view === "cards" ? " we-qp__list--cards" : ""),
@@ -612,9 +648,9 @@
         : React.createElement(React.Fragment, null,
             React.createElement("span", { className: "we-picker__hint" },
               q ? weT("没有匹配「{query}」的壁纸", { query: sel.qpSearch })
-                  : weT(ratingFilter !== "all" ? "「{name}」分级下没有可播放的壁纸"
-                      : typeFilter !== "all" ? "「{name}」类型下没有可播放的壁纸" : "没有可播放的壁纸",
-                      { name: qpRatingLabelOf(ratingFilter) })),
+                  : weT(Array.isArray(ratingAllow) && ratingAllow.length < 4 ? "勾选的分级下没有可播放的壁纸"
+                      : typeAllow.length < qpTypes().length ? "勾选的类型下没有可播放的壁纸"
+                      : "没有可播放的壁纸")),
           ),
     );
   }
@@ -631,7 +667,7 @@
     );
   }
 
-  function qpRenderLibrarySection(sel, view, typeFilter, ratingFilter, listRef, rows, cardsView, vTopH, vBtmH, q, switchView) {
+  function qpRenderLibrarySection(sel, view, typeAllow, ratingAllow, listRef, rows, cardsView, vTopH, vBtmH, q, switchView) {
     return React.createElement("div", { className: "we-qp__section we-qp__library" },
       !sel.loaded
         ? React.createElement("span", { className: "we-picker__hint" }, weT("扫描 Wallpaper Engine…"))
@@ -645,8 +681,8 @@
               }, weT(sel.loading ? "刷新中…" : "重试")),
             )
           : React.createElement(React.Fragment, null,
-      qpRenderViewBar(sel, view, typeFilter, ratingFilter, switchView),
-      qpRenderList(listRef, rows, view, cardsView, vTopH, vBtmH, q, ratingFilter, typeFilter, sel),
+      qpRenderViewBar(sel, view, typeAllow, ratingAllow, switchView),
+      qpRenderList(listRef, rows, view, cardsView, vTopH, vBtmH, q, ratingAllow, typeAllow, sel),
     ),
   );
   }
@@ -759,14 +795,23 @@
     //（用户口径：类型变动两处同步、不做单独的档）。持久化 ⇒ 同时管设置页列表与轮播候选；
     // 两处同值，设置页切档这边立刻跟着变，反之亦然。
     const q = String(sel.qpSearch || "").trim().toLowerCase();
-    const typeFilter = qpTypes().some((t) => t.id === sel.typeFilter) ? sel.typeFilter : "all";
+    // 类型勾选集合：旧档 / 坏值一律按「勾满四档」读（v8 起值是数组；只喂列表过滤与勾选框
+    // 受控态，不影响播放闸门 —— 类型档只筛显示）。
+    const typeFilter = Array.isArray(sel.typeFilter)
+      ? sel.typeFilter.filter((t) => qpTypes().some((r) => r.id === t))
+      : (sel.typeFilter === "all" ? qpTypes().map((r) => r.id)
+        : [sel.typeFilter].filter((t) => qpTypes().some((r) => r.id === t)));
+    const typeAllow = typeFilter.length ? typeFilter : qpTypes().map((r) => r.id);
     // 分级档与 typeFilter 同一套钳制（旧档/坏值回落「全部」）；闸门在 playableInventory
     // 里已经生效，这里钳出来的值只喂空态文案与下拉的受控 value。
-    const ratingFilter = qpRatings().some((r) => r.id === sel.contentRatingFilter)
-      ? sel.contentRatingFilter : "all";
+    // 分级勾选集合：旧档 / 坏值一律按「勾满四档」读（闸门在 playableInventory 里已经
+    // 生效，这里钳出来的值只喂勾选框的受控态与空态文案）；v7 起值是数组。
+    const ratingAllow = Array.isArray(sel.contentRatingFilter)
+      ? sel.contentRatingFilter.filter((t) => qpRatings().some((r) => r.id === t))
+      : qpRatings().map((r) => r.id);
     const playable = playableInventory();
     const filtered = playable.filter((w) => {
-      if (typeFilter !== "all" && w.type !== typeFilter) return false;
+      if (typeAllow.indexOf(w.type) === -1) return false;
       if (q && String(w.title || "").toLowerCase().indexOf(q) === -1) return false;
       return true;
     });
@@ -852,7 +897,7 @@
                 // ── 壁纸列表（搜索 + 视图切换 + 快切）──
                 // 库还没回来 / 扫描失败：**只有这一页**给一句话 —— 外观 / 播放两页不依赖库，
                 // 照常可用（不能整块替换掉，那样连外观都进不去）。
-                qpRenderLibrarySection(sel, view, typeFilter, ratingFilter, listRef, rows, cardsView, vTopH, vBtmH, q, switchView),
+                qpRenderLibrarySection(sel, view, typeAllow, ratingAllow, listRef, rows, cardsView, vTopH, vBtmH, q, switchView),
                 // 声音（与播放页那份同源：同一份渲染器、同一状态）。包一层 .we-qp__section
                 // 只为保留这一节的分隔线与间距（渲染器自己那份 section 是给设置页排版的）。
                 React.createElement("div", { className: "we-qp__section" },

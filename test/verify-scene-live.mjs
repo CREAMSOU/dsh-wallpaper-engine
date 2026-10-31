@@ -2803,17 +2803,17 @@ check('host 侧 /media-control 只收 POST + 动作走 mediaBackend.control（�
 // 瞬态 qpType + 两层交集空态兜底」整套退役：不再 setTransient("qpType")、不再有默认档
 // 行、空态不再有"没有交集/完整操作链"提示）。「图片」是后补的一档（上传的单文件图片
 // 壁纸）：判据按**同一份档位表**逐档核对，再加一条负对照 —— 少一档必须被判红。
-  const QP_TYPE_ROWS = [['all', '全部'], ['scene', '场景'], ['web', '网页'], ['video', '视频'], ['image', '图片']];
+  const QP_TYPE_ROWS = [['scene', '场景'], ['web', '网页'], ['video', '视频'], ['image', '图片']];
   const sideTypeFilterOk = (text) => text.includes('function qpTypes()')
     && QP_TYPE_ROWS.every(([id, label]) => text.includes('id: "' + id + '"')
       && (text.includes('label: weT("' + label + '")') || text.includes('label: weT("' + label + '", null,')))
-    && text.includes('w.type !== typeFilter');
-  check('侧栏列表类型筛选：五档齐全（含「图片」）+ 与设置页同键同步（setSetting typeFilter，单独档已退役）',
+    && text.includes('typeAllow.indexOf(w.type) === -1');
+  check('侧栏列表类型筛选：四档齐全（含「图片」）+ 与设置页同键同步（setSetting typeFilter，勾选集合）',
   // i18n（中文原文即键）之后：容器从文件顶层常量改成 `qpTypes()`（每次渲染现建，
   // 否则文案会冻在加载期），每档 label 各自走 `weT("…")` —— 判据只认"档位 id 仍绑着
   // 同一句原文"，不认包装形态（认形态的判据会在下一次改写法时静默失效）。
     sideTypeFilterOk(qpSrc)
-    && qpSrc.includes('setSetting("typeFilter", e.target.value)')
+    && qpSrc.includes('setSetting("typeFilter", next)')
     && !qpSrc.includes('setTransient("qpType"')
     && !qpSrc.includes('sel.qpType')
     && !src.includes('qpType: "all"')
@@ -2826,20 +2826,25 @@ check('host 侧 /media-control 只收 POST + 动作走 mediaBackend.control（�
   // ↑ 本段与"三键退役"共用同一个 `{ … }` 块（原先那条 check 的收尾 `}` 就在这里）——
   //   不要再包一层 `{}`：块会多开一层，整个文件在 EOF 报 "Unexpected end of input"。
 }
-// 用户口径：设置页切「类型」不得把**正在应用**的壁纸干掉 ⇒ 类型档只筛列表与轮播
-// 候选、不入播放闸门（keepPlayingWallpaper：分级拦播放，类型档没有入参）；轮播在场
-// 时「仅被类型档排除」也不换台（typeOnlyExcluded）。分级闸门照旧干掉并解释 —— 那
-// 一半钉在 verify-playback-controls E 段，这里钉类型档这一半。
+// 用户口径（2026-10-30 / issue #294）：设置页切「类型」不得把**正在应用**的壁纸干掉，
+// 也不得改变轮播成员与「下一张」⇒ 类型档只筛选择器网格的显示：
+//   · 播放闸门 keepPlayingWallpaper 只收分级档（类型档没有入参）；
+//   · 轮播候选 / 「下一张」走 isRotationEligible（可播放 ∧ 分级上限，同样不读类型档），
+//     所以 revalidateSelection 里不再需要「仅被类型档排除」的换台豁免（typeOnlyExcluded
+//     已退役）。分级闸门照旧干掉并解释 —— 那一半钉在 verify-playback-controls E 段。
 {
   const gateKeepsPlaying = (clientText, prepText) =>
     clientText.includes('const keepCurrent = keepPlayingWallpaper(cur, selection.contentRatingFilter)')
-      && clientText.includes('const typeOnlyExcluded = keepCurrent')
+      && !clientText.includes('typeOnlyExcluded')
+      && clientText.includes('isRotationEligible(w, selection.contentRatingFilter)')
       && prepText.includes('if (!w || !keepPlayingWallpaper(w, selection.contentRatingFilter))');
-  check('类型档不入播放闸门：revalidate 丢弃走 keepPlayingWallpaper + 换台豁免 typeOnlyExcluded',
+  check('类型档只筛显示：播放闸门与轮播候选都不读类型档（typeOnlyExcluded 已退役）',
     gateKeepsPlaying(src, prepSrc));
-  // 负对照：把闸面换回「读类型档」的旧形态（变异输入），同一条判据必须判否。
-  check('negative control: 闸门改回读类型档的形态会被同一条判据点出',
-    !gateKeepsPlaying(src, 'if (!w || !isRotatableWallpaper(w, selection.contentRatingFilter, selection.typeFilter))'));
+  // 负对照：把轮播候选换回「读类型档」的旧形态（变异输入），同一条判据必须判否。
+  check('negative control: 轮播候选改回读类型档的形态会被同一条判据点出',
+    !gateKeepsPlaying(src.split('isRotationEligible(w, selection.contentRatingFilter)')
+      .join('isRotatableWallpaper(w, selection.contentRatingFilter, selection.typeFilter)'), prepSrc)
+      && gateKeepsPlaying(src, prepSrc));
 }
 // 场景/网页实时渲染**默认开** —— 这是用户可见的默认值，三处一起钉：DEFAULTS 的值、
 // KINDS 的类型（boolTrue = 缺键读作开）、以及面板/活层的判据形态（`!== false`，
@@ -3299,7 +3304,7 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
   //    渲染重建一份，函数 / 对象身份全变）。
   // ⚠️ 例外（**必须留组件内**，故意不进名单）：`group` / `candidates` 是读**可变** store 算出的
   //    派生值 —— 提到模块级会退化成"只在模块初始化时算一次"的冻结快照。下面那条负对照钉住它。
-  const PROMOTED_HANDLERS = ['onRefresh', 'onRatingFilterChange', 'onTypeFilterChange',
+  const PROMOTED_HANDLERS = ['onRefresh', 'onRatingFilterToggle', 'onTypeFilterToggle',
     'onLayoutChange', 'onEdgeCompatChange', 'onGroupInterval', 'onArmDeleteGroup', 'onDeleteGroup',
     'onSwitchTransition', 'onSwitchTransitionDir', 'onSwitchTransitionSpeed',
     'onRopeVisibilityChange', 'onRopeFormChange', 'onRopeScaleChange',
@@ -3624,7 +3629,7 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
   const selBase = Object.assign({}, schema.DEFAULTS, {
     loaded: true, loading: false, id: 'w1', url: '/x', playing: true, videoPlaying: true,
     videoVolume: 0.5, videoAudioEnabled: false, videoError: '', type: 'video',
-    contentRatingFilter: 'all', hiddenIds: [], rotationGroups: [{ id: 'g1', name: 'G', interval: 10, order: 'sequence', wallpaperIds: ['w1', 'w2'] }], rotationGroupId: 'g1',
+    contentRatingFilter: ['everyone', 'pg13', 'mature', 'unrated'], hiddenIds: [], rotationGroups: [{ id: 'g1', name: 'G', interval: 10, order: 'sequence', wallpaperIds: ['w1', 'w2'] }], rotationGroupId: 'g1',
     rotationEnabled: false, qpSearch: '', qpType: 'all', url2: '',
     inventory: { wallpapers: [], error: null, installDir: '/we', uploadDir: '/up', weAssetsDir: null, sceneMediaBase: '', total: 0, portableCount: 0, playlists: [] },
     accent: '#4f8cff', glassColor: '#ffffff', glassAlpha: 0, blur: 0, border: 0,
@@ -6270,7 +6275,7 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
   const st = Object.assign({}, schemaMod.DEFAULTS, {
     loaded: true, loading: false, id: 'w1', url: '/x', type: 'video', playing: true,
     videoPlaying: true, videoVolume: 0.5, videoAudioEnabled: false, videoError: '',
-    contentRatingFilter: 'all', hiddenIds: [], rotationGroups: [{ id: 'g1', name: 'G', interval: 10, order: 'sequence', wallpaperIds: ['w1', 'w2'] }], rotationGroupId: 'g1',
+    contentRatingFilter: ['everyone', 'pg13', 'mature', 'unrated'], hiddenIds: [], rotationGroups: [{ id: 'g1', name: 'G', interval: 10, order: 'sequence', wallpaperIds: ['w1', 'w2'] }], rotationGroupId: 'g1',
     rotationEnabled: false, flip: false, objectFit: 'cover', playbackRate: 1,
     sceneLive: true, sceneLiveFailures: {}, themeFollow: false, themeFollowLine: '',
     adapterTarget: 'auto', pauseOnHidden: false, pauseOnBlur: false, pauseOnBattery: false,

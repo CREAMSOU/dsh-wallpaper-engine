@@ -33,8 +33,13 @@
     "pauseOnBattery": false,
     "flip": false,
     "objectFit": "cover",
-    "contentRatingFilter": "all",
-    "typeFilter": "all",
+    "contentRatingFilter": ["everyone", "pg13", "mature", "unrated"],
+    "typeFilter": [
+      "video",
+      "web",
+      "image",
+      "scene"
+    ],
     "pickerLayout": "fixed",
     "edgeCompat": true,
     "accent": "#00c800",

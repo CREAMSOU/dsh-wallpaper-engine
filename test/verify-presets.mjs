@@ -502,13 +502,15 @@ const OLD_TAG = 'dsh-we/glass-preset@1';
     // ★ 出厂预设不得替用户收窄**类型档**：套用一份外观预设不该顺手把壁纸库 / 轮播候选池切到
     //   单一分支（「作者自用」曾误设 `image` —— 用户看到的是"切个主题，壁纸列表突然只剩图片"）。
     //   值域同一套 id（`all` / `video` / `web` / `image` / `scene`），这里钉的是七套一律 `all`。
-    const narrowedOf = (m) => Object.entries(m).filter(([, v]) => v !== 'all');
+    // v8 起类型档是勾选集合：「不窄」= 勾满四档（顺序即规范顺序）。
+    const FULL_TYPES = ['video', 'web', 'image', 'scene'];
+    const narrowedOf = (m) => Object.entries(m).filter(([, v]) => JSON.stringify(v) !== JSON.stringify(FULL_TYPES));
     const narrowed = narrowedOf(types);
-    check('★ 七套出厂预设的类型档一律「全部」（外观预设不得替用户收窄壁纸分类）',
+    check('★ 七套出厂预设的类型档一律勾满四档（=「不限类型」；外观预设不得替用户收窄壁纸分类）',
       files.length === 7 && narrowed.length === 0,
       narrowed.length ? narrowed.map(([k, v]) => k + '=' + v).join(',') : JSON.stringify(types));
     check('  └ 负对照（同一条判据，喂被改窄的合成输入）：判得出 —— 判据有牙',
-      narrowedOf({ ...types, author: 'image' }).length === 1, '合成 author=image');
+      narrowedOf({ ...types, author: ['image'] }).length === 1, '合成 author=image');
   }
 
   // 创建用户预设：settings 段补齐成完整快照（100 键）

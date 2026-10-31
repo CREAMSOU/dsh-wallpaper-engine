@@ -972,12 +972,12 @@ function scheduleSceneVideoResync() {
 // `selection` 显式传入，模型自己不读任何模块级状态。
 
 // 选择被拒 / 被丢弃时的可读原因（`""` = 没有可解释的原因，正常应用）：壁纸层不渲染、
-// 播放按钮因 !sel.url 变灰时，卡片上至少给出原因。类型档不在原因表里：它只筛列表与
-// 轮播候选、不拦播放（keepPlayingWallpaper）。
+// 播放按钮因 !sel.url 变灰时，卡片上至少给出原因。类型档不在原因表里：它只筛选择器网格
+// 的显示，不拦播放、也不影响轮播与「下一张」（keepPlayingWallpaper / isRotationEligible）。
 function selectionBlockedNote(w) {
   if (!w) return weT("当前壁纸已不在列表里（可能已被移除或隐藏）");
   if (!isPlayableType(w)) return weT("这张壁纸没有可播放的媒体文件");
-  if (!matchesRatingFilter(w, selection.contentRatingFilter)) return weT("这张壁纸被「内容分级」过滤排除了 —— 把内容分级切回「全部」即可播放");
+  if (!matchesRatingFilter(w, selection.contentRatingFilter)) return weT("这张壁纸的内容分级不在勾选的分级里 —— 在「内容分级」里勾上它所在的档即可播放");
   return "";
 }
 
@@ -987,28 +987,36 @@ function playableInventory() {
   );
 }
 
+// 「下一张」在轮播关闭时的池：与轮播候选同一份入选判据（内容安全 ∧ 可播放，不读类型档），
+// 免得「类型档只筛显示」这条口径在轮播关闭的分支里漏掉一处。
+function rotationPoolAll() {
+  return selection.inventory.wallpapers.filter((w) =>
+    isRotationEligible(w, selection.contentRatingFilter)
+    && !isHiddenWallpaper(w.id, selection.hiddenIds));
+}
+
 // Re-validate the active selection against the current inventory + filters.
 // Called after a refresh AND after changing the rating/type filter. 丢弃闸门是
-// keepPlayingWallpaper：分级是内容闸门（拦播放），类型档只筛列表与轮播候选 ——
-// 切类型档不得把正在应用的壁纸干掉。轮播在场时拿不到候选就换下一张，但「仅被
-// 类型档排除」这一档不换台。
+// keepPlayingWallpaper：分级是内容闸门（勾选集合：勾上的档才允许播）；类型档只筛选择器
+// 网格的**显示**，既不得把正在应用的壁纸干掉，也不得改变轮播成员与「下一张」（用户口径
+// 2026-10-30 / issue #294）。轮播在场时拿不到候选就换下一张；当前壁纸被勾选集合挡掉
+// 时**立即换台**（用户口径 2026-10-30：「换得了就换，换不了才提示」）。
 function revalidateSelection() {
   // 被过滤条件丢弃的选择要留下原因：先取下来，applySelection("") 会清掉
   // blockedNote，故在其之后写回 —— 否则用户改一次过滤条件，壁纸就无声变空白。
   let droppedNote = "";
   const cur = selection.id ? selection.inventory.wallpapers.find((w) => w.id === selection.id) : null;
   const keepCurrent = keepPlayingWallpaper(cur, selection.contentRatingFilter);
+  // 「被勾选集合挡掉」这一支要区分于「壁纸被移除 / 已不在列表」：只有前者才自动换台。
+  const droppedByRating = Boolean(cur) && isPlayableType(cur)
+    && !matchesRatingFilter(cur, selection.contentRatingFilter);
   if (selection.id && !keepCurrent) {
     droppedNote = selectionBlockedNote(cur);
     setSetting("id", "");
   }
-  // 「仅被类型档排除」= 还能播、没被隐藏、确实属于当前轮播列表，只是候选表按类型
-  // 筛掉了它。这一档不换台（下一次轮换 tick 自然按候选走）；隐藏 / 不在列表 / 被
-  // 分级拦这些真原因照旧换台。
-  const typeOnlyExcluded = keepCurrent && Boolean(selection.id)
-    && !isHiddenWallpaper(selection.id, selection.hiddenIds)
-    && Boolean(activeRotationGroup()) && activeRotationGroup().wallpaperIds.indexOf(selection.id) >= 0;
-  if (selection.rotationEnabled && selection.id && !typeOnlyExcluded
+  // 轮播在场时：当前壁纸不在候选里就换下一张。候选判据（isRotationEligible：可播放 ∧
+  // 勾选集合）不含类型档 ⇒ 切类型档既不会把人踢下台，也不会改变轮播成员与「下一张」。
+  if (selection.rotationEnabled && selection.id
     && !rotationCandidates().some((w) => w.id === selection.id)) {
     const first = rotationCandidates()[0];
     setSetting("id", first ? first.id : "");
@@ -1017,8 +1025,14 @@ function revalidateSelection() {
     const first = rotationCandidates()[0];
     if (first) selection.id = first.id;
   }
+  // 收窄分级档把当前壁纸挡掉 ⇒ 立即换到当前档内第一张可播候选（轮播分支上面已接手，
+  // 这里兜「轮播关闭」与「轮播在场但候选为空」两种）；一张都找不到才留提示。
+  if (!selection.id && droppedByRating) {
+    const first = playableInventory()[0];
+    if (first) selection.id = first.id;
+  }
   applySelection(selection.id);
-  // 仍然没有可播壁纸 → 把被排除的原因显示出来（有轮播接手则不打扰）。
+  // 仍然没有可播壁纸 → 把被排除的原因显示出来（有接手则不打扰）。
   if (droppedNote && !selection.id) setTransient("blockedNote", droppedNote);
   emit();
 }
@@ -1049,7 +1063,7 @@ function groupWallpapers(group) {
   return group.wallpaperIds
     .map((id) => byId.get(id))
     .filter((w) => w
-      && isRotatableWallpaper(w, selection.contentRatingFilter, selection.typeFilter)
+      && isRotationEligible(w, selection.contentRatingFilter)
       && !isHiddenWallpaper(w.id, selection.hiddenIds));
 }
 
@@ -1271,7 +1285,7 @@ function commitRotationSwitch(prep) {
   prep.staged = null;
   const w = wallpaperById().get(prep.id);
   const valid = selection.rotationEnabled && selection.id === prep.fromId
-    && w && isRotatableWallpaper(w, selection.contentRatingFilter, selection.typeFilter)
+    && w && isRotationEligible(w, selection.contentRatingFilter)
     && !isHiddenWallpaper(w.id, selection.hiddenIds);
   liveLog("rotation-commit", "wid=" + prep.id + " from=" + prep.fromId + " kind=" + (prep.kind || "-")
     + " valid=" + valid + " " + liveStateBrief());
@@ -3414,7 +3428,7 @@ function onToggleRotation() {
 // 「下一张」（快捷面板）：轮播开着按活动列表推进、关着按可播放网格推进；
 // 锚点是【实际显示】的那张（与轮换同一锚点判定，避免 A→B→A 乒乓）。
 function onNextWallpaper() {
-  const list = selection.rotationEnabled ? rotationCandidates() : playableInventory();
+  const list = selection.rotationEnabled ? rotationCandidates() : rotationPoolAll();
   if (list.length < 2) return;
   const anchor = rotationAnchorWallpaper();
   const anchorId = anchor ? anchor.id : selection.id;
@@ -4008,12 +4022,22 @@ const onFontResetAll = () => {
 const onRefresh = () => loadInventory();
 // Filter changes: persist + re-validate so wallpapers outside the selected
 // categories drop out of the grid/rotation immediately.
-const onRatingFilterChange = (e) => {
-  setSetting("contentRatingFilter", e.target.value);
+// 内容分级是**多档勾选**（v7 起值是数组）：切某一档 = 往集合里加/删，且不允许把最后一档
+// 取消（一个都不勾等于全库空白，用户只会以为坏了）。
+const onRatingFilterToggle = (tier, on) => {
+  const cur = Array.isArray(selection.contentRatingFilter) ? selection.contentRatingFilter : [];
+  const next = RATING_TIERS.filter((t) => (t === tier ? on : cur.indexOf(t) !== -1));
+  if (!next.length) return;
+  setSetting("contentRatingFilter", next);
   revalidateSelection();
 };
-const onTypeFilterChange = (e) => {
-  setSetting("typeFilter", e.target.value);
+// 类型筛选也是**多档勾选**（v8 起值是数组，与内容分级同款）：不允许取消最后一档
+//（一个都不勾等于网格空白）。类型只筛列表与「下一张」候选，不拦正在播的壁纸。
+const onTypeFilterToggle = (tier, on) => {
+  const cur = Array.isArray(selection.typeFilter) ? selection.typeFilter : [];
+  const next = TYPE_TIERS.filter((t) => (t === tier ? on : cur.indexOf(t) !== -1));
+  if (!next.length) return;
+  setSetting("typeFilter", next);
   revalidateSelection();
 };
 // Card style: classic (CD-rack) vs fixed (overlap-proof).
@@ -4732,7 +4756,7 @@ function WallpaperPicker() {
         cdMode, query, basePlayable, ratingCounts, typeCounts,
         gridRef: pickerGridRef, vwin: pickerVwin,
         armedConfirm: sel.armedConfirm, onArmConfirm: armConfirm, onDisarmConfirm: disarmConfirm,
-        onClear, onTogglePlay, onRatingFilterChange, onTypeFilterChange,
+        onClear, onTogglePlay, onRatingToggle: onRatingFilterToggle, onTypeToggle: onTypeFilterToggle,
         onShowNormalView, onShowHiddenView,
         onToggleBatchMode, onArmBatchHide, onBatchHide, onBatchCancel, onSearchInput, onPickCard,
       }) : React.createElement(React.Fragment, null,
