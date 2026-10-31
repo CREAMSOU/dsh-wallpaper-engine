@@ -165,6 +165,7 @@ const VERIFY_STEPS = [
   step('test/verify-cache-prune.mjs'),
   step('test/verify-we-install-probe.mjs'),
   step('test/verify-wallpaper-scan.mjs'),
+  step('test/verify-we-folders.mjs'),
   step('test/verify-inventory-index.mjs'),
   step('test/verify-mp4-vfs.mjs'),
   step('test/verify-theme-layer.mjs'),
