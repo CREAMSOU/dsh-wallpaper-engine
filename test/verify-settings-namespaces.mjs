@@ -943,6 +943,62 @@ console.log('\n⑧ 组件写路径：v4 换算键按当前刻度落盘（70 就�
     Object.keys(after).length === HOST_KEY_COUNT, Object.keys(after).length + ' 键 vs 宿主 ' + HOST_KEY_COUNT + ' 键');
 }
 
+console.log('\n⑨ 纯迁移矩阵：v<4 才换算 / v>=4 一次都不换算（SETTINGS_VERSION 抬高后的防线）');
+{
+  // ⑧ 打的是**组件写路径**（body 不带 settingsVersion ⇒ NaN ⇒ 不短路）。
+  // 本条打的是另一条腿：**正常设置迁移**。旧实现靠 `v >= SETTINGS_VERSION` 早退隐式保证
+  // v4 换算只跑一次；SETTINGS_VERSION 6→8 之后，v6 存档不再早退 ⇒ 会掉进换算
+  //（实测 glassAlpha 55 ⇒ 92）。判据对每个档位逐一断言，不依赖早退这条隐式保证。
+  const SCALED = [
+    { key: 'glassAlpha', factor: 100 / 60, max: 100, legacyMax: 60 },
+    { key: 'sidebarAlpha', factor: 1 / 2, max: 100, legacyMax: 200 },
+    { key: 'sidebarContentAlpha', factor: 100 / 80, max: 100, legacyMax: 80 },
+    { key: 'settingsWindowTransparency', factor: 100 / 60, max: 100, legacyMax: 60 },
+    { key: 'floatersTransparency', factor: 100 / 60, max: 100, legacyMax: 60 },
+    { key: 'leftSidebarTransparency', factor: 100 / 60, max: 100, legacyMax: 60 },
+  ];
+  const scaledTo = (x, s) => Math.min(s.max, Math.round(x * s.factor));
+  const V = schema.sanitizeFromSchema({}, 'host').settingsVersion;
+
+  // 9 a v<4 / 无版本号 ⇒ 必须换算
+  for (const ver of [undefined, 0, 1, 2, 3]) {
+    for (const s of SCALED) {
+      const raw = { [s.key]: Math.min(s.legacyMax, 45) };
+      if (ver !== undefined) raw.settingsVersion = ver;
+      const got = schema.sanitizeFromSchema(raw, 'host')[s.key];
+      check(`⑨ v=${ver ?? '(无版本号)'} ${s.key} 旧刻度 ${raw[s.key]} ⇒ ${scaledTo(raw[s.key], s)}`,
+        got === scaledTo(raw[s.key], s), '实际=' + JSON.stringify(got));
+    }
+  }
+
+  // 9 b v>=4 ⇒ 一次都不许换算（本次修复的要害；55 是 PR 描述里被错标成 92 的那个值）
+  for (const ver of [4, 5, 6, 7, V]) {
+    for (const s of SCALED) {
+      for (const v of [20, 55, 80]) {
+        const capped = Math.min(s.max, v);
+        const got = schema.sanitizeFromSchema({ settingsVersion: ver, [s.key]: capped }, 'host')[s.key];
+        check(`⑨ v=${ver} ${s.key}=${capped}（新刻度）原样保留`, got === capped, '实际=' + JSON.stringify(got));
+      }
+    }
+  }
+
+  // 9 c 负对照：把 preV4Scale 强制为 true 的形态，在 v6 存档上必然二次缩放
+  // —— 证明上面 9 b 不是恒真判据。（对源码做一次字符串替换后临时求值，不落盘、不改仓库文件。）
+  {
+    const src = readFileSync(join(ROOT, 'lib', 'settings-schema.js'), 'utf8');
+    const naiveSrc = src.replace(/const preV4Scale = .*;/, 'const preV4Scale = true;');
+    check('⑨ 负对照装配：源码里 preV4Scale 那行被成功替换（否则下面的自检恒真）',
+      naiveSrc !== src && /const preV4Scale = true;/.test(naiveSrc));
+    const naivePath = join(ISO, 'settings-schema-naive.mjs');
+    writeFileSync(naivePath, naiveSrc);
+    const naive = await import(pathToFileURL(naivePath).href);
+    const victim = 'glassAlpha';
+    const naiveGot = naive.sanitizeFromSchema({ settingsVersion: 6, [victim]: 55 }, 'host')[victim];
+    check(`⑨ 负对照：不补守卫时 v6 存档的 ${victim}=55 会被二次缩放（≠ 55，证明防线有效）`,
+      naiveGot !== 55, '无守卫版得到=' + JSON.stringify(naiveGot));
+  }
+}
+
 if (typeof dispose === 'function') { try { dispose(); } catch { /* 清理失败不影响判定 */ } }
 console.log('');
 if (failed) { console.log(`SETTINGS NAMESPACE CHECKS FAILED — ${failed} failed`); process.exit(1); }
