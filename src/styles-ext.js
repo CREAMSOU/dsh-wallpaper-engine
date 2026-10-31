@@ -111,33 +111,53 @@ const CSS_EXT = `
 
   /* ── 「扩展」页签一号模块：自定义会话头像（装饰层见 src/avatar-layer.js）──
      这一层是**宿主会话 DOM 的补丁**：给三类消息行（data-chat-flow-kind = user / steering /
-     assistant-step）在最前面插一个 .we-avatar，行本身改横向 flex ⇒ 头像与消息并排；
-     用户行反过来（row-reverse）⇒ 先插的那个节点落在最右，于是"你的消息在右、助手在左"。
+     assistant-step）补一个 .we-avatar，并把行改成**两列 grid** —— 一列头像、一列内容。
+     助手行头像在第 1 列（左），用户行在第 2 列（右）⇒「你的消息在右、助手在左」。
      关掉开关时节点与属性都被装饰层撤掉 ⇒ 屏上一点痕迹都没有（下面每条规则都挂在开关属性下，
      与思考块玻璃 / 视差同一条门控纪律）。
      尺寸与圆角来自 body 上的两个变量（装饰层按设置写）⇒ 拖滑块只是**变量替换**，不重建节点；
      头像是**一个圆脸**（没导入图就画内置的默认头像 SVG），宽度固定为边长 ⇒ 长消息不会被挤。
      ⚠️ **没有自定义名字行**（用户口径）：这里不要再加名字。
 
-     ⚠️⚠️ 内容那一格必须**穿透槽出口锚点**（issue #154）：宿主把节点渲染包在
+     ⚠️ 为什么不是 flex 一行：表情 / 贴图是**第三方插件提到行首**的（dsh-meme 把
+     「表情: 描述」换成 img 后插到行的第一个子节点）。flex 一行里"头像 | 图 | 正文"
+     只能并排，图多时正文被挤到图的右边；用户要的是**正文先出完、表情另起一行**。
+     grid 的两列给出"头像列 + 内容列"：所有非头像子项都落在内容列里，行内自然换行。
+
+     ⚠️ 表情为什么由装饰层包一层 .we-avatar-media：grid 的每个直接子项会各占一行，
+     三张表情若直接挂在行下就会**竖着排**。装饰层把行首的 IMG 收进一个横向 flex 容器，
+     再按 order 排到正文后面：有正文 ⇒ 正文第 1 行、表情组第 2 行；没正文（内容根被
+     第三方 display:none）⇒ 表情组自然落在第 1 行、紧跟头像，正是用户要的两种形态。
+
+     ⚠️ 内容那一格必须**穿透槽出口锚点**（issue #154）：宿主把节点渲染包在
      div[data-slot="conversation.chat.node"] 里，并给它写死内联 style="display: contents"
      （宿主 renderer 的 ANCHOR_STYLE，注释明说要让 flex/grid 父级"看见槽自己的孩子"）⇒ 这层
-     **没有盒子**：它既不是 flex item，也不接受 flex 属性。所以只写 > :not(.we-avatar) 是
-     **打在空气上**——真正成为 flex item 的是锚点的孩子（助手消息的内容根 div.v5IAXa_root），
-     它会退回默认 flex: 0 1 auto、主轴尺寸按自身 max-content 算，不再"填满行"；而宿主给
-     **收起**状态的思考行写死 contain: size layout（固有尺寸 = 0）⇒ 一行可见内容只剩
-     "思考"折叠行时 max-content = 0 ⇒ 该 item 宽 0px，整条消息连着入口一起消失（展开时
-     contain:size 失效才可见，再收起又归零 = "关掉后找不到重新打开位置"）。
-     故两条选择器都写：直挂内容 + 锚点后面那一层；flex-grow: 1 是这里的要害
-     （固有宽为 0 的内容也靠 grow 撑满行）。判据见 test/verify-scene-live.mjs（头像段 CSS 钉法
-     + 假 DOM 照宿主真实形态造锚点）。**这一段不许出现反引号**：整套样式文本是被塞进产物里的
-     模板字符串，一个反引号就能把 JS 拼断（build-client 会当场报"产物语法错误"）。 */
-  body[data-we-avatar="on"] [data-we-avatar-row] { display: flex; align-items: flex-start; gap: 8px; }
-  body[data-we-avatar="on"] [data-we-avatar-row="user"] { flex-direction: row-reverse; }
-  body[data-we-avatar="on"] [data-we-avatar-row] > :not(.we-avatar),
-  body[data-we-avatar="on"] [data-we-avatar-row] > [data-slot] > :not(.we-avatar) { flex: 1 1 auto; min-width: 0; }
+     **没有盒子**：它既不是 grid item，也不接受 grid 属性。所以只写 > :not(.we-avatar) 是
+     **打在空气上**——真正成为 grid item 的是锚点的孩子（助手消息的内容根 div.v5IAXa_root）。
+     故两条选择器都写：直挂内容 + 锚点后面那一层；grid 的 minmax(0, 1fr) 列宽是这里的要害
+     （固有宽为 0 的内容也靠列宽撑住，不会像 flex-grow 那样被 contain: size layout 压成 0）。
+     判据见 test/verify-scene-live.mjs（头像段 CSS 钉法 + 假 DOM 照宿主真实形态造锚点）。
+     **这一段不许出现反引号**：整套样式文本是被塞进产物里的模板字符串，一个反引号就能把 JS
+     拼断（build-client 会当场报"产物语法错误"）。 */
+  body[data-we-avatar="on"] [data-we-avatar-row] {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    gap: 8px;
+  }
+  body[data-we-avatar="on"] [data-we-avatar-row="user"] { grid-template-columns: minmax(0, 1fr) auto; }
+  body[data-we-avatar="on"] [data-we-avatar-row] > :not(.we-avatar):not([data-slot]),
+  body[data-we-avatar="on"] [data-we-avatar-row] > [data-slot] > :not(.we-avatar) { grid-column: 2; min-width: 0; }
+  body[data-we-avatar="on"] [data-we-avatar-row="user"] > :not(.we-avatar):not([data-slot]),
+  body[data-we-avatar="on"] [data-we-avatar-row="user"] > [data-slot] > :not(.we-avatar) { grid-column: 1; }
   .we-avatar {
-    box-sizing: border-box; flex: 0 0 auto; display: flex; align-items: center; justify-content: center;
+    box-sizing: border-box;
+    order: -1;
+    grid-column: 1;
+    grid-row: 1;
+    align-self: start;
+    flex: 0 0 auto;
+    display: flex; align-items: center; justify-content: center;
     width: var(--we-avatar-size, 40px); height: var(--we-avatar-size, 40px);
     border-radius: calc(var(--we-avatar-round, 100) * 0.5%);
     overflow: hidden;
@@ -145,14 +165,47 @@ const CSS_EXT = `
     background: var(--dsw-alias-bg-layer-1, rgba(128, 128, 128, 0.16));
     border: 1px solid var(--dsw-alias-border-l2, rgba(128, 128, 128, 0.28));
   }
-  .we-avatar__img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  /* 用户行头像在第 2 列（右）；助手行沿用上面的第 1 列（左）。一份 grid-column 同时定左右。 */
+  body[data-we-avatar="on"] [data-we-avatar-row="user"] > .we-avatar { grid-column: 2; }
+  /* 行首表情的横排容器（装饰层按需建）：order:1 让它排在正文后面。
+     有正文 ⇒ 另起一行；没正文（内容根被第三方 display:none）⇒ 自然落在第 1 行、紧跟头像。
+     用户行靠 justify-content:flex-end 整组贴右；图自己的 inline margin-left:auto 在横排里
+     会把三张图撑开，故在容器内统一抹掉外边距（只作用于本层容器里的图）。 */
+  .we-avatar-media {
+    display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px;
+    min-width: 0; order: 1;
+  }
+  body[data-we-avatar="on"] [data-we-avatar-row="user"] > .we-avatar-media { justify-content: flex-end; }
+  .we-avatar-media > img { margin: 0 !important; }
+  /* 没有可见正文时（内容根还在、只是空了或被藏了）：表情容器钉回第 1 行，紧跟头像，
+     不能因为占位内容根仍在第 1 行就落到它下面。 */
+  body[data-we-avatar="on"] [data-we-avatar-row][data-we-avatar-no-text] > .we-avatar-media,
+  body[data-we-avatar="on"] [data-we-avatar-row][data-we-avatar-no-text] > img { grid-row: 1; }
+  /* 兜底：图还没来得及被收进容器时，直接挂在行下也排到正文后面，不和正文并排。 */
+  body[data-we-avatar="on"] [data-we-avatar-row] > img { order: 1; justify-self: start; }
+  body[data-we-avatar="on"] [data-we-avatar-row="user"] > img { justify-self: end; }
+  /* 头像图不接指针事件：dsh-meme 把聊天流里所有 img 都当表情（zoom-in 光标 + 点击放大），
+     自定义头像图也会被它接管。这不改变任何视觉，只是让装饰节点不再被当成内容图。 */
+  .we-avatar__img { display: block; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
   .we-avatar__glyph { display: flex; align-items: center; justify-content: center; }
   .we-avatar__glyph svg { width: 62%; height: 62%; }
   /* 连续同侧消息的后续行（issue #191 问题 2）：头像**只显示在第一条**。
-     ⚠️ 只做 visibility: hidden —— 节点与它的框都还在，缩进对齐与 flex 几何逐字节不变。
-     绝不写 display: none / 摘节点：那会让宿主 display:contents 锚点下的内容退回
-     flex: 0 1 auto，收起的思考行固有宽为 0 ⇒ 整条消息连入口一起消失（issue #154）。 */
+     ⚠️ 只做 visibility: hidden —— 节点始终留在 DOM 里（摘节点会踩 issue #154 的锚点塌陷）。
+     助手侧的续行另外带 data-we-avatar-cont：该行退化成单列、列间距归零，隐藏的头像
+     移出 grid 流（position:absolute），于是既不留 40px 空列、也不撑出 40px 行高，
+     正文回到与折叠头同一条左边缘。用户侧不塌列（气泡本来就靠右）。 */
   .we-avatar--cont { visibility: hidden; }
+  body[data-we-avatar="on"] [data-we-avatar-row="ai"][data-we-avatar-cont] {
+    grid-template-columns: minmax(0, 1fr);
+    column-gap: 0;
+  }
+  body[data-we-avatar="on"] [data-we-avatar-row="ai"][data-we-avatar-cont] > .we-avatar {
+    position: absolute;
+    visibility: hidden;
+    pointer-events: none;
+  }
+  body[data-we-avatar="on"] [data-we-avatar-row="ai"][data-we-avatar-cont] > :not(.we-avatar):not([data-slot]),
+  body[data-we-avatar="on"] [data-we-avatar-row="ai"][data-we-avatar-cont] > [data-slot] > :not(.we-avatar) { grid-column: 1; }
   /* 面板里的预览：固定框（不随滑块长高），里头那张脸按当前大小 / 圆角现画。
      预览用的是自己的一对类名（不是 .we-avatar）—— 那些节点由装饰层建在会话里，
      面板这一份是 React 画的，两边共用的是"零件表与 URL"而不是 DOM 结构。 */

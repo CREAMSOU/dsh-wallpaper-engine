@@ -6016,6 +6016,7 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
       && avSrc.includes("nodes = document.querySelectorAll('[' + AVATAR_NODE_ATTR + ']')")
       && avSrc.includes("rows = document.querySelectorAll('[' + AVATAR_ROW_ATTR + ']')")
       && avSrc.includes('row.removeAttribute(AVATAR_ROW_ATTR)')
+      && avSrc.includes('row.removeAttribute(AVATAR_CONT_ROW_ATTR)')
       // ⑤ 观察者两级早退：新增元素先判"是不是消息行"，再判"是不是已经在装饰过的行里"——
       //    流式输出每帧都在插节点，第二级把开销钉在一次 closest 上。
       && avSrc.includes("n.closest('[' + AVATAR_ROW_ATTR + ']')")
@@ -6023,8 +6024,12 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
       // ⑥ 只读 selection：一个字节都不写（写设置只发生在 client.js 的具名处理器里）。
       && !avSrc.includes('setSetting') && !avSrc.includes('persistSelection')
       && !avSrc.includes('commitLiveSetting') && !avSrc.includes('emit()')
-      // ⑦ 头像插到行的最前面：助手行 row（左）、用户行 row-reverse（右），一份插入顺序同时满足两侧。
-      && avSrc.includes('row.insertBefore(node, row.firstChild)'),
+      // ⑦ 头像插到行的最前面只是习惯位次：左右由 grid-column 决定（助手第 1 列、用户第 2 列）。
+      && avSrc.includes('row.insertBefore(node, row.firstChild)')
+      // ⑧ 头像仍按间隔出现在 CoT 过程行里；只有“续行”才塌列，且塌列标记会在关掉时清掉。
+      && avSrc.includes("const AVATAR_CONT_ROW_ATTR = 'data-we-avatar-cont';")
+      && avSrc.includes('row.setAttribute(AVATAR_CONT_ROW_ATTR, \'\')')
+      && avSrc.includes("row.removeAttribute(AVATAR_CONT_ROW_ATTR)"),
       'avatar-layer = 会话 DOM 装饰层：三类行 + 回原生 + 无昵称 + 两级早退 + 只读');
   }
   {
@@ -6090,8 +6095,8 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
       && /AVATAR_RADIUS_MIN,\s*AVATAR_RADIUS_MAX/.test(extAvSrc)
       && !extAvSrc.includes('昵称') && !extAvSrc.includes('avatarName')
       && !extAvSrc.includes('AVATAR_NAME_MAX') && !extAvSrc.includes('type: "text"'));
-    // 排布落在样式表上：那一段必须（a）整段挂在开关属性下、（b）用户行反过来（头像在右）、
-    // （c）消息内容那一格可伸缩（否则长消息会把头像挤出可视区）、（d）不得再有名字行。
+    // 排布落在样式表上：那一段必须（a）整段挂在开关属性下、（b）头像按左右分列、
+    // （c）内容格可伸缩（否则长消息会把头像挤出可视区）、（d）表情收进内容列且排在正文后。
     // 刀3：样式族取整族源码文本（8 个域模块 + 组装点，构建序拼接）；下面的锚点与切片不变。
     const stylesSrcAv = styleText();
     const avCssAt = stylesSrcAv.indexOf('「扩展」页签一号模块');
@@ -6107,16 +6112,35 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
     const avCssBare = stripComments(avRulesAt < 0 ? avCss : avCss.slice(avRulesAt)).replace(/\s+/g, ' ');
     // 「消息格可伸缩」那条规则必须**同时**覆盖直挂内容与槽出口锚点后面那一层：宿主给
     // `div[data-slot="conversation.chat.node"]` 写死内联 `display: contents`（没有盒子 ⇒
-    // 既不是 flex item 也不接受 flex 属性），只写直挂那一半就是打在空气上——内容根退回
-    // 默认 flex item、主轴尺寸按 max-content 算；宿主给收起态的思考行写死 `contain: size layout`
+    // 既不是 grid item 也不接受 grid 属性），只写直挂那一半就是打在空气上——内容根会退回
+    // 默认尺寸、按 max-content 算；宿主给收起态的思考行写死 `contain: size layout`
     // （固有尺寸 = 0）⇒ 一行只剩"思考"折叠行时整条消息宽 0px（issue #154）。
     // 这条钉法故意要求"两条选择器、一条声明块"：少写锚点那半条就红。
-    const AV_GROW_RULE = /body\[data-we-avatar="on"\] \[data-we-avatar-row\] > :not\(\.we-avatar\), body\[data-we-avatar="on"\] \[data-we-avatar-row\] > \[data-slot\] > :not\(\.we-avatar\) \{ flex: 1 1 auto; min-width: 0; \}/;
-    check('styles.js 头像段：开关属性下才生效 · 用户行反过来 · 消息格穿透槽出口锚点可伸缩 · 无昵称残留',
+    const AV_GRID_RULE = 'body[data-we-avatar="on"] [data-we-avatar-row] > :not(.we-avatar):not([data-slot]), body[data-we-avatar="on"] [data-we-avatar-row] > [data-slot] > :not(.we-avatar) { grid-column: 2; min-width: 0; }';
+    const AV_CONT_RULE = 'body[data-we-avatar="on"] [data-we-avatar-row="ai"][data-we-avatar-cont] { grid-template-columns: minmax(0, 1fr); column-gap: 0; }';
+    const AV_CONT_NODE_RULE = 'body[data-we-avatar="on"] [data-we-avatar-row="ai"][data-we-avatar-cont] > .we-avatar { position: absolute; visibility: hidden; pointer-events: none; }';
+    check('styles.js 头像段：开关属性下才生效 · 头像列左右分 · 内容格穿透槽出口锚点可伸缩 · 表情排正文后 · 无昵称残留',
       avCssAt > 0
-      && avCssBare.includes('body[data-we-avatar="on"] [data-we-avatar-row] { display: flex; align-items: flex-start; gap: 8px; }')
-      && avCssBare.includes('body[data-we-avatar="on"] [data-we-avatar-row="user"] { flex-direction: row-reverse; }')
-      && AV_GROW_RULE.test(avCssBare)
+      && avCssBare.includes('body[data-we-avatar="on"] [data-we-avatar-row] { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 8px; }')
+      && avCssBare.includes('body[data-we-avatar="on"] [data-we-avatar-row="user"] { grid-template-columns: minmax(0, 1fr) auto; }')
+      // 头像列由 grid-column 钉住，不能只靠 DOM 位次：第三方插件会把节点提到行首
+      // （dsh-meme 把表情图插到 row.firstChild）；用户行单独覆写到第 2 列（右）。
+      && /\.we-avatar\s*\{[^}]*order:\s*-1[^}]*grid-column:\s*1;[^}]*grid-row:\s*1;/.test(avCssBare)
+      && avCssBare.includes('body[data-we-avatar="on"] [data-we-avatar-row="user"] > .we-avatar { grid-column: 2; }')
+      && avCssBare.includes(AV_GRID_RULE)
+      // 助手续行（头像是隐藏的）退化成单列：不留 40px 空列 + 8px gap，正文回到左边缘；
+      // 隐藏的头像节点仍在 DOM 里，但 position:absolute 移出 grid 流，不撑行高。
+      && avCssBare.includes(AV_CONT_RULE)
+      && avCssBare.includes(AV_CONT_NODE_RULE)
+      // 表情横排容器：order:1 排在正文后；用户行整组贴右；容器内抹掉插件的 inline 外边距。
+      && avCssBare.includes('.we-avatar-media { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px; min-width: 0; order: 1; }')
+      && avCssBare.includes('body[data-we-avatar="on"] [data-we-avatar-row="user"] > .we-avatar-media { justify-content: flex-end; }')
+      && avCssBare.includes('.we-avatar-media > img { margin: 0 !important; }')
+      && avCssBare.includes('body[data-we-avatar="on"] [data-we-avatar-row] > img { order: 1; justify-self: start; }')
+      && avCssBare.includes('body[data-we-avatar="on"] [data-we-avatar-row="user"] > img { justify-self: end; }')
+      // 没有可见正文时，表情容器钉回第 1 行，紧跟头像（不能落到空正文下面）。
+      && avCssBare.includes('[data-we-avatar-row][data-we-avatar-no-text] > .we-avatar-media')
+      && avCssBare.includes('[data-we-avatar-row][data-we-avatar-no-text] > img { grid-row: 1; }')
       // 负对照：不许去改锚点自己的 display —— 宿主契约明写它靠 `display:contents` 让 flex/grid
       // 父级"看见槽的孩子"（renderer 的 ANCHOR_STYLE）；改成 block/flex 会把宿主自己的
       // 列间距与空条目判据（`.xz4KEq_column > :not([hidden]) ~ …` / `:has(> [data-slot]:empty)`）带歪。
@@ -6128,6 +6152,10 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
       // 别的功能不该被这一层带上（它只动消息行的排布）。
       && !avCss.includes('backdrop-filter'),
       'avCss=' + avCss.length + ' 段起始=' + avCssAt);
+    // 头像图是装饰节点，不接指针事件：dsh-meme 的「点击聊天图放大」按 `[data-chat-flow] img`
+    // 取图（0.1.56），不排除的话自定义头像也会出现 zoom-in 光标、点一下弹出表情放大层。
+    check('styles.js 头像段：头像图 pointer-events:none（不被第三方「点击聊天图放大」接管）',
+      /\.we-avatar__img\s*\{[^}]*pointer-events:\s*none/.test(avCssBare));
     // ── 装饰层的**行为**判据：用最小 DOM 替身真跑一遍「开 ⇒ 补节点 / 换设置 ⇒ 就地更新 /
     //    关 ⇒ 逐字节回原生」。源码口径看不见"补出来的东西长什么样"，而这一层恰恰只能靠
     //    真跑才知道（宿主 DOM 在无头环境里不存在 ⇒ 只能自己搭一个够它用的替身）。
@@ -6138,13 +6166,58 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
         constructor(tag) { this.tagName = String(tag).toUpperCase(); this.children = []; this.attrs = {}; this.style = { props: {}, setProperty: (k, v) => { this.style.props[k] = v; }, removeProperty: (k) => { delete this.style.props[k]; } }; this.className = ''; this.textContent = ''; }
         get firstChild() { return this.children[0] || null; }
         get firstElementChild() { return this.children[0] || null; }
-        get classList() { const self = this; return { contains: (c) => String(self.className).split(/\s+/).includes(c) }; }
-        appendChild(c) { c.parent = this; this.children.push(c); return c; }
-        insertBefore(c) { c.parent = this; this.children.unshift(c); return c; }
+        get classList() {
+          const self = this;
+          const list = () => String(self.className).split(/\s+/).filter(Boolean);
+          return {
+            contains: (c) => list().includes(c),
+            add: (c) => { if (!list().includes(c)) self.className = list().concat(c).join(' '); },
+            remove: (c) => { self.className = list().filter((x) => x !== c).join(' '); },
+            toggle: (c, force) => {
+              const has = list().includes(c);
+              const want = force === undefined ? !has : !!force;
+              if (want && !has) self.className = list().concat(c).join(' ');
+              if (!want && has) self.className = list().filter((x) => x !== c).join(' ');
+              return want;
+            },
+          };
+        }
+        appendChild(c) {
+          if (c.parent) {
+            const i = c.parent.children.indexOf(c);
+            if (i >= 0) c.parent.children.splice(i, 1);
+          }
+          c.parent = this;
+          this.children.push(c);
+          return c;
+        }
+        insertBefore(c, ref) {
+          if (c.parent) {
+            const i = c.parent.children.indexOf(c);
+            if (i >= 0) c.parent.children.splice(i, 1);
+          }
+          const at = ref ? this.children.indexOf(ref) : -1;
+          if (at >= 0) this.children.splice(at, 0, c); else this.children.push(c);
+          c.parent = this;
+          return c;
+        }
         remove() {
           const p = this.parent;
           if (p) { const i = p.children.indexOf(this); if (i >= 0) p.children.splice(i, 1); }
           this.parent = null;
+        }
+        closest(sel) {
+          let el = this;
+          const s = String(sel);
+          while (el) {
+            if (s === '[data-step-process-body]' && el.getAttribute
+              && el.getAttribute('data-step-process-body') !== null) return el;
+            if (s === '[data-step-process-body][hidden]' && el.getAttribute
+              && el.getAttribute('data-step-process-body') !== null
+              && el.getAttribute('hidden') !== null) return el;
+            el = el.parent;
+          }
+          return null;
         }
         setAttribute(k, v) { this.attrs[k] = String(v); }
         getAttribute(k) { return Object.prototype.hasOwnProperty.call(this.attrs, k) ? this.attrs[k] : null; }
@@ -6243,6 +6316,90 @@ check('官方侧栏接入用能力门 + 可选服务（不写进 inject，低版
             vars: body.style.props,
           });
         }
+        // 第三方插件把节点提到行首（dsh-meme 的真实手法：`row.insertBefore(img, row.firstChild)`
+        // ⇒ 表情图排在头像前面）。要求：装饰层不再把"首个子节点不是头像"当成"节点没了"——
+        // 否则这一轮 sweep 会再补一张脸（两张头像并排）。左右位次由 styles.js 的 order 兜底，
+        // 那条是源码判据（上面的 CSS 检查），这里的假 DOM 只看节点身份与数量。
+        const foreign = new El('img');
+        aiRow.insertBefore(foreign, aiRow.firstChild);
+        avatarLayerMod.syncAvatarLayer();
+        const avatarsAfter = aiRow.children.filter((c) => c.classList && c.classList.contains('we-avatar'));
+        if (avatarsAfter.length !== 1 || avatarsAfter[0] !== aNode
+          || aiRow.getAttribute('data-we-avatar-row') !== 'ai') {
+          behavior = behavior || '行首被第三方占用后重复补脸 / 丢标记：' + JSON.stringify({
+            avatars: avatarsAfter.length,
+            same: avatarsAfter[0] === aNode,
+            rowAttr: aiRow.getAttribute('data-we-avatar-row'),
+            kids: aiRow.children.map((c) => c.getAttribute('data-slot') || c.className),
+          });
+        }
+        foreign.remove();
+        // 表情收进横排容器：多张图 + 正文时，容器排在正文后（grid 第 2 行），三张留在同一横排；
+        // 图被摘空后容器自动撤掉，不留空白行。
+        const imgA = new El('img');
+        const imgB = new El('img');
+        aiRow.appendChild(imgA);
+        aiRow.appendChild(imgB);
+        avatarLayerMod.syncAvatarLayer();
+        const media = aiRow.children.find((c) => c.classList && c.classList.contains('we-avatar-media'));
+        const outletAt = aiRow.children.indexOf(aiBox.outlet);
+        const mediaAt = media ? aiRow.children.indexOf(media) : -1;
+        if (!media || mediaAt < outletAt || media.children.length !== 2
+          || media.children[0] !== imgA || media.children[1] !== imgB) {
+          behavior = behavior || '表情没被收进正文后的横排容器：' + JSON.stringify({
+            media: media && media.children.length,
+            at: [outletAt, mediaAt],
+            kids: aiRow.children.map((c) => c.getAttribute('data-slot') || c.className),
+          });
+        }
+        // 再扫一遍：图已经在容器里（不是行的直接子元素）时容器必须留住，别把图连容器一起摘掉。
+        avatarLayerMod.syncAvatarLayer();
+        const mediaAgain = aiRow.children.find((c) => c.classList && c.classList.contains('we-avatar-media'));
+        if (!mediaAgain || mediaAgain.children.length !== 2
+          || mediaAgain.children[0] !== imgA || mediaAgain.children[1] !== imgB) {
+          behavior = behavior || '二次扫描把已收进容器的表情摘掉了：' + JSON.stringify({
+            media: mediaAgain && mediaAgain.children.length,
+            kids: mediaAgain && mediaAgain.children.map((c) => c.tagName || c.className),
+          });
+        }
+        imgA.remove();
+        imgB.remove();
+        avatarLayerMod.syncAvatarLayer();
+        if (aiRow.children.some((c) => c.classList && c.classList.contains('we-avatar-media'))) {
+          behavior = behavior || '表情摘空后容器没撤掉：' + JSON.stringify({
+            kids: aiRow.children.map((c) => c.getAttribute('data-slot') || c.className),
+          });
+        }
+        // 过程组里的步骤行仍要按“助手头像间隔”露脸（用户明确要求 CoT 过程中保留头像，
+        // 间隔参数就是为控制频率而设）；但露过脸之后的下一条助手行是续行：
+        // 头像隐藏、行退化成单列（data-we-avatar-cont），不能靠空列把正文顶到右边。
+        const u2Box = mkRow('user');
+        const pBody = new El('div');
+        pBody.setAttribute('data-step-process-body', '');
+        const pRow = new El('div');
+        pRow.setAttribute('data-chat-flow-kind', 'assistant-step');
+        pBody.appendChild(pRow);
+        body.appendChild(pBody);
+        const a2Box = mkRow('assistant-step');
+        avatarLayerMod.syncAvatarLayer();
+        const pAvatar = pRow.children.find((c) => c.classList && c.classList.contains('we-avatar'));
+        const pCont = pAvatar && pAvatar.classList.contains('we-avatar--cont');
+        const a2Avatar = a2Box.el.children.find((c) => c.classList && c.classList.contains('we-avatar'));
+        const a2Cont = a2Avatar && a2Avatar.classList.contains('we-avatar--cont');
+        if (!pAvatar || pCont || pRow.getAttribute('data-we-avatar-row') !== 'ai'
+          || !a2Avatar || !a2Cont
+          || pRow.getAttribute('data-we-avatar-cont') !== null
+          || a2Box.el.getAttribute('data-we-avatar-cont') === null) {
+          behavior = behavior || '过程组步骤行没按间隔露脸 / 续行没塌列：' + JSON.stringify({
+            pAvatar: !!pAvatar, pCont,
+            pRowAttr: pRow.getAttribute('data-we-avatar-row'),
+            pContAttr: pRow.getAttribute('data-we-avatar-cont'),
+            a2: a2Avatar && a2Avatar.className,
+            a2ContAttr: a2Box.el.getAttribute('data-we-avatar-cont'),
+          });
+        }
+        // 清理新增行，别影响下面的"关掉回原生"断言。
+        u2Box.el.remove(); pBody.remove(); a2Box.el.remove();
         // 关掉：节点摘掉、行标记抹掉、开关属性与两个变量撤掉、观察者断开。
         // 行要**逐字节回原生** —— 只剩那层槽出口锚点（内容根还在它里面、原位未被重建）。
         globalThis.selection = { avatarEnabled: false };
