@@ -18,6 +18,7 @@
 
 ### 未发布（玻璃子包；版本号由主线统筹）
 
+- **壁纸库：选择器复刻 Wallpaper Engine 的「已安装」文件夹（#264）**：宿主读 `<WE 安装根>/config.json` 的 `general.browser.folders`（兼容旧布局 `general.folders`），清单多一个只读的 `folders` 树；选择器筛选行里多一个「文件夹」下拉（**仅当用户真的建过夹子时**才渲染，单选，v8 多档筛选行同款 `<details>` 形态）。语义：只筛当前列表与网格、**不改轮播也不拦正在播的壁纸**；成员键（裸工坊 id / 本地项目路径）走与播放列表同一条路径解析映射成清单 id，映射不上的成员丢弃，夹子按「含子夹的并集」过滤并显示 `n/m`（m 含 WE 里记着但本机清单没有的残留）。`folderFilter` 随设置持久化，但**排除出「整机配置预设」**（夹子 id 由 Steam profile + 名称路径生成，只在本机成立）。新增 `test/verify-we-folders.mjs`（读取 / 映射 / 并集 / 设置键四段判据 + 负对照）。
 - **版本号维持 `1.4.0`，发布号由主线统筹（玻璃子包 + 仅壁纸态）**：九个包（主包 + 八个子包，ADR-0016 新增 glass）同号锁步，`package-lock` 同批重算；发布集九件套自检通过（`pack:release` 九个 tarball，`publishOrder` 八个子包先行、主包殿后）。
 - **玻璃行开关「即时生效」（无需重启宿主）**：玻璃宿主半边新增 `glass-row` 状态路由族（`GET /wallpaper-engine/glass-row-state`）——**路由的存在性 = 本行启用**（行停用 ⇒ 宿主 prune fiber ⇒ 路由 404，与 about-notice「停行 ⇒ 路由 404」同一条宿主语义）。玻璃浏览器半边每 3 秒探测一次（页面隐藏时暂停、恢复可见立即探测、单次失败保持现状防抖动）：探测到停用 ⇒ 撤玻璃样式表 + 跑行为层 dispose（门控属性与 `--we-*` 变量整族摘除）+ 设置节停渲染 + 状态投影清空；重新启用 ⇒ 原样恢复。配套：玻璃清单收口为「自带路由族」形态（webserver peer、键表 base/runComponent/handOffTeardown，pet-link 同款）。实测（测试 profile 双态）：启用态路由 200 `{enabled:true}`、停用态 404 且页面剪除 glass bundle。
 - **修：插件 / 玻璃行关闭时左右侧栏主体保持透明**：侧栏填充的壁纸让位不再要求玻璃行开启（原先只在 `data-we-glass-page` 下清透 `--dsw-specific-sidebar-fill`，导致停插件后侧栏被宿主实色填满）。现在壁纸在场即清透侧栏填充；左栏玻璃开关仍只管「透明 ⇄ 玻璃」，关着是透明洞、打开才换玻璃配方。
